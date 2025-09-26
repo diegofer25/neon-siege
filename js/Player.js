@@ -86,6 +86,14 @@ export class Player {
         this.projectileSpeedMod = 1;
         /** @type {number} Rotation speed multiplier (2.0 = twice as fast rotation) */
         this.rotationSpeedMod = 1;
+        /** @type {{regenMultiplier:number, turnSpeedMultiplier:number, critBonus:number}} */
+        this.externalModifiers = {
+            regenMultiplier: 1,
+            turnSpeedMultiplier: 1,
+            critBonus: 0
+        };
+        /** @type {number} Persistent critical chance bonuses from meta/synergies */
+        this.persistentCritBonus = 0;
     }
     
     /**
@@ -135,10 +143,14 @@ export class Player {
 		this.slowFieldStrength = 0;
 		/** @type {number} Maximum allowed slow field stacks */
 		this.maxSlowFieldStacks = GameConfig.PLAYER.MAX_SLOW_FIELD_STACKS;
+        /** @type {number} Additional slow strength bonus from synergies */
+        this.slowFieldBonus = 0;
 		
 		// Immolation Aura configuration
 		/** @type {Object|null} Immolation Aura configuration object */
 		this.immolationAura = null;
+        /** @type {number} Additional aura damage bonus from synergies */
+        this.immolationAuraBonus = 0;
 		
 		// Shield Boss Counter Power-ups
 		/** @type {boolean} Whether Shield Breaker is active */
@@ -175,6 +187,9 @@ export class Player {
 		
 		/** @type {Object|null} Emergency Heal configuration */
 		this.emergencyHeal = null;
+
+        /** @type {Set<string>} Active synergy keys */
+        this.activeSynergies = new Set();
     }
     
     /**
@@ -188,6 +203,42 @@ export class Player {
         PowerUp.POWER_UP_STACK_NAMES.forEach(name => {
             this.powerUpStacks[name] = 0;
         });
+
+        this.externalModifiers = {
+            regenMultiplier: 1,
+            turnSpeedMultiplier: 1,
+            critBonus: 0
+        };
+        this.activeSynergies.clear();
+    }
+
+    /**
+     * Apply external modifiers from wave effects or meta progression
+     * @param {{regenMultiplier?:number, turnSpeedMultiplier?:number, critBonus?:number}} modifiers
+     */
+    setExternalModifiers(modifiers = {}) {
+        this.externalModifiers.regenMultiplier = modifiers.regenMultiplier ?? 1;
+        this.externalModifiers.turnSpeedMultiplier = modifiers.turnSpeedMultiplier ?? 1;
+        const transientCrit = typeof modifiers.critBonus === 'number' ? modifiers.critBonus : 0;
+        this.externalModifiers.critBonus = this.persistentCritBonus + transientCrit;
+    }
+
+    /**
+     * Ensure lucky shot structure exists and apply base critical chance bonus
+     * @param {number} chanceBonus - Additional critical chance to apply (0-1)
+     */
+    applyLuckyStartBonus(chanceBonus) {
+        if (!this.luckyShots) {
+            this.luckyShots = { chance: 0, active: true };
+        }
+        this.persistentCritBonus += chanceBonus;
+        this.luckyShots.chance = Math.min(0.6, this.luckyShots.chance + chanceBonus);
+        this.externalModifiers.critBonus = this.persistentCritBonus;
+    }
+
+    addPersistentCritBonus(amount) {
+        this.persistentCritBonus += amount;
+        this.externalModifiers.critBonus = this.persistentCritBonus;
     }
     
     /**
@@ -223,11 +274,13 @@ export class Player {
         this.hpRegen = 0;
         this.shieldRegen = 0;
         this.explosiveShots = false;
+        this.persistentCritBonus = 0;
         
         // Reset slow field properties
         this.slowFieldRadius = GameConfig.PLAYER.SLOW_FIELD_BASE_RADIUS;
         this.slowFieldStrength = 0;
         this.maxSlowFieldStacks = GameConfig.PLAYER.MAX_SLOW_FIELD_STACKS;
+        this.slowFieldBonus = 0;
         
         // Reset coin multiplier
         this.coinMagnetMultiplier = 1.0;
@@ -237,6 +290,7 @@ export class Player {
         
         // Reset Immolation Aura
         this.immolationAura = null;
+        this.immolationAuraBonus = 0;
         
         // Reset Shield Boss Counter Power-ups
         this.hasShieldBreaker = false;
@@ -302,11 +356,11 @@ export class Player {
         
         // Apply regeneration effects over time
         if (this.hpRegen > 0) {
-            this.heal(this.hpRegen * (delta / 1000));
+            this.heal(this.hpRegen * this.externalModifiers.regenMultiplier * (delta / 1000));
         }
         
         if (this.shieldRegen > 0 && this.hasShield) {
-            this.healShield(this.shieldRegen * (delta / 1000));
+            this.healShield(this.shieldRegen * this.externalModifiers.regenMultiplier * (delta / 1000));
         }
         
         // Apply area-of-effect slow field to nearby enemies
@@ -404,7 +458,7 @@ export class Player {
         
         // Calculate rotation amount for this frame with rotation speed modifier
         const baseRotationSpeed = GameConfig.PLAYER.ROTATION_SPEED;
-        const modifiedRotationSpeed = baseRotationSpeed * this.rotationSpeedMod;
+        const modifiedRotationSpeed = baseRotationSpeed * this.rotationSpeedMod * this.externalModifiers.turnSpeedMultiplier;
         const maxRotation = modifiedRotationSpeed * (delta / 1000);
         
         // Use smooth angle interpolation with speed limiting
@@ -606,11 +660,11 @@ export class Player {
         const leftAngle = centerAngle - spreadAngle;
         const rightAngle = centerAngle + spreadAngle;
 
-        const leftProjectile = this._createProjectile(leftAngle, damage * damageModifier);
+        const leftProjectile = this._createProjectile(game, leftAngle, damage * damageModifier, { isExtra: true });
         leftProjectile.isExtra = true;
         game.projectiles.push(leftProjectile);
 
-        const rightProjectile = this._createProjectile(rightAngle, damage * damageModifier);
+        const rightProjectile = this._createProjectile(game, rightAngle, damage * damageModifier, { isExtra: true });
         rightProjectile.isExtra = true;
         game.projectiles.push(rightProjectile);
     }
@@ -624,7 +678,7 @@ export class Player {
      * @param {number} angle - Firing angle
      */
     _fireSingleShot(game, damage, angle) {
-        const projectile = this._createProjectile(angle, damage);
+        const projectile = this._createProjectile(game, angle, damage);
         game.projectiles.push(projectile);
     }
     
@@ -638,7 +692,7 @@ export class Player {
      */
     _fireOverchargeBurst(game, damage, angle) {
         const burstDamage = damage * this.overchargeBurst.burstDamageMultiplier;
-        const projectile = this._createProjectile(angle, burstDamage);
+        const projectile = this._createProjectile(game, angle, burstDamage, { isOvercharge: true });
         
         // Special properties for overcharge burst
         projectile.isOverchargeBurst = true;
@@ -659,11 +713,22 @@ export class Player {
      * @param {number} damage - Base damage value
      * @returns {Projectile} Fully configured projectile instance
      */
-    _createProjectile(angle, damage) {
-        const projectile = new Projectile(
-            this.x, this.y, angle, damage, this.projectileSpeedMod
-        );
-        
+    _createProjectile(game, angle, damage, options = {}) {
+        let projectile;
+        if (game.projectilePool) {
+            projectile = game.projectilePool.get(
+                this.x,
+                this.y,
+                angle,
+                damage,
+                this.projectileSpeedMod,
+                options
+            );
+        } else {
+            projectile = new Projectile(this.x, this.y, angle, damage, this.projectileSpeedMod);
+            projectile.reset(this.x, this.y, angle, damage, this.projectileSpeedMod, options);
+        }
+		
         this._applyProjectileModifications(projectile);
         return projectile;
     }
@@ -701,17 +766,14 @@ export class Player {
             projectile.homingStrength = 0.1; // Slight homing effect
         }
         
-        // Apply Lucky Shots critical hit chance
-        if (this.luckyShots && this.luckyShots.active) {
-            const critRoll = Math.random();
-            if (critRoll < this.luckyShots.chance) {
-                projectile.isCritical = true;
-                projectile.damage *= 2; // Double damage for critical hits
-                
-                // Visual indicator for critical projectiles
-                projectile.glowColor = '#ffff00'; // Golden glow for crits
-                projectile.isCriticalVisual = true;
-            }
+        // Apply Lucky Shots critical hit chance with external bonuses
+        const baseCritChance = (this.luckyShots && this.luckyShots.active) ? this.luckyShots.chance : 0;
+        const totalCritChance = Math.min(0.75, baseCritChance + (this.externalModifiers.critBonus || 0));
+        if (totalCritChance > 0 && Math.random() < totalCritChance) {
+            projectile.isCritical = true;
+            projectile.damage *= 2; // Double damage for critical hits
+            projectile.glowColor = '#ffff00';
+            projectile.isCriticalVisual = true;
         }
     }
     
@@ -844,9 +906,9 @@ export class Player {
     applySlowField(enemies) {
         if (this.slowFieldStrength <= 0) return; // No slow field effect
         
-        // Calculate effective slow factor
-        // Each stack = 10% more slow, capped at 60% slow (6 stacks max)
-        const slowFactor = Math.max(0.1, 1 - (this.slowFieldStrength * 0.10));
+        // Calculate effective slow factor with synergy bonuses (max 90% slow)
+        const slowPercent = Math.min(0.9, (this.slowFieldStrength * 0.10) + this.slowFieldBonus);
+        const slowFactor = Math.max(0.1, 1 - slowPercent);
         
         enemies.forEach(enemy => {
             const dx = enemy.x - this.x;
@@ -871,7 +933,7 @@ export class Player {
     applyImmolationAura(enemies, delta) {
         if (!this.immolationAura || !this.immolationAura.active) return;
         
-        const damagePerSecond = this.immolationAura.damagePercent;
+        const damagePerSecond = this.immolationAura.damagePercent + this.immolationAuraBonus;
         const range = this.immolationAura.range;
         const deltaSeconds = delta / 1000;
         
@@ -894,6 +956,82 @@ export class Player {
                 }
             }
         });
+    }
+
+    /**
+     * Apply a diminishing multiplicative boost to a stat and track stacks.
+     * @param {string} statKey - Player property to multiply
+     * @param {number} baseIncrease - Base percentage increase (0.25 for +25%)
+     * @param {string} stackKey - Power-up stack key to increment
+     */
+    applyMultiplicativeBoost(statKey, baseIncrease, stackKey) {
+        const stacks = this.powerUpStacks[stackKey] || 0;
+        const diminishing = Math.pow(GameConfig.BALANCE.DIMINISHING_RETURN_BASE, stacks);
+        const multiplier = 1 + (baseIncrease * diminishing);
+        this[statKey] *= multiplier;
+        this.powerUpStacks[stackKey] = stacks + 1;
+    }
+
+    /**
+     * Apply an additive boost respecting diminishing returns
+     * @param {string} property - Player property to add to
+     * @param {number} baseAmount - Amount per stack
+     * @param {string} stackKey - Stack key for tracking
+     */
+    applyAdditiveBoost(property, baseAmount, stackKey) {
+        const stacks = this.powerUpStacks[stackKey] || 0;
+        const diminishing = Math.pow(GameConfig.BALANCE.DIMINISHING_RETURN_BASE, stacks);
+        this[property] += baseAmount * diminishing;
+        this.powerUpStacks[stackKey] = stacks + 1;
+    }
+
+    /**
+     * Evaluate configured power-up synergies and apply bonuses once
+     */
+    evaluateSynergies() {
+        GameConfig.POWERUP_SYNERGIES.forEach((synergy) => {
+            if (this.activeSynergies.has(synergy.key)) return;
+            const meetsRequirements = synergy.requires.every((req) => this._hasPowerUpRequirement(req));
+            if (meetsRequirements) {
+                this._applySynergyEffect(synergy.effect);
+                this.activeSynergies.add(synergy.key);
+            }
+        });
+    }
+
+    _hasPowerUpRequirement(name) {
+        if ((this.powerUpStacks[name] || 0) > 0) return true;
+        switch (name) {
+            case 'Lucky Shots':
+                return !!(this.luckyShots && this.luckyShots.active);
+            case 'Immolation Aura':
+                return !!(this.immolationAura && this.immolationAura.active);
+            case 'Slow Field':
+                return this.hasSlowField && this.slowFieldStrength > 0;
+            case 'Shield Breaker':
+                return this.hasShieldBreaker;
+            default:
+                return false;
+        }
+    }
+
+    _applySynergyEffect(effect) {
+        if (!effect) return;
+        if (effect.damageMultiplier) {
+            this.damageMod *= effect.damageMultiplier;
+        }
+        if (effect.fireRateMultiplier) {
+            this.fireRateMod *= effect.fireRateMultiplier;
+        }
+        if (effect.critChanceBonus) {
+            this.addPersistentCritBonus(effect.critChanceBonus);
+        }
+        if (effect.auraDamageBonus && this.immolationAura) {
+            this.immolationAuraBonus += effect.auraDamageBonus;
+        }
+        if (effect.slowBonus && this.hasSlowField) {
+            this.slowFieldBonus += effect.slowBonus;
+        }
     }
     
     /**

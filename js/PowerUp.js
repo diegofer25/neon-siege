@@ -1,3 +1,5 @@
+import { GameConfig } from './config/GameConfig.js';
+
 /**
  * PowerUp System
  *
@@ -58,8 +60,7 @@ export class PowerUp {
 			"+25% bullet damage",
 			"⚡",
 			(player) => {
-				player.damageMod *= 1.25;
-				player.powerUpStacks["Damage Boost"]++;
+				player.applyMultiplicativeBoost('damageMod', 0.25, 'Damage Boost');
 			}
 		),
 
@@ -68,8 +69,7 @@ export class PowerUp {
 			"+12.5% attack speed",
 			"🔥",
 			(player) => {
-				player.fireRateMod *= 1.125;
-				player.powerUpStacks["Fire Rate"]++;
+				player.applyMultiplicativeBoost('fireRateMod', 0.125, 'Fire Rate');
 			}
 		),
 
@@ -78,8 +78,7 @@ export class PowerUp {
 			"+15% projectile speed",
 			"💨",
 			(player) => {
-				player.projectileSpeedMod *= 1.15;
-				player.powerUpStacks["Speed Boost"]++;
+				player.applyMultiplicativeBoost('projectileSpeedMod', 0.15, 'Speed Boost');
 			}
 		),
 
@@ -88,8 +87,7 @@ export class PowerUp {
 			"+10% rotation speed for faster targeting",
 			"🌀",
 			(player) => {
-				player.turnSpeed *= 1.1;
-				player.powerUpStacks["Turn Speed"] = (player.powerUpStacks["Turn Speed"] || 0) + 1;
+				player.applyMultiplicativeBoost('rotationSpeedMod', 0.10, 'Turn Speed');
 			}
 		),
 
@@ -186,8 +184,7 @@ export class PowerUp {
 			"+1 health per second",
 			"💚",
 			(player) => {
-				player.hpRegen += 1; // 1 health per second
-				player.powerUpStacks["Regeneration"]++;
+				player.applyAdditiveBoost('hpRegen', 1, 'Regeneration');
 			}
 		),
 
@@ -201,8 +198,7 @@ export class PowerUp {
 					player.maxShieldHp = 25;
 					player.shieldHp = 25;
 				}
-				player.shieldRegen += 2;
-				player.powerUpStacks["Shield Regen"]++;
+				player.applyAdditiveBoost('shieldRegen', 2, 'Shield Regen');
 			}
 		),
 
@@ -242,8 +238,7 @@ export class PowerUp {
 			"+25% attack speed",
 			"🌪️",
 			(player) => {
-				player.fireRateMod *= 1.25;
-				player.powerUpStacks["Rapid Fire"]++;
+				player.applyMultiplicativeBoost('fireRateMod', 0.25, 'Rapid Fire');
 			}
 		),
 
@@ -255,8 +250,7 @@ export class PowerUp {
 				if (!player.coinMagnetMultiplier) {
 					player.coinMagnetMultiplier = 1;
 				}
-				player.coinMagnetMultiplier += 0.2;
-				player.powerUpStacks["Coin Magnet"]++;
+				player.applyAdditiveBoost('coinMagnetMultiplier', 0.2, 'Coin Magnet');
 			}
 		),
 
@@ -268,8 +262,10 @@ export class PowerUp {
 				if (!player.luckyShots) {
 					player.luckyShots = { chance: 0, active: true };
 				}
-				player.luckyShots.chance += 0.02; // Increase chance by 2% per stack
-				player.powerUpStacks["Lucky Shots"]++;
+				const stacks = player.powerUpStacks["Lucky Shots"] || 0;
+				const diminishing = Math.pow(GameConfig.BALANCE.DIMINISHING_RETURN_BASE, stacks);
+				player.luckyShots.chance = Math.min(0.6, player.luckyShots.chance + 0.02 * diminishing);
+				player.powerUpStacks["Lucky Shots"] = stacks + 1;
 			}
 		),
 

@@ -28,73 +28,73 @@ export class Projectile {
      * @param {number} [speedMod=1] - Speed modifier (1.0 = normal speed)
      */
     constructor(x, y, angle, damage, speedMod = 1) {
-        // Position properties
+        // Static configuration
+        this.baseSpeed = 400; // Base speed in pixels per second
+        this.radius = 5;
+        this.trail = [];
+        this.trailLength = 8;
+        this.hitEnemyIds = [];
+
+        // Lifecycle defaults
+        this.maxLifetime = 3000;
+
+        // Initialize special property placeholders
+        this.hasShieldBreaker = false;
+        this.shieldBreakerDamage = 1.0;
+        this.shieldRegenDelay = 0;
+        this.hasHoming = false;
+        this.homingStrength = 0;
+
+        this.reset(x, y, angle, damage, speedMod);
+        this._fromPool = false;
+    }
+
+    /**
+     * Reset projectile state for reuse with object pools
+     * @param {number} x
+     * @param {number} y
+     * @param {number} angle
+     * @param {number} damage
+     * @param {number} speedMod
+     * @param {Object} [options={}]
+     */
+    reset(x, y, angle, damage, speedMod = 1, options = {}) {
         this.x = x;
         this.y = y;
-        this.radius = 5; // Increased from 3 to 5 for better visibility and hit detection
-        this.damage = damage;
         this.angle = angle;
-        
-        // Movement calculations
-        this.baseSpeed = 400; // Base speed in pixels per second
+        this.damage = damage;
+        this.originalDamage = damage;
         this.speed = this.baseSpeed * speedMod;
-        this.vx = Math.cos(angle) * this.speed; // Velocity X component
-        this.vy = Math.sin(angle) * this.speed; // Velocity Y component
+        this.vx = Math.cos(angle) * this.speed;
+        this.vy = Math.sin(angle) * this.speed;
 
-        this.isExtra = false;
+        this.isExtra = !!options.isExtra;
+        this.isEnemyProjectile = !!options.isEnemyProjectile;
+        this.isOverchargeBurst = !!options.isOvercharge;
+        this.ignoresShields = !!options.ignoresShields;
+        this.size = options.size || this.radius;
 
-        // Special behavior properties
-        this.piercing = false;          // Can pass through multiple enemies
-        this.piercingCount = 0;         // Number of enemies this projectile can pierce
-        this.originalDamage = damage;   // Store original damage for piercing calculations
-        this.hitEnemyIds = [];           // An array to store the IDs of enemies that have been hit
-        this.enemiesHit = 0;           // Track number of enemies hit for damage reduction
-        this.explosive = false;         // Explodes on impact
-        this.explosionRadius = 50;      // Explosion effect radius
-        this.explosionDamage = 20;      // Damage dealt by explosion
-        
-        // Visual rendering properties
-        this.color = '#fff';            // Primary color
-        this.glowColor = '#fff';        // Glow effect color
-        this.trail = [];                // Array storing trail positions
-        this.trailLength = 8;           // Maximum trail points to keep
-        
-        // Lifecycle management
-        this.maxLifetime = 3000;        // Maximum lifetime in milliseconds (3 seconds)
-        this.lifetime = 0;              // Current age in milliseconds
-        
-        // Destruction flag for cleanup
-        this._destroy = false;
-        
-        // Critical hit properties
-        /** @type {boolean} Whether this projectile is a critical hit */
-        this.isCritical = false;
-        /** @type {boolean} Visual flag for critical hit effects */
-        this.isCriticalVisual = false;
-        /** @type {string} Glow color for visual effects */
+        this.piercing = false;
+        this.piercingCount = 0;
+        this.enemiesHit = 0;
+        this.hitEnemyIds.length = 0;
+        this.explosive = false;
+        this.explosionRadius = 50;
+        this.explosionDamage = 20;
+
+        this.color = '#fff';
         this.glowColor = '#fff';
-        this.isEnemyProjectile = false;
-        
-        // Shield Boss Counter properties
-        /** @type {boolean} Whether this is an overcharge burst projectile */
-        this.isOverchargeBurst = false;
-        /** @type {boolean} Whether this projectile ignores shields */
-        this.ignoresShields = false;
-        /** @type {number} Visual size override for special projectiles */
-        this.size = this.radius;
-        
-        // Shield Breaker properties
-        /** @type {boolean} Whether this projectile has shield breaker ability */
+        this.trail.length = 0;
+
+        this.lifetime = 0;
+        this._destroy = false;
+        this.isCritical = false;
+        this.isCriticalVisual = false;
+
         this.hasShieldBreaker = false;
-        /** @type {number} Shield damage multiplier */
         this.shieldBreakerDamage = 1.0;
-        /** @type {number} Shield regeneration delay in milliseconds */
         this.shieldRegenDelay = 0;
-        
-        // Adaptive Targeting properties
-        /** @type {boolean} Whether this projectile has homing ability */
         this.hasHoming = false;
-        /** @type {number} Homing strength (0-1, where 1 is perfect tracking) */
         this.homingStrength = 0;
     }
     

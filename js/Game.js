@@ -1,5 +1,6 @@
 import { Player } from "./Player.js";
 import { Particle } from "./Particle.js";
+import { Projectile } from "./Projectile.js";
 import { Shop } from "./Shop.js";
 import { GameConfig } from "./config/GameConfig.js";
 import { ObjectPool } from "./utils/ObjectPool.js";
@@ -9,6 +10,7 @@ import { WaveManager } from "./systems/WaveManager.js";
 import { EffectsManager } from "./systems/EffectsManager.js";
 import { EntityManager } from "./systems/EntityManager.js";
 import { playSFX } from "./main.js";
+import { ProgressionManager } from "./managers/ProgressionManager.js";
 
 /**
  * Main game class - now focused on coordination between systems rather than direct management.
@@ -66,6 +68,15 @@ export class Game {
 	 */
 	_initializeManagers() {
 		this.performanceManager = new PerformanceManager();
+		this.progressionManager = new ProgressionManager();
+		this.performanceProfileKey = GameConfig.DERIVED.selectPerformanceProfile();
+		this.modifierState = {
+			enemySpeedMultiplier: 1,
+			enemyDamageTakenMultiplier: 1,
+			playerRegenMultiplier: 1,
+			playerTurnSpeedMultiplier: 1,
+			visibilityReduction: false
+		};
 		this._initializeObjectPools();
 	}
 
@@ -85,11 +96,25 @@ export class Game {
 	 * @private
 	 */
 	_initializeObjectPools() {
+		this._configurePoolsForProfile(this.performanceProfileKey);
+	}
+
+	_configurePoolsForProfile(profileKey) {
+		const profile = GameConfig.PERFORMANCE_PROFILES[profileKey] || GameConfig.PERFORMANCE_PROFILES.HIGH;
+		this.performanceProfileKey = profileKey;
+
 		this.particlePool = new ObjectPool(
 			() => new Particle(0, 0, 0, 0, 0),
 			this._resetParticle.bind(this),
-			50,
-			200
+			profile.particlePoolSize.initial,
+			profile.particlePoolSize.max
+		);
+
+		this.projectilePool = new ObjectPool(
+			() => new Projectile(0, 0, 0, 0, 1),
+			this._resetProjectile.bind(this),
+			profile.projectilePoolSize.initial,
+			profile.projectilePoolSize.max
 		);
 	}
 
@@ -108,6 +133,11 @@ export class Game {
 		particle.glowColor = color || "#fff";
 		particle._destroy = false;
 		particle._fromPool = true;
+	}
+
+	_resetProjectile(projectile, x, y, angle, damage, speedMod = 1, options = {}) {
+		projectile.reset(x, y, angle, damage, speedMod, options);
+		projectile._fromPool = true;
 	}
 
 	/**
@@ -245,6 +275,11 @@ export class Game {
 
 		// Update core managers
 		this.performanceManager.update(delta);
+		const avgFps = this.performanceManager.getAverageFps();
+		const targetProfile = GameConfig.DERIVED.selectPerformanceProfile(avgFps);
+		if (targetProfile !== this.performanceProfileKey) {
+			this._configurePoolsForProfile(targetProfile);
+		}
 
 		// Update all game systems
 		this.effectsManager.update(delta);
@@ -269,6 +304,7 @@ export class Game {
 		// Calculate and award coins
 		const totalCoins = this.waveManager.calculateWaveReward();
 		this.player.addCoins(totalCoins);
+		this.progressionManager.recordWaveCompletion(this.wave, this.waveManager.isBossWave);
 
 		this.showShop();
 	}
@@ -291,6 +327,7 @@ export class Game {
 	purchasePowerUp(powerUp, price) {
 		if (this.player.spendCoins(price)) {
 			powerUp.apply(this.player);
+			this.player.evaluateSynergies();
 			playSFX("powerup")
 		}
 	}
@@ -302,10 +339,49 @@ export class Game {
 		this.shop.closeShop();
 		this.wave++;
 		this.gameState = "playing";
+		this.applyWaveModifier(null);
 
 		setTimeout(() => {
 			this.waveManager.startWave(this.wave);
 		}, 1000);
+	}
+
+	getActiveParticleLimit() {
+		const profile = GameConfig.PERFORMANCE_PROFILES[this.performanceProfileKey] || GameConfig.PERFORMANCE_PROFILES.HIGH;
+		return profile.particleLimit;
+	}
+
+	applyWaveModifier(modifierKey) {
+		const previousVisibility = this.modifierState.visibilityReduction;
+		this.modifierState = {
+			enemySpeedMultiplier: 1,
+			enemyDamageTakenMultiplier: 1,
+			playerRegenMultiplier: 1,
+			playerTurnSpeedMultiplier: 1,
+			visibilityReduction: false
+		};
+		this.waveModifierKey = modifierKey;
+		if (modifierKey && GameConfig.WAVE_MODIFIERS[modifierKey]) {
+			Object.assign(this.modifierState, GameConfig.WAVE_MODIFIERS[modifierKey].effect);
+		}
+
+		if (this.player) {
+			this.player.setExternalModifiers({
+				regenMultiplier: this.modifierState.playerRegenMultiplier,
+				turnSpeedMultiplier: this.modifierState.playerTurnSpeedMultiplier
+			});
+		}
+
+		if (this.modifierState.visibilityReduction !== previousVisibility) {
+			const container = document.getElementById('gameContainer');
+			if (container) {
+				container.classList.toggle('modifier-fog', this.modifierState.visibilityReduction);
+			}
+		}
+	}
+
+	getEnemyDamageTakenMultiplier() {
+		return this.modifierState.enemyDamageTakenMultiplier || 1;
 	}
 
 	// Delegate methods to effects manager

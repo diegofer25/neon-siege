@@ -15,6 +15,9 @@
  * - VFX: Visual effects and performance settings
  * - ECONOMY: Coin rewards and economic balance
  * - BALANCE: High-level balance constraints
+ * - PERFORMANCE_PROFILES: Tunable presets for different device capabilities
+ * - META: Persistent progression and unlock configuration
+ * - WAVE_MODIFIERS: Special scenario definitions applied to specific waves
  * 
  * @example
  * // Using configuration values
@@ -379,6 +382,28 @@ export const GameConfig = {
     },
 
     /**
+     * Performance presets that tune pooling and particle limits for different devices
+     * These presets are used by the performance manager to quickly scale effects.
+     */
+    PERFORMANCE_PROFILES: {
+        HIGH: {
+            particlePoolSize: { initial: 80, max: 240 },
+            projectilePoolSize: { initial: 60, max: 160 },
+            particleLimit: 200
+        },
+        MEDIUM: {
+            particlePoolSize: { initial: 60, max: 180 },
+            projectilePoolSize: { initial: 45, max: 120 },
+            particleLimit: 140
+        },
+        LOW: {
+            particlePoolSize: { initial: 40, max: 120 },
+            projectilePoolSize: { initial: 30, max: 90 },
+            particleLimit: 90
+        }
+    },
+
+    /**
      * Economic system configuration
      * 
      * Controls coin rewards, pricing inflation, and economic balance.
@@ -424,7 +449,94 @@ export const GameConfig = {
         COIN_INFLATION_FACTOR: 1.05,
         
         /** @type {number} Minimum kill ratio for performance bonus (0.0 to 1.0) */
-        PERFORMANCE_BONUS_THRESHOLD: 0.8
+        PERFORMANCE_BONUS_THRESHOLD: 0.8,
+
+        /** @type {number} Base multiplier for diminishing returns on stacking multipliers */
+        DIMINISHING_RETURN_BASE: 0.85
+    },
+
+    /**
+     * Persistent meta progression configuration
+     */
+    META: {
+        STORAGE_KEY: 'neon_td_meta',
+        CURRENCIES: {
+            LEGACY_TOKENS: {
+                label: 'Legacy Tokens',
+                description: 'Earned from each completed wave and used for permanent upgrades.',
+                perWaveReward: 1,
+                bossBonus: 5
+            }
+        },
+        UNLOCKS: {
+            SHIELD_BREAKER: {
+                cost: 25,
+                description: 'Start runs with Shield Breaker unlocked.'
+            },
+            LUCKY_START: {
+                cost: 30,
+                description: 'Begin each run with +10% critical chance.'
+            }
+        }
+    },
+
+    /**
+     * Synergy definitions that grant bonus effects when power-up combinations are met
+     */
+    POWERUP_SYNERGIES: [
+        {
+            key: 'LUCKY_OVERCHARGE',
+            requires: ['Lucky Shots', 'Double Damage'],
+            effect: {
+                critChanceBonus: 0.05,
+                damageMultiplier: 1.05
+            }
+        },
+        {
+            key: 'RAPID_BARRAGE',
+            requires: ['Fire Rate', 'Rapid Fire'],
+            effect: {
+                fireRateMultiplier: 1.03
+            }
+        },
+        {
+            key: 'IMMOLATION_VORTEX',
+            requires: ['Immolation Aura', 'Slow Field'],
+            effect: {
+                auraDamageBonus: 0.005,
+                slowBonus: 0.05
+            }
+        }
+    ],
+
+    /**
+     * Special wave modifiers controlling global conditions per wave
+     */
+    WAVE_MODIFIERS: {
+        STORM: {
+            name: 'Ion Storm',
+            description: 'Enemy projectiles move 20% faster, player regen halved.',
+            effect: {
+                enemySpeedMultiplier: 1.2,
+                playerRegenMultiplier: 0.5
+            }
+        },
+        OVERCLOCK: {
+            name: 'Overclock',
+            description: 'Enemies move 30% faster but take 10% more damage.',
+            effect: {
+                enemySpeedMultiplier: 1.3,
+                enemyDamageTakenMultiplier: 1.1
+            }
+        },
+        FOG: {
+            name: 'Neon Fog',
+            description: 'Visibility reduced. Player turn speed reduced by 15%.',
+            effect: {
+                visibilityReduction: true,
+                playerTurnSpeedMultiplier: 0.85
+            }
+        }
     }
 };
 
@@ -548,6 +660,30 @@ GameConfig.DERIVED = {
         const stackMultiplier = 1 + (stacks * GameConfig.ECONOMY.SHOP_STACK_PRICE_MULTIPLIER);
         
         return Math.max(1, Math.floor(basePrice * waveInflation * stackMultiplier));
+    },
+
+    /**
+     * Selects the best performance profile based on heuristic FPS or device mutator
+     * @param {number} averageFps
+     * @returns {keyof GameConfig['PERFORMANCE_PROFILES']}
+     */
+    selectPerformanceProfile(averageFps = 60) {
+        if (averageFps >= 50) return 'HIGH';
+        if (averageFps >= 30) return 'MEDIUM';
+        return 'LOW';
+    },
+
+    /**
+     * Retrieve wave modifier key for a given wave number
+     * Applies repeating pattern every 5 waves beyond wave 5.
+     * @param {number} wave
+     * @returns {string|null}
+     */
+    getModifierForWave(wave) {
+        if (wave < 6) return null;
+        const sequence = ['STORM', 'OVERCLOCK', 'FOG'];
+        const index = (wave - 6) % sequence.length;
+        return sequence[index];
     }
 };
 
