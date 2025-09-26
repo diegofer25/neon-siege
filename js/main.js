@@ -19,6 +19,9 @@ let lastTime = 0;
 /** @type {boolean} Whether to show performance statistics */
 let showPerformanceStats = false;
 
+/** @type {number|null} Active animation frame request id */
+let animationFrameId = null;
+
 /**
  * Audio system configuration and state
  * @type {Object}
@@ -306,7 +309,12 @@ export function startGame() {
     
     // Initialize game state and start main loop
     game.start();
-    gameLoop();
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 /**
@@ -316,7 +324,12 @@ export function startGame() {
 function restartGame() {
     document.getElementById('gameOver').classList.remove('show');
     game.restart();
-    gameLoop();
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 /**
@@ -330,7 +343,12 @@ export function togglePause() {
     } else if (game.gameState === 'paused') {
         game.resume();
         document.getElementById('pauseScreen').classList.remove('show');
-        gameLoop();
+        if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
     }
 }
 
@@ -344,7 +362,10 @@ export function togglePause() {
  */
 function gameLoop(timestamp = 0) {
     // Skip update if game is paused
-    if (game.gameState === 'paused') return;
+    if (game.gameState === 'paused') {
+        animationFrameId = null;
+        return;
+    }
     
     // Calculate frame delta time for smooth animation
     const delta = timestamp - lastTime;
@@ -367,9 +388,12 @@ function gameLoop(timestamp = 0) {
     
     // Continue loop based on game state
     if (game.gameState === 'playing' || game.gameState === 'powerup') {
-        requestAnimationFrame(gameLoop);
-    } else if (game.gameState === 'gameover') {
-        showGameOver();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    } else {
+        animationFrameId = null;
+        if (game.gameState === 'gameover') {
+            showGameOver();
+        }
     }
 }
 
