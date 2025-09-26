@@ -4,8 +4,10 @@
   "description": "A browser-based 2D tower-defense shooter with infinite wave survival and neon aesthetics",
   "main": "index.html",
   "scripts": {
-    "start": "npx live-server --port=8080 --open=/index.html",
-    "dev": "npx live-server --port=8080 --open=/index.html --watch=js,style.css,index.html",
+    "start": "npm run dev",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix"
   },
@@ -31,6 +33,7 @@
     "@eslint/css": "^0.9.0",
     "@eslint/js": "^9.30.1",
     "eslint": "^9.30.1",
-    "globals": "^16.3.0"
+    "globals": "^16.3.0",
+    "vite": "^5.4.8"
   }
 }

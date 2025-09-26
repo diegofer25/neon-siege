@@ -31,6 +31,7 @@ A browser-based 2D tower defense game with infinite wave survival, auto-targetin
 - **Wave Management**: Dynamic enemy spawning and difficulty scaling
 - **Effect System**: Centralized visual effects management
 - **Configuration System**: Centralized game balance and settings
+- **Vite Tooling**: Lightning-fast dev server with optimized production builds
 
 ## 🚀 Quick Start
 
@@ -43,15 +44,17 @@ Visit the [live demo](https://your-username.github.io/neon-td-vanilla) to play i
 git clone https://github.com/your-username/neon-td-vanilla.git
 cd neon-td-vanilla
 
-# Install development server (optional)
+# Install dependencies
 npm install
 
-# Start development server
+# Start the Vite dev server (auto-opens http://localhost:8080)
 npm run dev
-# OR
-npm start
 
-# Open browser to http://localhost:8080
+# Build production assets
+npm run build
+
+# Preview the optimized build locally
+npm run preview
 ```
 
 ### Manual Setup
