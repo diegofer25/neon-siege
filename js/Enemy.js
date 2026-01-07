@@ -48,6 +48,9 @@ export class Enemy {
         
         // Enemy type identification
         this.isSplitter = false; // Whether this enemy is a splitter type
+
+        /** @type {import('./Game.js').Game | null} */
+        this.game = null;
     }
     
     /**
@@ -55,7 +58,7 @@ export class Enemy {
      * @param {number} delta - Time elapsed since last update in milliseconds
      * @param {Object} player - Player object with x, y, and radius properties
      */
-    update(delta, player) {
+    update(delta, player, game = null) {
         // Handle death animation
         if (this.dying) {
             this.deathTimer += delta;
@@ -81,8 +84,10 @@ export class Enemy {
             const normalizedDx = dx / distance;
             const normalizedDy = dy / distance;
             
+            const speedMultiplier = (game && game.modifierState && game.modifierState.enemySpeedMultiplier) ? game.modifierState.enemySpeedMultiplier : 1;
+
             // Convert speed from pixels per second to pixels per frame
-            const actualSpeed = this.speed * this.slowFactor * (delta / 1000);
+            const actualSpeed = this.speed * speedMultiplier * this.slowFactor * (delta / 1000);
             
             // Store previous position for velocity calculation
             this.prevX = this.x;
@@ -105,20 +110,16 @@ export class Enemy {
         // Reset slow factor each frame (reapplied by slow towers if in range)
         this.slowFactor = 1;
         
-        // Check collision with player (circular collision detection)
-        if (distance <= this.radius + player.radius) {
-            // Mark for removal - collision damage handled by Game class
-            this.health = 0;
-        }
+        // Player collision is handled centrally by CollisionSystem
     }
     
     /**
      * Applies damage to the enemy and triggers visual feedback.
      * @param {number} amount - Amount of damage to deal
-     * @param {import('./Projectile.js').Projectile} [projectile] - Optional projectile that caused the damage
      */
-    takeDamage(amount, projectile = null) {
-        this.health -= amount;
+    takeDamage(amount) {
+        const damageTakenMultiplier = this.game?.getEnemyDamageTakenMultiplier?.() || 1;
+        this.health -= amount * damageTakenMultiplier;
         
         // Trigger white flash effect when hit
         this.flashTimer = 100; // Flash duration in milliseconds
@@ -221,8 +222,7 @@ export class Enemy {
      * @param {import('./Game.js').Game} game - Game instance
      */
     setGameReference(game) {
-        // Base implementation does nothing
-        // Override in subclasses that need game reference
+        this.game = game;
     }
     
     /**
@@ -372,10 +372,10 @@ export class SplitterEnemy extends Enemy {
     /**
      * Override takeDamage to handle splitting on death.
      * @param {number} amount - Amount of damage to deal
-     * @param {import('./Projectile.js').Projectile} [projectile] - Optional projectile that caused the damage
      */
-    takeDamage(amount, projectile = null) {
-        this.health -= amount;
+    takeDamage(amount) {
+        const damageTakenMultiplier = this.game?.getEnemyDamageTakenMultiplier?.() || 1;
+        this.health -= amount * damageTakenMultiplier;
         
         // Trigger white flash effect when hit
         this.flashTimer = 100;

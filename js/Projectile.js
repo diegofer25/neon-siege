@@ -81,6 +81,7 @@ export class Projectile {
         this.explosive = false;
         this.explosionRadius = 50;
         this.explosionDamage = 20;
+        this.exploded = false;
 
         this.color = '#fff';
         this.glowColor = '#fff';
@@ -212,11 +213,13 @@ export class Projectile {
      */
     isOffScreen(canvas) {
         const margin = 50; // Extra margin to account for projectile size
+        const canvasWidth = canvas.logicalWidth || canvas.width;
+        const canvasHeight = canvas.logicalHeight || canvas.height;
         return (
             this.x < -margin ||
-            this.x > canvas.width + margin ||
+            this.x > canvasWidth + margin ||
             this.y < -margin ||
-            this.y > canvas.height + margin
+            this.y > canvasHeight + margin
         );
     }
     
@@ -228,6 +231,8 @@ export class Projectile {
      */
     explode(game) {
         if (!this.explosive) return;
+        if (this.exploded) return;
+        this.exploded = true;
         
         // Generate visual explosion particles
         game.createExplosion(this.x, this.y, 12);
@@ -248,10 +253,12 @@ export class Projectile {
                 
                 // Display damage number floating text
                 const rect = game.canvas.getBoundingClientRect();
+                const canvasWidth = game.canvas.logicalWidth || game.canvas.width;
+                const canvasHeight = game.canvas.logicalHeight || game.canvas.height;
                 createFloatingText(
                     `-${damage.toFixed(1)}`,
-                    enemy.x * (rect.width / game.canvas.width) + rect.left,
-                    enemy.y * (rect.height / game.canvas.height) + rect.top,
+                    enemy.x * (rect.width / canvasWidth) + rect.left,
+                    enemy.y * (rect.height / canvasHeight) + rect.top,
                     'damage'
                 );
             }

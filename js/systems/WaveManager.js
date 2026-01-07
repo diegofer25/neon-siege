@@ -45,8 +45,18 @@ export class WaveManager {
         this.waveStartTime = Date.now();
         this.isBossWave = this.currentWave > 0 && this.currentWave % 10 === 0;
 
+        // Apply a wave modifier (or none) at the start of each wave.
+        // Boss waves intentionally have no modifier to keep tuning simpler.
+        let modifierKey = null;
+        const modifierKeys = Object.keys(GameConfig.WAVE_MODIFIERS || {});
+        if (!this.isBossWave && modifierKeys.length > 0 && Math.random() < 0.25) {
+            modifierKey = modifierKeys[Math.floor(Math.random() * modifierKeys.length)];
+        }
+        this.game.applyWaveModifier(modifierKey);
+
         const enemyCount = GameConfig.DERIVED.getEnemyCountForWave(this.currentWave);
-        this.enemiesToSpawn = enemyCount;
+        // Boss waves are boss-only (regular spawns disabled)
+        this.enemiesToSpawn = this.isBossWave ? 0 : enemyCount;
         this.enemySpawnInterval = GameConfig.DERIVED.getSpawnIntervalForWave(this.currentWave);
         this.waveScaling = GameConfig.DERIVED.getScalingForWave(this.currentWave);
         this.enemySpawnTimer = 0;
@@ -80,9 +90,12 @@ export class WaveManager {
      * Spawn a single enemy at the screen perimeter.
      */
     spawnEnemy() {
-        const centerX = this.game.canvas.width / 2;
-        const centerY = this.game.canvas.height / 2;
-        const spawnRadius = Math.max(this.game.canvas.width, this.game.canvas.height) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
+        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
+
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+        const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
         
         const angle = Math.random() * Math.PI * 2;
         const x = centerX + Math.cos(angle) * spawnRadius;

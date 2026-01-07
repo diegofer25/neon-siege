@@ -273,8 +273,7 @@ export class Game {
 	update(delta, input) {
 		if (this.gameState !== "playing") return;
 
-		// Update core managers
-		this.performanceManager.update(delta);
+		// PerformanceManager is updated by the outer game loop in js/main.js
 		const avgFps = this.performanceManager.getAverageFps();
 		const targetProfile = GameConfig.DERIVED.selectPerformanceProfile(avgFps);
 		if (targetProfile !== this.performanceProfileKey) {
@@ -339,7 +338,6 @@ export class Game {
 		this.shop.closeShop();
 		this.wave++;
 		this.gameState = "playing";
-		this.applyWaveModifier(null);
 
 		setTimeout(() => {
 			this.waveManager.startWave(this.wave);
@@ -402,8 +400,10 @@ export class Game {
 	 */
 	render() {
 		const ctx = this.ctx;
+		const canvasWidth = this.canvas.logicalWidth || this.canvas.width;
+		const canvasHeight = this.canvas.logicalHeight || this.canvas.height;
 
-		ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
 		// Apply screen shake from effects manager
 		ctx.save();
@@ -445,19 +445,22 @@ export class Game {
 		ctx.strokeStyle = `rgba(0, 255, 255, ${GameConfig.VFX.GRID_ALPHA})`;
 		ctx.lineWidth = 1;
 
+		const canvasWidth = this.canvas.logicalWidth || this.canvas.width;
+		const canvasHeight = this.canvas.logicalHeight || this.canvas.height;
+
 		// Draw vertical lines
-		for (let x = 0; x < this.canvas.width; x += gridSize) {
+		for (let x = 0; x < canvasWidth; x += gridSize) {
 			ctx.beginPath();
 			ctx.moveTo(x, 0);
-			ctx.lineTo(x, this.canvas.height);
+			ctx.lineTo(x, canvasHeight);
 			ctx.stroke();
 		}
 
 		// Draw horizontal lines
-		for (let y = 0; y < this.canvas.height; y += gridSize) {
+		for (let y = 0; y < canvasHeight; y += gridSize) {
 			ctx.beginPath();
 			ctx.moveTo(0, y);
-			ctx.lineTo(this.canvas.width, y);
+			ctx.lineTo(canvasWidth, y);
 			ctx.stroke();
 		}
 	}
@@ -466,6 +469,8 @@ export class Game {
 	 * Draw visual warning when enemies are about to spawn.
 	 */
 	drawSpawnWarning(ctx) {
+		const canvasWidth = this.canvas.logicalWidth || this.canvas.width;
+		const canvasHeight = this.canvas.logicalHeight || this.canvas.height;
 		const pulseIntensity = 0.5 + 0.5 * Math.sin(Date.now() / 200);
 		const warningColor = `rgba(255, 165, 0, ${pulseIntensity * 0.3})`;
 
@@ -477,8 +482,8 @@ export class Game {
 		ctx.strokeRect(
 			margin,
 			margin,
-			this.canvas.width - margin * 2,
-			this.canvas.height - margin * 2
+			canvasWidth - margin * 2,
+			canvasHeight - margin * 2
 		);
 
 		ctx.setLineDash([]); // Reset line dash
@@ -491,7 +496,7 @@ export class Game {
 		ctx.shadowBlur = 10;
 
 		const text = `Incoming: ${this.waveManager.enemiesToSpawn}`;
-		ctx.fillText(text, this.canvas.width / 2, 40);
+		ctx.fillText(text, canvasWidth / 2, 40);
 
 		// Reset text properties
 		ctx.textAlign = "left";

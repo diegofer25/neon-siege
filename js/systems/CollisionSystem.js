@@ -24,21 +24,37 @@ export class CollisionSystem {
         this._checkEnemyProjectilePlayerCollisions();
     }
 
+    _removeProjectileAt(index) {
+        const projectile = this.game.projectiles[index];
+        if (!projectile) return;
+
+        this.game.projectiles.splice(index, 1);
+        if (projectile._fromPool) {
+            this.game.projectilePool.release(projectile);
+        }
+    }
+
     /**
      * Handle projectile vs enemy collisions with piercing and explosive logic.
      * @private
      */
     _checkProjectileEnemyCollisions() {
-        this.game.projectiles.forEach((projectile, pIndex) => {
-            // Skip enemy projectiles
-            if (projectile.isEnemyProjectile) return;
-            
-            this.game.enemies.forEach((enemy) => {
+        for (let pIndex = this.game.projectiles.length - 1; pIndex >= 0; pIndex--) {
+            const projectile = this.game.projectiles[pIndex];
+            if (!projectile || projectile.isEnemyProjectile) continue;
+
+            for (let eIndex = this.game.enemies.length - 1; eIndex >= 0; eIndex--) {
+                const enemy = this.game.enemies[eIndex];
+                if (!enemy) continue;
+
                 if (MathUtils.circleCollision(projectile, enemy)) {
-                    this._handleProjectileHit(projectile, enemy, pIndex);
+                    const projectileRemoved = this._handleProjectileHit(projectile, enemy, pIndex);
+                    if (projectileRemoved) {
+                        break;
+                    }
                 }
-            });
-        });
+            }
+        }
     }
 
     /**
@@ -46,11 +62,13 @@ export class CollisionSystem {
      * @private
      */
     _checkPlayerEnemyCollisions() {
-        this.game.enemies.forEach((enemy, index) => {
+        for (let index = this.game.enemies.length - 1; index >= 0; index--) {
+            const enemy = this.game.enemies[index];
+            if (!enemy) continue;
             if (MathUtils.circleCollision(enemy, this.game.player)) {
                 this._handlePlayerHit(enemy, index);
             }
-        });
+        }
     }
 
     /**
@@ -84,11 +102,14 @@ export class CollisionSystem {
         if (projectile.explosive) {
             projectile.explode(this.game);
         }
-        
-        // Handle piercing projectiles
+
+        // Non-piercing projectiles are consumed on first hit
         if (!projectile.piercing) {
-            this.game.projectiles.splice(projectileIndex, 1);
+            this._removeProjectileAt(projectileIndex);
+            return true;
         }
+
+        return false;
     }
 
     /**
@@ -125,10 +146,12 @@ export class CollisionSystem {
      */
     _showDamageText(enemy, damage) {
         const rect = this.game.canvas.getBoundingClientRect();
+        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
+        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
        createFloatingText(
             `-${damage.toFixed(1)}`,
-            enemy.x * (rect.width / this.game.canvas.width) + rect.left,
-            enemy.y * (rect.height / this.game.canvas.height) + rect.top,
+            enemy.x * (rect.width / canvasWidth) + rect.left,
+            enemy.y * (rect.height / canvasHeight) + rect.top,
             'damage'
         );
     }
@@ -140,10 +163,12 @@ export class CollisionSystem {
      */
     _showPlayerDamageText(damage) {
         const rect = this.game.canvas.getBoundingClientRect();
+        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
+        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
         createFloatingText(
             `-${damage.toFixed(1)}`,
-            this.game.player.x * (rect.width / this.game.canvas.width) + rect.left,
-            this.game.player.y * (rect.height / this.game.canvas.height) + rect.top,
+            this.game.player.x * (rect.width / canvasWidth) + rect.left,
+            this.game.player.y * (rect.height / canvasHeight) + rect.top,
             'player-damage'
         );
     }
@@ -153,14 +178,14 @@ export class CollisionSystem {
      * @private
      */
     _checkEnemyProjectilePlayerCollisions() {
-        this.game.projectiles.forEach((projectile, pIndex) => {
-            // Only check enemy projectiles
-            if (!projectile.isEnemyProjectile) return;
-            
+        for (let pIndex = this.game.projectiles.length - 1; pIndex >= 0; pIndex--) {
+            const projectile = this.game.projectiles[pIndex];
+            if (!projectile || !projectile.isEnemyProjectile) continue;
+
             if (MathUtils.circleCollision(projectile, this.game.player)) {
                 this._handleEnemyProjectileHit(projectile, pIndex);
             }
-        });
+        }
     }
     
     /**
@@ -185,6 +210,6 @@ export class CollisionSystem {
         this.game.effectsManager.createHitEffect(this.game.player.x, this.game.player.y);
         
         // Remove projectile
-        this.game.projectiles.splice(projectileIndex, 1);
+        this._removeProjectileAt(projectileIndex);
     }
 }

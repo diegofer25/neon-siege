@@ -6,7 +6,7 @@ Purpose
 
 Project overview
 - Neon Tower Defense Shooter: browser-based, vanilla JavaScript + HTML5 Canvas.
-- Static project: no bundler/build step; runs directly in the browser.
+- Static browser game served by Vite in development.
 
 Environment
 - Node.js >= 22 (enforced via package.json engines)
@@ -16,11 +16,13 @@ Environment
 
 Commands
 - Setup: npm install
-- Dev server (primary): npm run dev (live-server on http://localhost:8080 with watch for js, style.css, index.html)
+- Dev server (primary): npm run dev (Vite on http://localhost:8080)
 - Dev server (alt): npm start
+- Build: npm run build
+- Preview: npm run preview
 - Lint: npm run lint
 - Lint (auto-fix): npm run lint:fix
-- No build step: You can also open index.html directly; dev server is preferred for live reload.
+- Note: Opening index.html directly may fail due to ES modules/CORS; use the dev server.
 
 High-level architecture
 - Entry/UI shell
@@ -49,9 +51,9 @@ Common modifications (where to change things)
 - Performance debugging: append ?stats=true to the game URL when running the dev server.
 
 Project-specific guardrails for agents
-- Do not introduce a bundler or build pipeline (keep the static, no-bundler architecture).
+- Do not replace Vite or add additional bundlers/build pipelines; keep the current Vite setup.
 - Do not change the Node engine requirement; keep Node >= 22.
-- Do not alter script/link paths or loading order in index.html unless explicitly requested; the live-server flow depends on current paths.
+- Do not alter script/link paths or loading order in index.html unless explicitly requested; the Vite dev flow depends on current paths.
 - Do not add a test framework or CI/CD workflows unless requested; explicitly document if you do.
 - Prefer small, incremental changes within existing modules and patterns; reuse pooling and systems architecture.
 - Keep CSS structure under style/ intact; index.css is the aggregator.

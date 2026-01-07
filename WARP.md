@@ -7,11 +7,13 @@ Repository: Neon Tower Defense Shooter (vanilla JS + HTML5 Canvas)
 Development commands (npm)
 - Setup: npm install
 - Dev server (primary): npm run dev
-  - Serves index.html on http://localhost:8080 via live-server with watch enabled for js, style.css, index.html
+  - Serves on http://localhost:8080 via Vite (see vite.config.js)
 - Dev server (alt): npm start
+- Build: npm run build
+- Preview: npm run preview
 - Lint: npm run lint
 - Lint (auto-fix): npm run lint:fix
-- No build step: The game runs directly in the browser. You can also open index.html directly, but the dev server is recommended.
+- Note: Opening index.html directly may fail due to ES modules/CORS; use the dev server.
 
 Environment and tooling
 - Node.js >= 22 (enforced by package.json engines)
@@ -51,5 +53,5 @@ Common modification guide
 - Performance debugging: Launch dev server and navigate to http://localhost:8080/?stats=true to view FPS and frame timing.
 
 Notes
-- This is a static, no-bundler project. Live reloading is provided by live-server. Keep file paths and script tags consistent with index.html.
+- This is a static browser game served by Vite in development. Keep file paths and script tags consistent with index.html.
 

@@ -82,6 +82,13 @@ function init() {
     
     // Handle dynamic window resizing
     window.addEventListener('resize', handleResize);
+
+    // Avoid massive delta jumps when returning to a backgrounded tab
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            lastTime = performance.now();
+        }
+    });
     
     // Initialize audio system
     loadAudio();
@@ -146,26 +153,30 @@ function setupCanvas() {
         canvasHeight = minHeight;
     }
     
-    // Apply calculated dimensions with proper rounding
-    canvas.width = Math.round(canvasWidth);
-    canvas.height = Math.round(canvasHeight);
-    canvas.style.width = Math.round(canvasWidth) + 'px';
-    canvas.style.height = Math.round(canvasHeight) + 'px';
-    
-    // Handle high DPI displays for crisp rendering
+    // Store logical dimensions (CSS pixels) for gameplay coordinates
+    const logicalWidth = Math.round(canvasWidth);
+    const logicalHeight = Math.round(canvasHeight);
+    canvas.logicalWidth = logicalWidth;
+    canvas.logicalHeight = logicalHeight;
+
+    // Apply logical size via CSS
+    canvas.style.width = logicalWidth + 'px';
+    canvas.style.height = logicalHeight + 'px';
+
+    // Handle high DPI displays by resizing the backing store
     const dpr = window.devicePixelRatio || 1;
     const ctx = canvas.getContext('2d');
-    
-    // Scale canvas backing store for high DPI with proper rounding
-    canvas.width = Math.round(canvasWidth * dpr);
-    canvas.height = Math.round(canvasHeight * dpr);
-    ctx.scale(dpr, dpr);
-    canvas.style.width = Math.round(canvasWidth) + 'px';
-    canvas.style.height = Math.round(canvasHeight) + 'px';
-    
-    // Store logical dimensions for easy access
-    canvas.logicalWidth = Math.round(canvasWidth);
-    canvas.logicalHeight = Math.round(canvasHeight);
+    canvas.width = Math.round(logicalWidth * dpr);
+    canvas.height = Math.round(logicalHeight * dpr);
+
+    // Reset transform so repeated resizes don't compound scaling
+    if (typeof ctx.setTransform === 'function') {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    } else {
+        // Fallback for very old browsers
+        ctx.resetTransform?.();
+        ctx.scale(dpr, dpr);
+    }
 }
 
 /**
@@ -368,7 +379,8 @@ function gameLoop(timestamp = 0) {
     }
     
     // Calculate frame delta time for smooth animation
-    const delta = timestamp - lastTime;
+    const rawDelta = timestamp - lastTime;
+    const delta = Math.max(0, Math.min(rawDelta, 100));
     lastTime = timestamp;
     
     // Update performance manager with current game state
@@ -446,8 +458,8 @@ function updateHUD() {
         }
     }
     
-    // Update currency display (rounded to whole number)
-    document.getElementById('coinAmount').textContent = Math.round(game.player.coins).toString();
+    // Update currency display (use one decimal for consistency with fractional rewards)
+    document.getElementById('coinAmount').textContent = game.player.coins.toFixed(1);
     
     // Update wave progress with enemy count using wave manager data
     const waveProgress = game.getWaveProgress();

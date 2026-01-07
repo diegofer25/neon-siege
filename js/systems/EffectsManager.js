@@ -179,9 +179,11 @@ export class EffectsManager {
         
         // Convert canvas coordinates to screen coordinates
         const rect = this.game.canvas.getBoundingClientRect();
-        const screenX = (x / this.game.canvas.width) * rect.width + rect.left;
-        const screenY = (y / this.game.canvas.height) * rect.height + rect.top;
-        const screenRadius = (radius / this.game.canvas.width) * rect.width;
+        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
+        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
+        const screenX = (x / canvasWidth) * rect.width + rect.left;
+        const screenY = (y / canvasHeight) * rect.height + rect.top;
+        const screenRadius = (radius / canvasWidth) * rect.width;
         
         // Position and size the ring
         const ringSize = screenRadius * 2;

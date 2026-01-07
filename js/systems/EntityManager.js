@@ -63,13 +63,16 @@ export class EntityManager {
     cleanupProjectiles() {
         // Skip cleanup if game is not playing
         if (this.game.gameState !== 'playing') return;
-        
-        this.game.projectiles = this.game.projectiles.filter(projectile => {
+
+        for (let i = this.game.projectiles.length - 1; i >= 0; i--) {
+            const projectile = this.game.projectiles[i];
             if (projectile.isOffScreen(this.game.canvas)) {
-                return false;
+                this.game.projectiles.splice(i, 1);
+                if (projectile._fromPool) {
+                    this.game.projectilePool.release(projectile);
+                }
             }
-            return true;
-        });
+        }
     }
 
     /**
@@ -88,13 +91,14 @@ export class EntityManager {
      * @param {number} delta - Time elapsed since last frame
      */
     _updateEnemies(delta) {
-        this.game.enemies.forEach((enemy, index) => {
+        for (let index = this.game.enemies.length - 1; index >= 0; index--) {
+            const enemy = this.game.enemies[index];
             enemy.update(delta, this.game.player, this.game);
-            
+
             if (enemy.health <= 0) {
                 this.onEnemyDeath(enemy, index);
             }
-        });
+        }
     }
 
     /**
@@ -103,13 +107,17 @@ export class EntityManager {
      * @param {number} delta - Time elapsed since last frame
      */
     _updateProjectiles(delta) {
-        this.game.projectiles.forEach((projectile, index) => {
+        for (let index = this.game.projectiles.length - 1; index >= 0; index--) {
+            const projectile = this.game.projectiles[index];
             projectile.update(delta);
-            
+
             if (projectile.isOffScreen(this.game.canvas)) {
                 this.game.projectiles.splice(index, 1);
+                if (projectile._fromPool) {
+                    this.game.projectilePool.release(projectile);
+                }
             }
-        });
+        }
     }
 
     /**

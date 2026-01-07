@@ -33,6 +33,8 @@ export class Shop {
         
         /** @type {Function|null} Callback function executed on power-up purchase */
         this.currentOnPurchase = null;
+
+        this._tabsInitialized = false;
     }
 
     /**
@@ -171,10 +173,10 @@ export class Shop {
         this.currentOnPurchase = onPurchase;
         
         // Update modal title to show current coin count
-        modal.querySelector('h2').textContent = `Power-Up Shop (Coins: ${Math.round(coins)})`;
+        modal.querySelector('h2').textContent = `Power-Up Shop (Coins: ${coins.toFixed(1)})`;
         
         // Initialize tab system and event handlers
-        this.setupTabs(player, coins, onPurchase);
+        this.setupTabs();
         this.setupCloseButton(onContinue);
         
         // Display the current tab content
@@ -197,7 +199,7 @@ export class Shop {
         if (this.currentPlayer && this.currentOnPurchase) {
             const modal = document.getElementById('powerUpModal');
             // Update coin display
-            modal.querySelector('h2').textContent = `Power-Up Shop (Coins: ${this.currentPlayer.coins})`;
+            modal.querySelector('h2').textContent = `Power-Up Shop (Coins: ${this.currentPlayer.coins.toFixed(1)})`;
             // Refresh current tab content
             this.showTab(this.currentTab, this.currentPlayer, this.currentPlayer.coins, this.currentOnPurchase);
         }
@@ -212,8 +214,14 @@ export class Shop {
      * @param {number} coins - Player's available coins
      * @param {Function} onPurchase - Purchase callback function
      */
-    setupTabs(player, coins, onPurchase) {
+    setupTabs() {
         const tabButtons = document.querySelectorAll('.tab-button');
+
+        if (this._tabsInitialized) {
+            return;
+        }
+
+        this._tabsInitialized = true;
         
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -224,9 +232,11 @@ export class Shop {
                 // Switch to selected tab
                 const tabName = button.getAttribute('data-tab');
                 this.currentTab = tabName;
-                
-                // Load tab content
-                this.showTab(tabName, player, coins, onPurchase);
+
+                // Load tab content using current state
+                if (this.currentPlayer && this.currentOnPurchase) {
+                    this.showTab(tabName, this.currentPlayer, this.currentPlayer.coins, this.currentOnPurchase);
+                }
             });
         });
     }

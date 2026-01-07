@@ -7,7 +7,7 @@ A browser-based 2D tower defense game with infinite wave survival, auto-targetin
 ### 🎯 Core Gameplay
 - **Intelligent Auto-targeting System**: Advanced player rotation and targeting AI with customizable turn speed
 - **Balanced Difficulty Curve**: Slower initial firing with strategic enemy scaling that increases challenge over time
-- **Infinite Wave Survival**: Progressively challenging enemy waves with 25% health increase per wave
+- **Infinite Wave Survival**: Progressively challenging enemy waves with ~9% health scaling per wave (plus speed/damage scaling)
 - **Power-up Shop**: 15+ upgrades across offense, defense, and utility categories
 - **Stackable Upgrades**: Build your perfect loadout with combinable power-ups
 - **Smart Enemy AI**: Enemies with varied movement patterns and behaviors
@@ -58,7 +58,7 @@ npm run preview
 ```
 
 ### Manual Setup
-Simply open `index.html` in any modern web browser. For best experience, serve from a local HTTP server:
+For best experience, serve from a local HTTP server (opening `index.html` directly may fail due to ES module/CORS restrictions):
 
 ```bash
 # Using Python 3
@@ -112,23 +112,29 @@ npx live-server --port=8080
 
 ### 👾 Enemy Types
 
+Enemy spawn mix by wave range:
+- Waves 1–10: Basic only
+- Waves 11–20: Basic ~80%, Fast ~20%
+- Waves 21–30: Basic ~70%, Fast ~15%, Tank ~15%
+- Waves 31+: Basic ~60%, Fast ~10%, Tank ~10%, Splitter ~20%
+
 #### Basic Enemy (Cyan)
 - **Appearance**: Waves 1-10
 - **Characteristics**: Balanced stats, hexagonal shape
 - **Strategy**: Standard threat, good for learning the game
 
 #### Fast Enemy (Magenta) 
-- **Appearance**: Waves 11+ (40% spawn rate)
+- **Appearance**: Waves 11+
 - **Characteristics**: 50% health, 200% speed, 150% damage
 - **Strategy**: Glass cannons that rush quickly but die easily
 
 #### Tank Enemy (Yellow)
-- **Appearance**: Waves 21+ (10-20% spawn rate)
+- **Appearance**: Waves 21+
 - **Characteristics**: 300% health, 50% speed, 250% damage
 - **Strategy**: Slow but heavily armored, requires sustained fire
 
 #### 🆕 Splitter Enemy (Orange)
-- **Appearance**: Waves 21+ (10-15% spawn rate)
+- **Appearance**: Waves 31+ (20% spawn rate)
 - **Characteristics**: 200% health, 80% speed, 180% damage
 - **Special Ability**: Splits into 2-3 smaller enemies when destroyed
 - **Generations**: Can split up to 3 times (Original → Split → Mini-Split)
@@ -138,6 +144,7 @@ npx live-server --port=8080
 #### Boss Enemies
 - **Classic Boss (Magenta)**: Waves 10, 30, 50... - Projectile bursts and charging attacks
 - **🆕 Shield Boss (Cyan)**: Waves 20, 40, 60... - Regenerating shields and laser attacks
+- Boss waves are boss-only (no regular enemy spawns)
 
 ## 🏗️ Architecture
 
@@ -190,9 +197,9 @@ WAVE: {
     BASE_ENEMY_COUNT: 4,          // Enemies in wave 1
     ENEMY_COUNT_SCALING: 2,       // Additional enemies per wave
     SCALING_FACTORS: {
-        HEALTH: 1.15,             // 15% health increase per wave
-        SPEED: 1.1,               // 10% speed increase per wave
-        DAMAGE: 1.15              // 15% damage increase per wave
+        HEALTH: 1.09,             // 9% health increase per wave
+        SPEED: 1.03,              // 3% speed increase per wave
+        DAMAGE: 1.06              // 6% damage increase per wave
     }
 }
 ```

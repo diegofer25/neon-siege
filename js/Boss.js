@@ -18,6 +18,10 @@ export class Boss extends Enemy {
         this.currentAttack = null;
         this.minionSpawnTimer = 0;
         this.minionSpawnCooldown = GameConfig.BOSS.MINION_SPAWN_COOLDOWN;
+
+        this.isCharging = false;
+        this.chargeDuration = 500;
+        this.chargeTimeRemaining = 0;
     }
 
     update(delta, player) {
@@ -26,20 +30,33 @@ export class Boss extends Enemy {
         const dy = player.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
+        const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
+            ? this.game.modifierState.enemySpeedMultiplier
+            : 1;
+
         // Store previous position for velocity calculation
         this.prevX = this.x;
         this.prevY = this.y;
 
-        if (distance > 200) { // Keep some distance
+        const deltaSeconds = delta / 1000;
+        if (this.isCharging) {
+            this.x += this.vx * deltaSeconds;
+            this.y += this.vy * deltaSeconds;
+            this.chargeTimeRemaining -= delta;
+            if (this.chargeTimeRemaining <= 0) {
+                this.isCharging = false;
+                this.vx = 0;
+                this.vy = 0;
+            }
+        } else if (distance > 200) { // Keep some distance
             const normalizedDx = dx / distance;
             const normalizedDy = dy / distance;
-            const actualSpeed = this.speed * (delta / 1000);
+            const actualSpeed = this.speed * speedMultiplier * deltaSeconds;
             this.x += normalizedDx * actualSpeed;
             this.y += normalizedDy * actualSpeed;
         }
         
         // Calculate velocity in pixels per second for predictive targeting
-        const deltaSeconds = delta / 1000;
         if (deltaSeconds > 0) {
             this.vx = (this.x - this.prevX) / deltaSeconds;
             this.vy = (this.y - this.prevY) / deltaSeconds;
@@ -96,7 +113,10 @@ export class Boss extends Enemy {
     }
 
     charge(player) {
-        const chargeSpeed = this.speed * 3;
+        const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
+            ? this.game.modifierState.enemySpeedMultiplier
+            : 1;
+        const chargeSpeed = this.speed * 3 * speedMultiplier;
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -105,11 +125,8 @@ export class Boss extends Enemy {
             this.vy = (dy / distance) * chargeSpeed;
         }
 
-
-        setTimeout(() => {
-            this.vx = 0;
-            this.vy = 0;
-        }, 500);
+        this.isCharging = true;
+        this.chargeTimeRemaining = this.chargeDuration;
     }
 
     spawnMinions() {
@@ -146,9 +163,10 @@ export class Boss extends Enemy {
     }
 
     drawBossHealthBar(ctx) {
-        const barWidth = this.game.canvas.width * 0.6;
+        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
+        const barWidth = canvasWidth * 0.6;
         const barHeight = 20;
-        const barX = (this.game.canvas.width - barWidth) / 2;
+        const barX = (canvasWidth - barWidth) / 2;
         const barY = 20;
         const healthPercent = this.health / this.maxHealth;
 
@@ -164,7 +182,7 @@ export class Boss extends Enemy {
         ctx.fillStyle = '#fff';
         ctx.font = '14px "Press Start 2P", monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('BOSS', this.game.canvas.width / 2, barY + 15);
+        ctx.fillText('BOSS', canvasWidth / 2, barY + 15);
     }
 
     static createBoss(game) {
@@ -172,9 +190,12 @@ export class Boss extends Enemy {
         const health = GameConfig.BOSS.BASE_HEALTH * (1 + (wave / 10) * 0.5);
         const damage = GameConfig.BOSS.BASE_DAMAGE * (1 + (wave / 10) * 0.2);
 
-        const centerX = game.canvas.width / 2;
-        const centerY = game.canvas.height / 2;
-        const spawnRadius = Math.max(game.canvas.width, game.canvas.height) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+        const canvasWidth = game.canvas.logicalWidth || game.canvas.width;
+        const canvasHeight = game.canvas.logicalHeight || game.canvas.height;
+
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+        const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
         const angle = Math.random() * Math.PI * 2;
         const x = centerX + Math.cos(angle) * spawnRadius;
         const y = centerY + Math.sin(angle) * spawnRadius;
@@ -219,6 +240,24 @@ export class ShieldBoss extends Boss {
         this.isChargingLaser = false;
         this.shieldBurstCooldown = 8000; // 8 seconds
         this.shieldBurstTimer = 0;
+
+        this._scheduledTimeouts = new Set();
+    }
+
+    _schedule(fn, delay) {
+        const id = setTimeout(() => {
+            this._scheduledTimeouts.delete(id);
+            fn();
+        }, delay);
+        this._scheduledTimeouts.add(id);
+        return id;
+    }
+
+    _clearScheduledAttacks() {
+        for (const id of this._scheduledTimeouts) {
+            clearTimeout(id);
+        }
+        this._scheduledTimeouts.clear();
     }
     
     update(delta, player) {
@@ -268,8 +307,10 @@ export class ShieldBoss extends Boss {
      * @param {number} delta - Time since last update in milliseconds
      */
     circularMovement(delta) {
-        const centerX = this.game.canvas.width / 2;
-        const centerY = this.game.canvas.height / 2;
+        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
+        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
         const orbitRadius = 250;
         
         // Store previous position
@@ -278,7 +319,11 @@ export class ShieldBoss extends Boss {
         
         // Circular movement around center
         const time = Date.now() / 1000;
-        const speed = this.vulnerabilityPhase ? 0.5 : 0.3; // Move faster when vulnerable
+        const baseSpeed = this.vulnerabilityPhase ? 0.5 : 0.3; // Move faster when vulnerable
+        const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
+            ? this.game.modifierState.enemySpeedMultiplier
+            : 1;
+        const speed = baseSpeed * speedMultiplier;
         
         this.x = centerX + Math.cos(time * speed) * orbitRadius;
         this.y = centerY + Math.sin(time * speed) * orbitRadius;
@@ -394,7 +439,8 @@ export class ShieldBoss extends Boss {
         const projectilesPerRing = 12;
         
         for (let ring = 0; ring < rings; ring++) {
-            setTimeout(() => {
+            this._schedule(() => {
+                if (this.health <= 0 || this.game.gameState !== 'playing') return;
                 for (let i = 0; i < projectilesPerRing; i++) {
                     const angle = (Math.PI * 2 / projectilesPerRing) * i;
                     const projectile = new Projectile(
@@ -430,7 +476,8 @@ export class ShieldBoss extends Boss {
             const x = this.x + Math.cos(angle) * distance;
             const y = this.y + Math.sin(angle) * distance;
             
-            setTimeout(() => {
+            this._schedule(() => {
+                if (this.health <= 0 || this.game.gameState !== 'playing') return;
                 const projectile = new Projectile(x, y, angle, 20);
                 projectile.isEnemyProjectile = true;
                 projectile.speed = 0; // Stationary laser segments
@@ -444,6 +491,7 @@ export class ShieldBoss extends Boss {
     }
     
     takeDamage(damage, projectile = null) {
+        damage *= this.game?.getEnemyDamageTakenMultiplier?.() || 1;
         this.lastDamageTime = Date.now();
         
         // Check for Overcharge Burst that ignores shields
@@ -478,6 +526,10 @@ export class ShieldBoss extends Boss {
         // Remaining damage goes to health
         if (damage > 0) {
             this.health = Math.max(0, this.health - damage);
+        }
+
+        if (this.health <= 0) {
+            this._clearScheduledAttacks();
         }
     }
     
@@ -575,9 +627,10 @@ export class ShieldBoss extends Boss {
     }
     
     drawShieldBossHealthBar(ctx) {
-        const barWidth = this.game.canvas.width * 0.6;
+        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
+        const barWidth = canvasWidth * 0.6;
         const barHeight = 20;
-        const barX = (this.game.canvas.width - barWidth) / 2;
+        const barX = (canvasWidth - barWidth) / 2;
         const barY = 20;
         const healthPercent = this.health / this.maxHealth;
         const shieldPercent = this.shield / this.maxShield;
@@ -606,6 +659,6 @@ export class ShieldBoss extends Boss {
         ctx.font = '14px "Press Start 2P", monospace';
         ctx.textAlign = 'center';
         const bossText = this.vulnerabilityPhase ? 'SHIELD BOSS - VULNERABLE!' : 'SHIELD BOSS';
-        ctx.fillText(bossText, this.game.canvas.width / 2, barY + 15);
+        ctx.fillText(bossText, canvasWidth / 2, barY + 15);
     }
 }

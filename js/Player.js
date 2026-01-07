@@ -517,8 +517,10 @@ export class Player {
         const targetingMargin = 10; // Don't target enemies too close to edge
         const minX = targetingMargin;
         const minY = targetingMargin;
-        const maxX = canvas.width - targetingMargin;
-        const maxY = canvas.height - targetingMargin;
+        const canvasWidth = canvas.logicalWidth || canvas.width;
+        const canvasHeight = canvas.logicalHeight || canvas.height;
+        const maxX = canvasWidth - targetingMargin;
+        const maxY = canvasHeight - targetingMargin;
         
         let bestTarget = null;
         let bestPriority = Infinity;
@@ -947,13 +949,7 @@ export class Player {
             if (distance <= range) {
                 // Apply burn damage as percentage of enemy's max health
                 const burnDamage = enemy.maxHealth * damagePerSecond * deltaSeconds;
-                enemy.health -= burnDamage;
-                
-                // Ensure enemy doesn't go below 0 health
-                if (enemy.health <= 0) {
-                    enemy.health = 0;
-                    enemy.dying = true;
-                }
+                enemy.takeDamage(burnDamage);
             }
         });
     }
@@ -1043,7 +1039,7 @@ export class Player {
      */
     onEnemyKill(enemy) {
         if (this.hasLifeSteal) {
-            const healAmount = enemy.maxHealth * 0.01; // Heal 1% of enemy's max health
+            const healAmount = enemy.maxHealth * GameConfig.PLAYER.LIFE_STEAL_PERCENTAGE;
             this.heal(healAmount);
         }
     }
@@ -1101,10 +1097,12 @@ export class Player {
         // Create floating text effect if UI system is available
         const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('gameCanvas'));
         const rect = canvas.getBoundingClientRect();
+        const canvasWidth = canvas.logicalWidth || canvas.width;
+        const canvasHeight = canvas.logicalHeight || canvas.height;
         createFloatingText(
             `+${amount.toFixed(1)} coins`,
-            this.x * (rect.width / canvas.width) + rect.left,
-            (this.y - 40) * (rect.height / canvas.height) + rect.top,
+            this.x * (rect.width / canvasWidth) + rect.left,
+            (this.y - 40) * (rect.height / canvasHeight) + rect.top,
             'coins'
         );
     }
