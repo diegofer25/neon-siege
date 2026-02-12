@@ -11,6 +11,12 @@ declare global {
         dataLayer?: Array<Record<string, unknown>>;
         gtag?: (...args: unknown[]) => void;
         neonRewardedAdapter?: RewardedAdapterLike;
+        __NEON_TRACE_ENABLED__?: boolean;
+    }
+
+    interface HTMLCanvasElement {
+        logicalWidth?: number;
+        logicalHeight?: number;
     }
 }
 

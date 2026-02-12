@@ -117,8 +117,9 @@ export class Enemy {
     /**
      * Applies damage to the enemy and triggers visual feedback.
      * @param {number} amount - Amount of damage to deal
+     * @param {unknown} [source] - Optional damage source metadata
      */
-    takeDamage(amount) {
+    takeDamage(amount, source = null) {
         const damageTakenMultiplier = this.game?.getEnemyDamageTakenMultiplier?.() || 1;
         const healthBefore = this.health;
         const appliedDamage = amount * damageTakenMultiplier;
@@ -126,6 +127,7 @@ export class Enemy {
         this.game?.trace?.('enemy.damage', {
             enemyId: this.id,
             amount,
+            sourceType: source?.constructor?.name || typeof source,
             damageTakenMultiplier,
             appliedDamage,
             healthBefore,
@@ -387,8 +389,10 @@ export class SplitterEnemy extends Enemy {
     /**
      * Override takeDamage to handle splitting on death.
      * @param {number} amount - Amount of damage to deal
+     * @param {unknown} [source] - Optional damage source metadata
      */
-    takeDamage(amount) {
+    takeDamage(amount, source = null) {
+        void source;
         const damageTakenMultiplier = this.game?.getEnemyDamageTakenMultiplier?.() || 1;
         this.health -= amount * damageTakenMultiplier;
         
