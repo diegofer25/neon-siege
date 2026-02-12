@@ -25,6 +25,11 @@ let showPerformanceStats = false;
 /** @type {number|null} Active animation frame request id */
 let animationFrameId = null;
 
+const APP_RUNTIME_KEY = '__NEON_TD_RUNTIME__';
+const appRuntime = window[APP_RUNTIME_KEY] || (window[APP_RUNTIME_KEY] = {
+    initialized: false
+});
+
 /**
  * Audio system configuration and state
  * @type {Object}
@@ -74,6 +79,11 @@ export const input = {
  * Sets up canvas, game instance, input handlers, audio, and UI
  */
 function init() {
+    if (appRuntime.initialized) {
+        return;
+    }
+    appRuntime.initialized = true;
+
     const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('gameCanvas'));
     const ctx = canvas.getContext('2d');
     input.canvas = canvas;
@@ -653,6 +663,17 @@ function showGameOver() {
  * @param {string} className - CSS class for styling (default: 'damage')
  */
 export function createFloatingText(text, x, y, className = 'damage') {
+    if (window.__NEON_TRACE_ENABLED__) {
+        const stack = new Error().stack?.split('\n').slice(2, 6).map(line => line.trim());
+        console.log('[TRACE floatingText.create]', {
+            text,
+            className,
+            x: Math.round(x),
+            y: Math.round(y),
+            stack
+        });
+    }
+
     const textElement = document.createElement('div');
     textElement.className = `floating-text ${className}`;
     textElement.textContent = text;
@@ -687,7 +708,11 @@ export function screenFlash() {
 }
 
 // Initialize application when DOM content is fully loaded
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+} else {
+    setTimeout(init, 0);
+}
 
 window.addEventListener('beforeunload', () => {
     telemetry.endSession('window_unload');

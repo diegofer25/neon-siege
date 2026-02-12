@@ -43,6 +43,7 @@ export class Game {
 		this.canvas = canvas;
 		this.ctx = ctx;
 		this.gameState = Game.STATES.MENU;
+		this._initializeDebugTrace();
 
 		this._initializeEntities();
 		this._initializeManagers();
@@ -51,6 +52,27 @@ export class Game {
 		this._initializeShop();
 
 		this.init();
+	}
+
+	_initializeDebugTrace() {
+		const params = new URLSearchParams(window.location.search);
+		this.traceEnabled = params.get("trace") === "true";
+		this._traceSeq = 0;
+		this._traceFrame = 0;
+		window.__NEON_TRACE_ENABLED__ = this.traceEnabled;
+		if (this.traceEnabled) {
+			console.info("[TRACE] enabled (?trace=true)");
+		}
+	}
+
+	trace(event, payload = {}) {
+		if (!this.traceEnabled) return;
+		this._traceSeq += 1;
+		console.log(`[TRACE #${this._traceSeq}] ${event}`, {
+			frame: this._traceFrame,
+			ts: Math.round(performance.now()),
+			...payload,
+		});
 	}
 
 	/**
@@ -281,6 +303,7 @@ export class Game {
 	 */
 	update(delta, input) {
 		if (this.gameState !== "playing") return;
+		this._traceFrame += 1;
 
 		// PerformanceManager is updated by the outer game loop in js/main.js
 		const avgFps = this.performanceManager.getAverageFps();
@@ -300,6 +323,11 @@ export class Game {
 		// Check game over
 		if (this.player.hp <= 0) {
 			this.gameState = "gameover";
+			this.trace("gameover", {
+				wave: this.wave,
+				score: this.score,
+				coins: this.player.coins,
+			});
 			if (!this._gameOverTracked) {
 				this._gameOverTracked = true;
 				telemetry.track("game_over", {
@@ -319,12 +347,26 @@ export class Game {
 	 * Handle wave completion logic and transition to shop.
 	 */
 	completeWave() {
+		this.trace("wave.complete", {
+			wave: this.wave,
+			enemiesRemaining: this.enemies.length,
+			enemiesKilled: this.waveManager.enemiesKilled,
+			enemiesSpawned: this.waveManager.enemiesSpawned,
+			enemiesToSpawn: this.waveManager.enemiesToSpawn,
+		});
 		this.gameState = "powerup";
 		playSFX("wave_complete");
 
 		// Calculate and award coins
 		const totalCoins = this.waveManager.calculateWaveReward();
+		const coinsBefore = this.player.coins;
 		this.player.addCoins(totalCoins);
+		this.trace("coins.award.waveComplete", {
+			wave: this.wave,
+			amount: totalCoins,
+			coinsBefore,
+			coinsAfter: this.player.coins,
+		});
 		this.progressionManager.recordWaveCompletion(this.wave, this.waveManager.isBossWave);
 
 		telemetry.track("wave_complete", {
@@ -408,7 +450,14 @@ export class Game {
 			"between_waves_coin_boost",
 			{ wave: this.wave, proposedBonus: bonus },
 			() => {
+				const coinsBefore = this.player.coins;
 				this.player.addCoins(bonus);
+				this.trace("coins.award.rewarded", {
+					wave: this.wave,
+					amount: bonus,
+					coinsBefore,
+					coinsAfter: this.player.coins,
+				});
 				telemetry.track("rewarded_bonus_applied", {
 					placement: "between_waves_coin_boost",
 					wave: this.wave,

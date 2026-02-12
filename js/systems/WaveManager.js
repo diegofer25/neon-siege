@@ -223,11 +223,30 @@ export class WaveManager {
      * @param {number} delta - Time elapsed since last frame
      */
     _checkWaveCompletion(delta) {
-        if (this.isWaveComplete() && !this.waveComplete) {
+        const waveCompleteNow = this.isWaveComplete();
+        if (this.game.traceEnabled && waveCompleteNow && !this.waveComplete) {
+            this.game.trace('wave.complete.check.passed', {
+                wave: this.currentWave,
+                enemiesToSpawn: this.enemiesToSpawn,
+                enemiesOnField: this.game.enemies.length,
+                enemiesSpawned: this.enemiesSpawned,
+                enemiesKilled: this.enemiesKilled,
+                waveCompletionTimer: this.waveCompletionTimer
+            });
+        }
+
+        if (waveCompleteNow && !this.waveComplete) {
             this.waveCompletionTimer += delta;
             
             if (this.waveCompletionTimer >= 1000) { // 1 second delay
                 this.waveComplete = true;
+                this.game.trace('wave.complete.triggered', {
+                    wave: this.currentWave,
+                    enemiesToSpawn: this.enemiesToSpawn,
+                    enemiesOnField: this.game.enemies.length,
+                    enemiesSpawned: this.enemiesSpawned,
+                    enemiesKilled: this.enemiesKilled
+                });
                 this.game.completeWave();
             }
         }

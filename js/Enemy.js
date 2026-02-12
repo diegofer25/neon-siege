@@ -120,7 +120,17 @@ export class Enemy {
      */
     takeDamage(amount) {
         const damageTakenMultiplier = this.game?.getEnemyDamageTakenMultiplier?.() || 1;
-        this.health -= amount * damageTakenMultiplier;
+        const healthBefore = this.health;
+        const appliedDamage = amount * damageTakenMultiplier;
+        this.health -= appliedDamage;
+        this.game?.trace?.('enemy.damage', {
+            enemyId: this.id,
+            amount,
+            damageTakenMultiplier,
+            appliedDamage,
+            healthBefore,
+            healthAfter: this.health
+        });
         
         // Trigger white flash effect when hit
         this.flashTimer = 100; // Flash duration in milliseconds
@@ -129,6 +139,10 @@ export class Enemy {
         if (this.health <= 0) {
             this.dying = true;
             this.deathTimer = 0;
+            this.game?.trace?.('enemy.state.dying', {
+                enemyId: this.id,
+                health: this.health
+            });
         }
     }
     

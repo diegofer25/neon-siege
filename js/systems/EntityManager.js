@@ -35,6 +35,14 @@ export class EntityManager {
     onEnemyDeath(enemy, index) {
         // Skip enemy death processing if game is not playing
         if (this.game.gameState !== 'playing') return;
+
+        this.game.trace('enemy.death.process.start', {
+            enemyId: enemy.id,
+            enemyIndex: index,
+            enemyHealth: enemy.health,
+            enemyDying: enemy.dying,
+            enemiesBefore: this.game.enemies.length
+        });
         
         // Create visual explosion effect
         this.game.effectsManager.createExplosion(enemy.x, enemy.y, 10);
@@ -46,12 +54,26 @@ export class EntityManager {
         
         // Calculate and award coin reward
         const coinReward = this._calculateCoinReward();
+        const coinsBefore = this.game.player.coins;
         this.game.player.addCoins(coinReward);
+        this.game.trace('coins.award.enemyKill', {
+            enemyId: enemy.id,
+            amount: coinReward,
+            coinsBefore,
+            coinsAfter: this.game.player.coins
+        });
         
         // Remove enemy and update counters
         this.game.enemies.splice(index, 1);
         this.game.waveManager.onEnemyKilled();
         this.game.score += 10;
+        this.game.trace('enemy.death.process.end', {
+            enemyId: enemy.id,
+            enemyIndex: index,
+            enemiesAfter: this.game.enemies.length,
+            enemiesKilled: this.game.waveManager.enemiesKilled,
+            score: this.game.score
+        });
         
         // Audio feedback
         if (enemy.isBoss) {
@@ -101,6 +123,12 @@ export class EntityManager {
             enemy.update(delta, this.game.player, this.game);
 
             if (enemy.health <= 0) {
+                this.game.trace('enemy.death.detected', {
+                    enemyId: enemy.id,
+                    enemyIndex: index,
+                    enemyHealth: enemy.health,
+                    enemyDying: enemy.dying
+                });
                 this.onEnemyDeath(enemy, index);
             }
         }

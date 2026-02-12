@@ -59,6 +59,15 @@ Project-specific guardrails for agents
 - Keep CSS structure under style/ intact; index.css is the aggregator.
 - If adding assets, place under assets/ (the game functions without audio; loading has graceful error handling).
 
+Debugging strategy for complex bugs
+- If the bug is unclear, intermittent, multi-system, or not fixed on the first attempt, do not keep guessing with more code changes.
+- Add targeted trace logging first, behind a URL/debug flag (for example `?trace=true`) so normal gameplay remains clean.
+- Instrument the full event chain end-to-end (example: collision -> damage -> death -> rewards -> wave state), including entity IDs, frame number, and before/after values.
+- Log where UI effects are created (floating text, HUD updates) and include short stack traces when useful to find duplicate emitters.
+- Prefer low-noise, structured logs with consistent event names (for example `hit.enemy`, `enemy.death.process`, `coins.award`).
+- Ask the user to reproduce once and share logs; then patch only after evidence identifies the root cause.
+- After the issue is resolved, keep logs gated by the debug flag or remove temporary traces if no longer needed.
+
 Notes
 - This repository is optimized for quick iteration with live-server and object pooling; favor changes that preserve 60fps responsiveness and minimal allocations.
 - For large changes touching multiple systems, describe the plan in PR description and highlight any new config flags added to js/config/GameConfig.js.

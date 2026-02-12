@@ -1,0 +1,674 @@
+[vite] connecting...
+client:618 [vite] connected.
+Game.js:64 [TRACE] enabled (?trace=true)
+main.js:305 Audio play failed: NotAllowedError: play() failed because the user didn't interact with the document first.
+Game.js:64 [TRACE] enabled (?trace=true)
+main.js:305 Audio play failed: NotAllowedError: play() failed because the user didn't interact with the document first.
+Game.js:71 [TRACE #1] hit.enemy {frame: 73, ts: 4506, enemyId: 0, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #2] enemy.damage {frame: 73, ts: 4506, enemyId: 0, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #3] hit.enemy.applied {frame: 73, ts: 4507, enemyId: 0, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 1113, y: 739, stack: Array(4)}
+ObjectPool.js:159  Attempted to release object not in active pool
+release @ ObjectPool.js:159
+_removeProjectileAt @ CollisionSystem.js:33
+_handleProjectileHit @ CollisionSystem.js:144
+_checkProjectileEnemyCollisions @ CollisionSystem.js:52
+checkAllCollisions @ CollisionSystem.js:22
+update @ Game.js:321
+gameLoop @ main.js:442
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+Game.js:71 [TRACE #4] hit.enemy {frame: 135, ts: 5447, enemyId: 0, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #5] enemy.damage {frame: 135, ts: 5447, enemyId: 0, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #6] enemy.state.dying {frame: 135, ts: 5447, enemyId: 0, health: -9}
+Game.js:71 [TRACE #7] hit.enemy.applied {frame: 135, ts: 5447, enemyId: 0, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 1086, y: 720, stack: Array(4)}
+Game.js:71 [TRACE #8] enemy.death.detected {frame: 136, ts: 5464, enemyId: 0, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #9] enemy.death.process.start {frame: 136, ts: 5464, enemyId: 0, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #10] coins.award.enemyKill {frame: 136, ts: 5464, enemyId: 0, amount: 1, coinsBefore: 0, …}
+Game.js:71 [TRACE #11] enemy.death.process.end {frame: 136, ts: 5464, enemyId: 0, enemyIndex: 0, enemiesAfter: 2, …}
+Game.js:71 [TRACE #12] hit.enemy {frame: 246, ts: 7181, enemyId: 2, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #13] enemy.damage {frame: 246, ts: 7181, enemyId: 2, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #14] hit.enemy.applied {frame: 246, ts: 7181, enemyId: 2, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 547, y: 758, stack: Array(4)}
+2ObjectPool.js:159  Attempted to release object not in active pool
+release @ ObjectPool.js:159
+(anonymous) @ EffectsManager.js:96
+updateParticles @ EffectsManager.js:90
+update @ EffectsManager.js:41
+update @ Game.js:316
+gameLoop @ main.js:442
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+Game.js:71 [TRACE #1] hit.enemy {frame: 270, ts: 7550, enemyId: 3, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #2] enemy.damage {frame: 270, ts: 7550, enemyId: 3, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #3] hit.enemy.applied {frame: 270, ts: 7550, enemyId: 3, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 447, y: 477, stack: Array(4)}
+ObjectPool.js:159  Attempted to release object not in active pool
+release @ ObjectPool.js:159
+_removeProjectileAt @ CollisionSystem.js:33
+_handleProjectileHit @ CollisionSystem.js:144
+_checkProjectileEnemyCollisions @ CollisionSystem.js:52
+checkAllCollisions @ CollisionSystem.js:22
+update @ Game.js:321
+gameLoop @ main.js:442
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+3ObjectPool.js:159  Attempted to release object not in active pool
+release @ ObjectPool.js:159
+(anonymous) @ EffectsManager.js:96
+updateParticles @ EffectsManager.js:90
+update @ EffectsManager.js:41
+update @ Game.js:316
+gameLoop @ main.js:442
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+Game.js:71 [TRACE #15] hit.enemy {frame: 307, ts: 8114, enemyId: 2, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #16] enemy.damage {frame: 307, ts: 8114, enemyId: 2, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #17] enemy.state.dying {frame: 307, ts: 8114, enemyId: 2, health: -9}
+Game.js:71 [TRACE #18] hit.enemy.applied {frame: 307, ts: 8114, enemyId: 2, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 568, y: 734, stack: Array(4)}
+ObjectPool.js:159  Attempted to release object not in active pool
+release @ ObjectPool.js:159
+_removeProjectileAt @ CollisionSystem.js:33
+_handleProjectileHit @ CollisionSystem.js:144
+_checkProjectileEnemyCollisions @ CollisionSystem.js:52
+checkAllCollisions @ CollisionSystem.js:22
+update @ Game.js:321
+gameLoop @ main.js:442
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+requestAnimationFrame
+gameLoop @ main.js:453
+Game.js:71 [TRACE #19] enemy.death.detected {frame: 308, ts: 8131, enemyId: 2, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #20] enemy.death.process.start {frame: 308, ts: 8131, enemyId: 2, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #21] coins.award.enemyKill {frame: 308, ts: 8131, enemyId: 2, amount: 1, coinsBefore: 1, …}
+Game.js:71 [TRACE #22] enemy.death.process.end {frame: 308, ts: 8131, enemyId: 2, enemyIndex: 0, enemiesAfter: 4, …}
+Game.js:71 [TRACE #4] hit.enemy {frame: 349, ts: 8772, enemyId: 1, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #5] enemy.damage {frame: 349, ts: 8772, enemyId: 1, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #6] hit.enemy.applied {frame: 349, ts: 8772, enemyId: 1, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 719, y: 758, stack: Array(4)}
+Game.js:71 [TRACE #7] hit.enemy {frame: 410, ts: 9713, enemyId: 1, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #8] enemy.damage {frame: 410, ts: 9713, enemyId: 1, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #9] enemy.state.dying {frame: 410, ts: 9713, enemyId: 1, health: -9}
+Game.js:71 [TRACE #10] hit.enemy.applied {frame: 410, ts: 9713, enemyId: 1, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 726, y: 725, stack: Array(4)}
+Game.js:71 [TRACE #11] enemy.death.detected {frame: 411, ts: 9730, enemyId: 1, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #12] enemy.death.process.start {frame: 411, ts: 9730, enemyId: 1, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #13] coins.award.enemyKill {frame: 411, ts: 9731, enemyId: 1, amount: 1, coinsBefore: 0, …}
+Game.js:71 [TRACE #14] enemy.death.process.end {frame: 411, ts: 9731, enemyId: 1, enemyIndex: 0, enemiesAfter: 5, …}
+Game.js:71 [TRACE #23] hit.enemy {frame: 425, ts: 9947, enemyId: 4, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #24] enemy.damage {frame: 425, ts: 9947, enemyId: 4, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #25] hit.enemy.applied {frame: 425, ts: 9947, enemyId: 4, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 854, y: 763, stack: Array(4)}
+Game.js:71 [TRACE #15] hit.enemy {frame: 474, ts: 10714, enemyId: 3, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #16] enemy.damage {frame: 474, ts: 10714, enemyId: 3, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #17] enemy.state.dying {frame: 474, ts: 10714, enemyId: 3, health: -9}
+Game.js:71 [TRACE #18] hit.enemy.applied {frame: 474, ts: 10714, enemyId: 3, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 558, y: 486, stack: Array(4)}
+Game.js:71 [TRACE #19] enemy.death.detected {frame: 475, ts: 10730, enemyId: 3, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #20] enemy.death.process.start {frame: 475, ts: 10730, enemyId: 3, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #21] coins.award.enemyKill {frame: 475, ts: 10730, enemyId: 3, amount: 1, coinsBefore: 1, …}
+Game.js:71 [TRACE #22] enemy.death.process.end {frame: 475, ts: 10730, enemyId: 3, enemyIndex: 0, enemiesAfter: 4, …}
+Game.js:71 [TRACE #26] hit.enemy {frame: 484, ts: 10864, enemyId: 4, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #27] enemy.damage {frame: 484, ts: 10864, enemyId: 4, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #28] enemy.state.dying {frame: 484, ts: 10864, enemyId: 4, health: -9}
+Game.js:71 [TRACE #29] hit.enemy.applied {frame: 484, ts: 10864, enemyId: 4, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 845, y: 733, stack: Array(4)}
+Game.js:71 [TRACE #30] enemy.death.detected {frame: 485, ts: 10881, enemyId: 4, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #31] enemy.death.process.start {frame: 485, ts: 10881, enemyId: 4, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #32] coins.award.enemyKill {frame: 485, ts: 10881, enemyId: 4, amount: 1, coinsBefore: 2, …}
+Game.js:71 [TRACE #33] enemy.death.process.end {frame: 485, ts: 10881, enemyId: 4, enemyIndex: 0, enemiesAfter: 3, …}
+Game.js:71 [TRACE #23] hit.enemy {frame: 537, ts: 11697, enemyId: 5, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #24] enemy.damage {frame: 537, ts: 11697, enemyId: 5, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #25] hit.enemy.applied {frame: 537, ts: 11697, enemyId: 5, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 724, y: 708, stack: Array(4)}
+Game.js:71 [TRACE #34] hit.enemy {frame: 565, ts: 12114, enemyId: 7, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #35] enemy.damage {frame: 565, ts: 12115, enemyId: 7, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #36] hit.enemy.applied {frame: 565, ts: 12115, enemyId: 7, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 887, y: 303, stack: Array(4)}
+Game.js:71 [TRACE #26] hit.enemy {frame: 598, ts: 12614, enemyId: 5, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #27] enemy.damage {frame: 598, ts: 12614, enemyId: 5, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #28] enemy.state.dying {frame: 598, ts: 12614, enemyId: 5, health: -9}
+Game.js:71 [TRACE #29] hit.enemy.applied {frame: 598, ts: 12614, enemyId: 5, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 732, y: 677, stack: Array(4)}
+Game.js:71 [TRACE #30] enemy.death.detected {frame: 599, ts: 12634, enemyId: 5, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #31] enemy.death.process.start {frame: 599, ts: 12635, enemyId: 5, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #32] coins.award.enemyKill {frame: 599, ts: 12635, enemyId: 5, amount: 1, coinsBefore: 2, …}
+Game.js:71 [TRACE #33] enemy.death.process.end {frame: 599, ts: 12635, enemyId: 5, enemyIndex: 0, enemiesAfter: 3, …}
+Game.js:71 [TRACE #37] hit.enemy {frame: 626, ts: 13049, enemyId: 7, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #38] enemy.damage {frame: 626, ts: 13049, enemyId: 7, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #39] enemy.state.dying {frame: 626, ts: 13049, enemyId: 7, health: -9}
+Game.js:71 [TRACE #40] hit.enemy.applied {frame: 626, ts: 13049, enemyId: 7, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 871, y: 331, stack: Array(4)}
+Game.js:71 [TRACE #41] enemy.death.detected {frame: 627, ts: 13067, enemyId: 7, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #42] enemy.death.process.start {frame: 627, ts: 13067, enemyId: 7, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #43] coins.award.enemyKill {frame: 627, ts: 13068, enemyId: 7, amount: 1, coinsBefore: 3, …}
+Game.js:71 [TRACE #44] enemy.death.process.end {frame: 627, ts: 13068, enemyId: 7, enemyIndex: 0, enemiesAfter: 2, …}
+Game.js:71 [TRACE #34] hit.enemy {frame: 662, ts: 13614, enemyId: 6, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #35] enemy.damage {frame: 662, ts: 13614, enemyId: 6, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #36] hit.enemy.applied {frame: 662, ts: 13614, enemyId: 6, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 605, y: 471, stack: Array(4)}
+Game.js:71 [TRACE #45] hit.enemy {frame: 691, ts: 14049, enemyId: 9, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #46] enemy.damage {frame: 691, ts: 14049, enemyId: 9, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #47] hit.enemy.applied {frame: 691, ts: 14050, enemyId: 9, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 893, y: 654, stack: Array(4)}
+Game.js:71 [TRACE #37] hit.enemy {frame: 723, ts: 14534, enemyId: 6, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #38] enemy.damage {frame: 723, ts: 14534, enemyId: 6, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #39] enemy.state.dying {frame: 723, ts: 14534, enemyId: 6, health: -9}
+Game.js:71 [TRACE #40] hit.enemy.applied {frame: 723, ts: 14534, enemyId: 6, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 637, y: 477, stack: Array(4)}
+Game.js:71 [TRACE #41] enemy.death.detected {frame: 724, ts: 14552, enemyId: 6, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #42] enemy.death.process.start {frame: 724, ts: 14552, enemyId: 6, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #43] coins.award.enemyKill {frame: 724, ts: 14552, enemyId: 6, amount: 1, coinsBefore: 3, …}
+Game.js:71 [TRACE #44] enemy.death.process.end {frame: 724, ts: 14552, enemyId: 6, enemyIndex: 0, enemiesAfter: 2, …}
+Game.js:71 [TRACE #48] hit.enemy {frame: 753, ts: 14980, enemyId: 9, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #49] enemy.damage {frame: 753, ts: 14980, enemyId: 9, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #50] enemy.state.dying {frame: 753, ts: 14980, enemyId: 9, health: -9}
+Game.js:71 [TRACE #51] hit.enemy.applied {frame: 753, ts: 14980, enemyId: 9, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 873, y: 628, stack: Array(4)}
+Game.js:71 [TRACE #52] enemy.death.detected {frame: 754, ts: 15000, enemyId: 9, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #53] enemy.death.process.start {frame: 754, ts: 15000, enemyId: 9, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #54] coins.award.enemyKill {frame: 754, ts: 15001, enemyId: 9, amount: 1, coinsBefore: 4, …}
+Game.js:71 [TRACE #55] enemy.death.process.end {frame: 754, ts: 15001, enemyId: 9, enemyIndex: 0, enemiesAfter: 1, …}
+Game.js:71 [TRACE #45] hit.enemy {frame: 788, ts: 15505, enemyId: 8, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #46] enemy.damage {frame: 788, ts: 15505, enemyId: 8, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #47] hit.enemy.applied {frame: 788, ts: 15506, enemyId: 8, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 649, y: 540, stack: Array(4)}
+Game.js:71 [TRACE #56] hit.enemy {frame: 829, ts: 16114, enemyId: 11, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #57] enemy.damage {frame: 829, ts: 16114, enemyId: 11, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #58] hit.enemy.applied {frame: 829, ts: 16114, enemyId: 11, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 741, y: 363, stack: Array(4)}
+Game.js:71 [TRACE #48] hit.enemy {frame: 850, ts: 16448, enemyId: 8, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #49] enemy.damage {frame: 850, ts: 16448, enemyId: 8, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #50] enemy.state.dying {frame: 850, ts: 16448, enemyId: 8, health: -9}
+Game.js:71 [TRACE #51] hit.enemy.applied {frame: 850, ts: 16448, enemyId: 8, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 681, y: 531, stack: Array(4)}
+Game.js:71 [TRACE #52] enemy.death.detected {frame: 851, ts: 16465, enemyId: 8, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #53] enemy.death.process.start {frame: 851, ts: 16465, enemyId: 8, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #54] coins.award.enemyKill {frame: 851, ts: 16466, enemyId: 8, amount: 1, coinsBefore: 4, …}
+Game.js:71 [TRACE #55] enemy.death.process.end {frame: 851, ts: 16466, enemyId: 8, enemyIndex: 0, enemiesAfter: 1, …}
+Game.js:71 [TRACE #59] hit.enemy {frame: 890, ts: 17021, enemyId: 11, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #60] enemy.damage {frame: 890, ts: 17021, enemyId: 11, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #61] enemy.state.dying {frame: 890, ts: 17021, enemyId: 11, health: -9}
+Game.js:71 [TRACE #62] hit.enemy.applied {frame: 890, ts: 17022, enemyId: 11, projectileIndex: 0, enemyHealthAfter: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 749, y: 393, stack: Array(4)}
+Game.js:71 [TRACE #63] enemy.death.detected {frame: 891, ts: 17042, enemyId: 11, enemyIndex: 0, enemyHealth: -9, …}
+Game.js:71 [TRACE #64] enemy.death.process.start {frame: 891, ts: 17043, enemyId: 11, enemyIndex: 0, enemyHealth: -9, …}
+main.js:658 [TRACE floatingText.create] {text: '+1.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #65] coins.award.enemyKill {frame: 891, ts: 17043, enemyId: 11, amount: 1, coinsBefore: 5, …}
+Game.js:71 [TRACE #66] enemy.death.process.end {frame: 891, ts: 17043, enemyId: 11, enemyIndex: 0, enemiesAfter: 0, …}
+Game.js:71 [TRACE #67] wave.complete.check.passed {frame: 892, ts: 17049, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #68] wave.complete.check.passed {frame: 893, ts: 17065, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #69] wave.complete.check.passed {frame: 894, ts: 17080, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #70] wave.complete.check.passed {frame: 895, ts: 17105, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #71] wave.complete.check.passed {frame: 896, ts: 17112, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #72] wave.complete.check.passed {frame: 897, ts: 17121, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #73] wave.complete.check.passed {frame: 898, ts: 17136, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #74] wave.complete.check.passed {frame: 899, ts: 17149, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #75] wave.complete.check.passed {frame: 900, ts: 17173, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #76] wave.complete.check.passed {frame: 901, ts: 17180, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #77] wave.complete.check.passed {frame: 902, ts: 17197, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #78] wave.complete.check.passed {frame: 903, ts: 17213, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #79] wave.complete.check.passed {frame: 904, ts: 17239, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #80] wave.complete.check.passed {frame: 905, ts: 17246, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #81] wave.complete.check.passed {frame: 906, ts: 17262, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #82] wave.complete.check.passed {frame: 907, ts: 17271, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #83] wave.complete.check.passed {frame: 908, ts: 17287, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #84] wave.complete.check.passed {frame: 909, ts: 17306, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #85] wave.complete.check.passed {frame: 910, ts: 17308, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #86] wave.complete.check.passed {frame: 911, ts: 17322, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #87] wave.complete.check.passed {frame: 912, ts: 17335, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #88] wave.complete.check.passed {frame: 913, ts: 17351, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #89] wave.complete.check.passed {frame: 914, ts: 17372, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #90] wave.complete.check.passed {frame: 915, ts: 17373, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #91] wave.complete.check.passed {frame: 916, ts: 17389, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #92] wave.complete.check.passed {frame: 917, ts: 17401, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #93] wave.complete.check.passed {frame: 918, ts: 17417, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #94] wave.complete.check.passed {frame: 919, ts: 17439, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #95] wave.complete.check.passed {frame: 920, ts: 17440, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #96] wave.complete.check.passed {frame: 921, ts: 17455, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #97] wave.complete.check.passed {frame: 922, ts: 17467, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #98] wave.complete.check.passed {frame: 923, ts: 17483, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #99] wave.complete.check.passed {frame: 924, ts: 17505, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #100] wave.complete.check.passed {frame: 925, ts: 17506, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #56] hit.enemy {frame: 925, ts: 17506, enemyId: 10, projectileIndex: 0, projectilePiercing: false, …}
+Game.js:71 [TRACE #57] enemy.damage {frame: 925, ts: 17506, enemyId: 10, amount: 10, damageTakenMultiplier: 1, …}
+Game.js:71 [TRACE #58] hit.enemy.applied {frame: 925, ts: 17506, enemyId: 10, projectileIndex: 0, enemyHealthAfter: 1, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'damage', x: 861, y: 462, stack: Array(4)}
+Game.js:71 [TRACE #101] wave.complete.check.passed {frame: 926, ts: 17522, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #102] wave.complete.check.passed {frame: 927, ts: 17533, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #103] wave.complete.check.passed {frame: 928, ts: 17550, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #104] wave.complete.check.passed {frame: 929, ts: 17572, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #105] wave.complete.check.passed {frame: 930, ts: 17573, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #106] wave.complete.check.passed {frame: 931, ts: 17588, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #107] wave.complete.check.passed {frame: 932, ts: 17601, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #108] wave.complete.check.passed {frame: 933, ts: 17616, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #109] wave.complete.check.passed {frame: 934, ts: 17638, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #110] wave.complete.check.passed {frame: 935, ts: 17639, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #111] wave.complete.check.passed {frame: 936, ts: 17657, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #112] wave.complete.check.passed {frame: 937, ts: 17669, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #113] wave.complete.check.passed {frame: 938, ts: 17682, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #114] wave.complete.check.passed {frame: 939, ts: 17703, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #115] wave.complete.check.passed {frame: 940, ts: 17705, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #116] wave.complete.check.passed {frame: 941, ts: 17721, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #117] wave.complete.check.passed {frame: 942, ts: 17734, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #118] wave.complete.check.passed {frame: 943, ts: 17748, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #119] wave.complete.check.passed {frame: 944, ts: 17770, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #120] wave.complete.check.passed {frame: 945, ts: 17780, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #121] wave.complete.check.passed {frame: 946, ts: 17796, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #122] wave.complete.check.passed {frame: 947, ts: 17812, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #123] wave.complete.check.passed {frame: 948, ts: 17821, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #124] wave.complete.check.passed {frame: 949, ts: 17838, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #125] wave.complete.check.passed {frame: 950, ts: 17850, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #126] wave.complete.check.passed {frame: 951, ts: 17866, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #127] wave.complete.check.passed {frame: 952, ts: 17880, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #128] wave.complete.check.passed {frame: 953, ts: 17904, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #129] wave.complete.check.passed {frame: 954, ts: 17905, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #130] wave.complete.check.passed {frame: 955, ts: 17921, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #131] wave.complete.check.passed {frame: 956, ts: 17933, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #132] wave.complete.check.passed {frame: 957, ts: 17949, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #133] wave.complete.check.passed {frame: 958, ts: 17972, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #134] wave.complete.check.passed {frame: 959, ts: 17980, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #135] wave.complete.check.passed {frame: 960, ts: 17996, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #136] wave.complete.check.passed {frame: 961, ts: 18004, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #137] wave.complete.check.passed {frame: 962, ts: 18020, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #138] wave.complete.check.passed {frame: 963, ts: 18033, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #139] wave.complete.check.passed {frame: 964, ts: 18040, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #140] wave.complete.triggered {frame: 964, ts: 18040, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #141] wave.complete {frame: 964, ts: 18040, wave: 1, enemiesRemaining: 0, enemiesKilled: 6, …}
+main.js:658 [TRACE floatingText.create] {text: '+15.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #142] coins.award.waveComplete {frame: 964, ts: 18040, wave: 1, amount: 15, coinsBefore: 6, …}
+main.js:658 [TRACE floatingText.create] {text: '-10.0', className: 'player-damage', x: 777, y: 503, stack: Array(4)}
+Game.js:71 [TRACE #59] enemy.removed.playerCollision {frame: 1029, ts: 19033, enemyId: 10, enemyIndex: 0, enemyDamage: 10, …}
+Game.js:71 [TRACE #60] wave.complete.check.passed {frame: 1030, ts: 19048, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #61] wave.complete.check.passed {frame: 1031, ts: 19063, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #62] wave.complete.check.passed {frame: 1032, ts: 19080, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #63] wave.complete.check.passed {frame: 1033, ts: 19096, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #64] wave.complete.check.passed {frame: 1034, ts: 19115, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #65] wave.complete.check.passed {frame: 1035, ts: 19130, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #66] wave.complete.check.passed {frame: 1036, ts: 19146, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #67] wave.complete.check.passed {frame: 1037, ts: 19163, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #68] wave.complete.check.passed {frame: 1038, ts: 19187, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #69] wave.complete.check.passed {frame: 1039, ts: 19198, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #70] wave.complete.check.passed {frame: 1040, ts: 19215, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #71] wave.complete.check.passed {frame: 1041, ts: 19229, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #72] wave.complete.check.passed {frame: 1042, ts: 19253, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #73] wave.complete.check.passed {frame: 1043, ts: 19257, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #74] wave.complete.check.passed {frame: 1044, ts: 19273, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #75] wave.complete.check.passed {frame: 1045, ts: 19283, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #76] wave.complete.check.passed {frame: 1046, ts: 19298, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #77] wave.complete.check.passed {frame: 1047, ts: 19314, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #78] wave.complete.check.passed {frame: 1048, ts: 19330, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #79] wave.complete.check.passed {frame: 1049, ts: 19345, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #80] wave.complete.check.passed {frame: 1050, ts: 19363, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #81] wave.complete.check.passed {frame: 1051, ts: 19387, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #82] wave.complete.check.passed {frame: 1052, ts: 19396, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #83] wave.complete.check.passed {frame: 1053, ts: 19413, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #84] wave.complete.check.passed {frame: 1054, ts: 19430, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #85] wave.complete.check.passed {frame: 1055, ts: 19451, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #86] wave.complete.check.passed {frame: 1056, ts: 19463, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #87] wave.complete.check.passed {frame: 1057, ts: 19479, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #88] wave.complete.check.passed {frame: 1058, ts: 19495, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #89] wave.complete.check.passed {frame: 1059, ts: 19512, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #90] wave.complete.check.passed {frame: 1060, ts: 19521, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #91] wave.complete.check.passed {frame: 1061, ts: 19537, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #92] wave.complete.check.passed {frame: 1062, ts: 19550, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #93] wave.complete.check.passed {frame: 1063, ts: 19565, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #94] wave.complete.check.passed {frame: 1064, ts: 19581, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #95] wave.complete.check.passed {frame: 1065, ts: 19597, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #96] wave.complete.check.passed {frame: 1066, ts: 19613, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #97] wave.complete.check.passed {frame: 1067, ts: 19630, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #98] wave.complete.check.passed {frame: 1068, ts: 19646, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #99] wave.complete.check.passed {frame: 1069, ts: 19663, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #100] wave.complete.check.passed {frame: 1070, ts: 19680, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #101] wave.complete.check.passed {frame: 1071, ts: 19696, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #102] wave.complete.check.passed {frame: 1072, ts: 19713, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #103] wave.complete.check.passed {frame: 1073, ts: 19729, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #104] wave.complete.check.passed {frame: 1074, ts: 19746, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #105] wave.complete.check.passed {frame: 1075, ts: 19755, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #106] wave.complete.check.passed {frame: 1076, ts: 19771, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #107] wave.complete.check.passed {frame: 1077, ts: 19783, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #108] wave.complete.check.passed {frame: 1078, ts: 19798, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #109] wave.complete.check.passed {frame: 1079, ts: 19814, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #110] wave.complete.check.passed {frame: 1080, ts: 19830, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #111] wave.complete.check.passed {frame: 1081, ts: 19846, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #112] wave.complete.check.passed {frame: 1082, ts: 19863, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #113] wave.complete.check.passed {frame: 1083, ts: 19880, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #114] wave.complete.check.passed {frame: 1084, ts: 19896, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #115] wave.complete.check.passed {frame: 1085, ts: 19913, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #116] wave.complete.check.passed {frame: 1086, ts: 19930, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #117] wave.complete.check.passed {frame: 1087, ts: 19946, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #118] wave.complete.check.passed {frame: 1088, ts: 19963, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #119] wave.complete.check.passed {frame: 1089, ts: 19979, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #120] wave.complete.check.passed {frame: 1090, ts: 19996, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #121] wave.complete.check.passed {frame: 1091, ts: 20005, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #122] wave.complete.check.passed {frame: 1092, ts: 20021, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #123] wave.complete.check.passed {frame: 1093, ts: 20034, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #124] wave.complete.triggered {frame: 1093, ts: 20034, wave: 1, enemiesToSpawn: 0, enemiesOnField: 0, …}
+Game.js:71 [TRACE #125] wave.complete {frame: 1093, ts: 20034, wave: 1, enemiesRemaining: 0, enemiesKilled: 5, …}
+main.js:658 [TRACE floatingText.create] {text: '+15.0 coins', className: 'coins', x: 777, y: 463, stack: Array(4)}
+Game.js:71 [TRACE #126] coins.award.waveComplete {frame: 1093, ts: 20035, wave: 1, amount: 15, coinsBefore: 5, …}

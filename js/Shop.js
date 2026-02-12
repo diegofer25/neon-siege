@@ -281,7 +281,7 @@ export class Shop {
 
         newRewardButton.style.display = 'inline-block';
         newRewardButton.disabled = false;
-        newRewardButton.textContent = 'Watch Ad: +50% Wave Coins';
+        newRewardButton.textContent = 'Ad Boost (+50%)';
 
         newRewardButton.addEventListener('click', async () => {
             playSFX('ui_click');
@@ -292,13 +292,13 @@ export class Shop {
                 const result = await onRewardedBoost();
 
                 if (result?.rewardGranted) {
-                    newRewardButton.textContent = 'Reward Claimed';
+                    newRewardButton.textContent = 'Boost Claimed';
                     playSFX('reward_claim_success');
                 } else {
                     newRewardButton.textContent = 'Ad Unavailable';
                     playSFX('reward_claim_fail');
                     setTimeout(() => {
-                        newRewardButton.textContent = 'Watch Ad: +50% Wave Coins';
+                        newRewardButton.textContent = 'Ad Boost (+50%)';
                         newRewardButton.disabled = false;
                     }, 1500);
                 }

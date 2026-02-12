@@ -46,6 +46,7 @@ export class CollisionSystem {
             for (let eIndex = this.game.enemies.length - 1; eIndex >= 0; eIndex--) {
                 const enemy = this.game.enemies[eIndex];
                 if (!enemy) continue;
+                if (enemy.dying || enemy.health <= 0) continue;
 
                 if (MathUtils.circleCollision(projectile, enemy)) {
                     const projectileRemoved = this._handleProjectileHit(projectile, enemy, pIndex);
@@ -79,17 +80,47 @@ export class CollisionSystem {
      * @param {number} projectileIndex - Index of projectile in array
      */
     _handleProjectileHit(projectile, enemy, projectileIndex) {
+        if (enemy.dying || enemy.health <= 0) {
+            this.game.trace('hit.ignored.deadEnemy', {
+                enemyId: enemy.id,
+                enemyHealth: enemy.health,
+                enemyDying: enemy.dying,
+                projectileIndex
+            });
+            return;
+        }
+
         // If projectile has already hit this enemy, ignore
         if (projectile.hitEnemyIds.includes(enemy.id)) {
+            this.game.trace('hit.ignored.alreadyHitEnemy', {
+                enemyId: enemy.id,
+                projectileIndex,
+                hitEnemyIdsCount: projectile.hitEnemyIds.length
+            });
             return;
         }
 
         // Calculate damage based on piercing mechanics
         const currentDamage = projectile.getCurrentDamage();
+        const enemyHealthBefore = enemy.health;
+        this.game.trace('hit.enemy', {
+            enemyId: enemy.id,
+            projectileIndex,
+            projectilePiercing: projectile.piercing,
+            projectileExplosive: projectile.explosive,
+            damage: currentDamage,
+            enemyHealthBefore
+        });
         
         // Damage enemy - pass projectile for special effects
         enemy.takeDamage(currentDamage, projectile);
         projectile.hitEnemyIds.push(enemy.id); // Record hit
+        this.game.trace('hit.enemy.applied', {
+            enemyId: enemy.id,
+            projectileIndex,
+            enemyHealthAfter: enemy.health,
+            enemyDying: enemy.dying
+        });
         
         // Increment enemies hit count for piercing damage reduction
         projectile.enemiesHit++;
@@ -100,7 +131,7 @@ export class CollisionSystem {
         
         // Handle explosive projectiles
         if (projectile.explosive) {
-            projectile.explode(this.game);
+            projectile.explode(this.game, enemy.id);
             playSFX('impact_explosion_small');
         } else if (projectile.piercing) {
             playSFX('impact_pierce');
@@ -146,6 +177,12 @@ export class CollisionSystem {
         this._showPlayerDamageText(enemy.damage);
         
         // Remove enemy after collision
+        this.game.trace('enemy.removed.playerCollision', {
+            enemyId: enemy.id,
+            enemyIndex,
+            enemyDamage: enemy.damage,
+            enemiesBefore: this.game.enemies.length
+        });
         this.game.enemies.splice(enemyIndex, 1);
     }
 

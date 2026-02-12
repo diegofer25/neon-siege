@@ -228,11 +228,18 @@ export class Projectile {
      * Damages all enemies within explosion radius and creates visual effects.
      * 
      * @param {import('./Game.js').Game} game - The main game instance for accessing enemies and effects
+     * @param {number | null} excludedEnemyId - Enemy id to exclude from AoE (typically direct-hit target)
      */
-    explode(game) {
+    explode(game, excludedEnemyId = null) {
         if (!this.explosive) return;
         if (this.exploded) return;
         this.exploded = true;
+        game.trace('explosion.start', {
+            x: this.x,
+            y: this.y,
+            radius: this.explosionRadius,
+            excludedEnemyId
+        });
         
         // Generate visual explosion particles
         game.createExplosion(this.x, this.y, 12);
@@ -242,6 +249,19 @@ export class Projectile {
         
         // Apply area damage to all enemies within explosion radius
         game.enemies.forEach(enemy => {
+            if (excludedEnemyId !== null && enemy.id === excludedEnemyId) {
+                game.trace('explosion.skip.excludedEnemy', { enemyId: enemy.id });
+                return;
+            }
+            if (enemy.dying || enemy.health <= 0) {
+                game.trace('explosion.skip.deadEnemy', {
+                    enemyId: enemy.id,
+                    enemyHealth: enemy.health,
+                    enemyDying: enemy.dying
+                });
+                return;
+            }
+
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -249,6 +269,12 @@ export class Projectile {
             if (distance <= this.explosionRadius) {
                 // Calculate damage falloff based on distance from explosion center
                 const damage = this.explosionDamage * (1 - distance / this.explosionRadius);
+                game.trace('explosion.hit', {
+                    enemyId: enemy.id,
+                    damage,
+                    enemyHealthBefore: enemy.health,
+                    distance
+                });
                 enemy.takeDamage(damage);
                 
                 // Display damage number floating text
@@ -261,6 +287,11 @@ export class Projectile {
                     enemy.y * (rect.height / canvasHeight) + rect.top,
                     'damage'
                 );
+                game.trace('explosion.hit.applied', {
+                    enemyId: enemy.id,
+                    enemyHealthAfter: enemy.health,
+                    enemyDying: enemy.dying
+                });
             }
         });
         
