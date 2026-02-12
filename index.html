@@ -34,11 +34,8 @@
             <div id="waveCounter" class="hud-element">
                 <span id="wave">Wave: 1</span>
             </div>
-            <div id="muteButton" class="hud-element">
-                <button id="muteBtn">🔊</button>
-            </div>
-            <div id="consentButton" class="hud-element">
-                <button id="consentManageBtn" title="Privacy preferences">⚖️</button>
+            <div id="settingsButton" class="hud-element">
+                <button id="settingsBtn" title="Settings">⚙️</button>
             </div>
             <div id="statsDisplay" class="hud-element">
                 <div class="stat-item">
@@ -91,6 +88,77 @@
             <p>Auto-targeting turret defense game</p>
             <p>Earn coins to buy power-ups between waves!</p>
             <button id="startBtn">CLICK TO START</button>
+            <button id="loadSaveBtn" style="display: none;">LOAD LAST SAVE</button>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="settingsModal" class="overlay">
+            <div class="settings-panel">
+                <h2>Settings</h2>
+                <div class="settings-grid">
+                    <label class="settings-row">
+                        <span>Sound Effects</span>
+                        <span class="toggle-switch">
+                            <input id="settingSoundEnabled" type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </span>
+                    </label>
+                    <label class="settings-row">
+                        <span>Music</span>
+                        <span class="toggle-switch">
+                            <input id="settingMusicEnabled" type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </span>
+                    </label>
+                    <label class="settings-row">
+                        <span>Difficulty</span>
+                        <select id="settingDifficulty">
+                            <option value="easy">Easy</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </label>
+                    <label class="settings-row">
+                        <span>Screen Shake</span>
+                        <span class="toggle-switch">
+                            <input id="settingScreenShake" type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </span>
+                    </label>
+                    <label class="settings-row">
+                        <span>Performance Mode</span>
+                        <span class="toggle-switch">
+                            <input id="settingPerformanceMode" type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </span>
+                    </label>
+                    <label class="settings-row">
+                        <span>Show FPS</span>
+                        <span class="toggle-switch">
+                            <input id="settingShowStats" type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </span>
+                    </label>
+                    <label class="settings-row">
+                        <span>Keybind Hints</span>
+                        <span class="toggle-switch">
+                            <input id="settingKeybindHints" type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </span>
+                    </label>
+                </div>
+                <p id="keybindHintsText" class="settings-help">Keyboard: P pause/resume • Settings also pause the run.</p>
+                <div class="settings-actions">
+                    <button id="saveGameBtn">Save Game</button>
+                    <button id="loadGameBtn">Load Save</button>
+                    <button id="clearSaveBtn" class="danger">Delete Save</button>
+                </div>
+                <div class="settings-actions">
+                    <button id="consentManageBtn" title="Privacy preferences">Privacy</button>
+                    <button id="resetSettingsBtn">Reset Defaults</button>
+                    <button id="closeSettingsBtn" class="primary">Close</button>
+                </div>
+            </div>
         </div>
 
         <!-- Consent Screen -->
@@ -98,7 +166,7 @@
             <div class="consent-panel">
                 <h2>Privacy Preferences</h2>
                 <p>Choose how your data is used for analytics and ads.</p>
-                <p>You can change this anytime with the ⚖️ button.</p>
+                <p>You can change this anytime from Settings → Privacy.</p>
 
                 <div class="consent-options">
                     <label>
@@ -153,7 +221,9 @@
         <div id="gameOver" class="overlay">
             <h1>GAME OVER</h1>
             <p>Waves Survived: <span id="finalWave">0</span></p>
-            <button id="restartBtn">PLAY AGAIN</button>
+            <button id="restoreFromAdBtn" style="display: none;">WATCH AD TO RESTORE SAVE</button>
+            <button id="loadAfterGameOverBtn" style="display: none;">LOAD LAST SAVE</button>
+            <button id="restartBtn">START AGAIN</button>
         </div>
 
         <!-- Pause Screen -->

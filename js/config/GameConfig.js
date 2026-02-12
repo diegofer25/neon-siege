@@ -244,6 +244,36 @@ export const GameConfig = {
     },
 
     /**
+     * Difficulty presets applied at run level
+     */
+    DIFFICULTY_PRESETS: {
+        easy: {
+            label: 'Easy',
+            enemyCountMultiplier: 0.85,
+            enemyHealthMultiplier: 0.85,
+            enemySpeedMultiplier: 0.9,
+            enemyDamageMultiplier: 0.85,
+            spawnIntervalMultiplier: 1.1
+        },
+        normal: {
+            label: 'Normal',
+            enemyCountMultiplier: 1,
+            enemyHealthMultiplier: 1,
+            enemySpeedMultiplier: 1,
+            enemyDamageMultiplier: 1,
+            spawnIntervalMultiplier: 1
+        },
+        hard: {
+            label: 'Hard',
+            enemyCountMultiplier: 1.2,
+            enemyHealthMultiplier: 1.15,
+            enemySpeedMultiplier: 1.12,
+            enemyDamageMultiplier: 1.2,
+            spawnIntervalMultiplier: 0.9
+        }
+    },
+
+    /**
      * Power-up shop pricing
      * 
      * Base prices in coins for each power-up. Actual prices may be modified
@@ -687,6 +717,15 @@ GameConfig.DERIVED = {
         const sequence = ['STORM', 'OVERCLOCK', 'FOG'];
         const index = (wave - 6) % sequence.length;
         return sequence[index];
+    },
+
+    /**
+     * Resolve run difficulty preset
+     * @param {string} difficulty
+     * @returns {{label:string, enemyCountMultiplier:number, enemyHealthMultiplier:number, enemySpeedMultiplier:number, enemyDamageMultiplier:number, spawnIntervalMultiplier:number}}
+     */
+    getDifficultyPreset(difficulty = 'normal') {
+        return GameConfig.DIFFICULTY_PRESETS[difficulty] || GameConfig.DIFFICULTY_PRESETS.normal;
     }
 };
 

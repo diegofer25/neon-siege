@@ -14,6 +14,12 @@ import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
 import { monetizationManager } from "./managers/MonetizationManager.js";
 
+const DEFAULT_RUNTIME_SETTINGS = {
+	difficulty: "normal",
+	screenShakeEnabled: true,
+	performanceModeEnabled: false,
+};
+
 /**
  * Main game class - now focused on coordination between systems rather than direct management.
  *
@@ -102,6 +108,7 @@ export class Game {
 			visibilityReduction: false
 		};
 		this._initializeObjectPools();
+		this.runtimeSettings = { ...DEFAULT_RUNTIME_SETTINGS };
 	}
 
 	/**
@@ -245,6 +252,7 @@ export class Game {
 		this.player.reset();
 		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
+		this.waveManager.setDifficulty(this.runtimeSettings.difficulty);
 		this.waveManager.startWave(this.wave);
 
 		telemetry.track("run_start", {
@@ -260,6 +268,14 @@ export class Game {
 	restart() {
 		this.init();
 		this.start();
+	}
+
+	setRuntimeSettings(settings = {}) {
+		this.runtimeSettings = {
+			...this.runtimeSettings,
+			...settings,
+		};
+		this.waveManager.setDifficulty(this.runtimeSettings.difficulty);
 	}
 
 	/**
@@ -670,5 +686,169 @@ export class Game {
 			enemiesToSpawn,
 			totalEnemies,
 		};
+	}
+
+	canSaveCurrentRun() {
+		return this.gameState === Game.STATES.PLAYING || this.gameState === Game.STATES.PAUSED || this.gameState === Game.STATES.POWERUP;
+	}
+
+	getSaveSnapshot() {
+		const checkpointWave = this.gameState === Game.STATES.POWERUP
+			? this.wave + 1
+			: this.wave;
+
+		return {
+			gameState: this.gameState,
+			wave: this.wave,
+			checkpointWave: Math.max(1, checkpointWave),
+			score: this.score,
+			modifierKey: this.waveModifierKey || null,
+			player: this._getPlayerSaveState(),
+			waveState: this.waveManager.getSaveSnapshot(),
+		};
+	}
+
+	restoreFromSave(snapshot) {
+		if (!snapshot || typeof snapshot !== "object") {
+			return false;
+		}
+
+		const checkpointWave = Math.max(1, snapshot.checkpointWave || snapshot.wave || 1);
+
+		this.enemies = [];
+		this.projectiles = [];
+		this.particles = [];
+		this.particlePool.clear();
+		this.projectilePool.clear();
+
+		this.player.reset();
+		this._applyPlayerSaveState(snapshot.player || {});
+
+		this.wave = checkpointWave;
+		this.score = snapshot.score || 0;
+		this.gameState = Game.STATES.PLAYING;
+		this._gameOverTracked = false;
+
+		this.waveManager.reset();
+		this.waveManager.setDifficulty(this.runtimeSettings.difficulty);
+		this.waveManager.startWave(this.wave);
+
+		if (snapshot.modifierKey) {
+			this.applyWaveModifier(snapshot.modifierKey);
+		}
+
+		telemetry.track("save_loaded", {
+			wave: this.wave,
+			checkpointWave,
+		});
+
+		return true;
+	}
+
+	_getPlayerSaveState() {
+		const player = this.player;
+		return {
+			hp: player.hp,
+			maxHp: player.maxHp,
+			coins: player.coins,
+			damageMod: player.damageMod,
+			fireRateMod: player.fireRateMod,
+			projectileSpeedMod: player.projectileSpeedMod,
+			rotationSpeedMod: player.rotationSpeedMod,
+			fireCooldown: player.fireCooldown,
+			hasShield: player.hasShield,
+			shieldHp: player.shieldHp,
+			maxShieldHp: player.maxShieldHp,
+			hasSlowField: player.hasSlowField,
+			slowFieldStrength: player.slowFieldStrength,
+			slowFieldRadius: player.slowFieldRadius,
+			hpRegen: player.hpRegen,
+			shieldRegen: player.shieldRegen,
+			piercingLevel: player.piercingLevel,
+			hasTripleShot: player.hasTripleShot,
+			hasLifeSteal: player.hasLifeSteal,
+			explosiveShots: player.explosiveShots,
+			explosionRadius: player.explosionRadius,
+			explosionDamage: player.explosionDamage,
+			coinMagnetMultiplier: player.coinMagnetMultiplier,
+			luckyShots: player.luckyShots ? { ...player.luckyShots } : null,
+			immolationAura: player.immolationAura ? { ...player.immolationAura } : null,
+			hasShieldBreaker: player.hasShieldBreaker,
+			shieldBreakerDamage: player.shieldBreakerDamage,
+			shieldRegenDelay: player.shieldRegenDelay,
+			shieldBreakerStacks: player.shieldBreakerStacks,
+			hasAdaptiveTargeting: player.hasAdaptiveTargeting,
+			targetingRange: player.targetingRange,
+			hasHomingShots: player.hasHomingShots,
+			hasBarrierPhase: player.hasBarrierPhase,
+			barrierPhaseCooldown: player.barrierPhaseCooldown,
+			barrierPhaseMaxCooldown: player.barrierPhaseMaxCooldown,
+			barrierPhaseDuration: player.barrierPhaseDuration,
+			barrierPhaseActive: player.barrierPhaseActive,
+			barrierPhaseThreshold: player.barrierPhaseThreshold,
+			overchargeBurst: player.overchargeBurst ? { ...player.overchargeBurst } : null,
+			emergencyHeal: player.emergencyHeal ? { ...player.emergencyHeal } : null,
+			persistentCritBonus: player.persistentCritBonus,
+			slowFieldBonus: player.slowFieldBonus,
+			immolationAuraBonus: player.immolationAuraBonus,
+			powerUpStacks: { ...player.powerUpStacks },
+			activeSynergies: Array.from(player.activeSynergies || []),
+		};
+	}
+
+	_applyPlayerSaveState(playerState) {
+		const player = this.player;
+		Object.assign(player, {
+			hp: playerState.hp ?? player.hp,
+			maxHp: playerState.maxHp ?? player.maxHp,
+			coins: playerState.coins ?? player.coins,
+			damageMod: playerState.damageMod ?? player.damageMod,
+			fireRateMod: playerState.fireRateMod ?? player.fireRateMod,
+			projectileSpeedMod: playerState.projectileSpeedMod ?? player.projectileSpeedMod,
+			rotationSpeedMod: playerState.rotationSpeedMod ?? player.rotationSpeedMod,
+			fireCooldown: playerState.fireCooldown ?? player.fireCooldown,
+			hasShield: playerState.hasShield ?? player.hasShield,
+			shieldHp: playerState.shieldHp ?? player.shieldHp,
+			maxShieldHp: playerState.maxShieldHp ?? player.maxShieldHp,
+			hasSlowField: playerState.hasSlowField ?? player.hasSlowField,
+			slowFieldStrength: playerState.slowFieldStrength ?? player.slowFieldStrength,
+			slowFieldRadius: playerState.slowFieldRadius ?? player.slowFieldRadius,
+			hpRegen: playerState.hpRegen ?? player.hpRegen,
+			shieldRegen: playerState.shieldRegen ?? player.shieldRegen,
+			piercingLevel: playerState.piercingLevel ?? player.piercingLevel,
+			hasTripleShot: playerState.hasTripleShot ?? player.hasTripleShot,
+			hasLifeSteal: playerState.hasLifeSteal ?? player.hasLifeSteal,
+			explosiveShots: playerState.explosiveShots ?? player.explosiveShots,
+			explosionRadius: playerState.explosionRadius ?? player.explosionRadius,
+			explosionDamage: playerState.explosionDamage ?? player.explosionDamage,
+			coinMagnetMultiplier: playerState.coinMagnetMultiplier ?? player.coinMagnetMultiplier,
+			hasShieldBreaker: playerState.hasShieldBreaker ?? player.hasShieldBreaker,
+			shieldBreakerDamage: playerState.shieldBreakerDamage ?? player.shieldBreakerDamage,
+			shieldRegenDelay: playerState.shieldRegenDelay ?? player.shieldRegenDelay,
+			shieldBreakerStacks: playerState.shieldBreakerStacks ?? player.shieldBreakerStacks,
+			hasAdaptiveTargeting: playerState.hasAdaptiveTargeting ?? player.hasAdaptiveTargeting,
+			targetingRange: playerState.targetingRange ?? player.targetingRange,
+			hasHomingShots: playerState.hasHomingShots ?? player.hasHomingShots,
+			hasBarrierPhase: playerState.hasBarrierPhase ?? player.hasBarrierPhase,
+			barrierPhaseCooldown: playerState.barrierPhaseCooldown ?? player.barrierPhaseCooldown,
+			barrierPhaseMaxCooldown: playerState.barrierPhaseMaxCooldown ?? player.barrierPhaseMaxCooldown,
+			barrierPhaseDuration: playerState.barrierPhaseDuration ?? player.barrierPhaseDuration,
+			barrierPhaseActive: playerState.barrierPhaseActive ?? player.barrierPhaseActive,
+			barrierPhaseThreshold: playerState.barrierPhaseThreshold ?? player.barrierPhaseThreshold,
+			persistentCritBonus: playerState.persistentCritBonus ?? player.persistentCritBonus,
+			slowFieldBonus: playerState.slowFieldBonus ?? player.slowFieldBonus,
+			immolationAuraBonus: playerState.immolationAuraBonus ?? player.immolationAuraBonus,
+		});
+
+		player.luckyShots = playerState.luckyShots ? { ...playerState.luckyShots } : null;
+		player.immolationAura = playerState.immolationAura ? { ...playerState.immolationAura } : null;
+		player.overchargeBurst = playerState.overchargeBurst ? { ...playerState.overchargeBurst } : null;
+		player.emergencyHeal = playerState.emergencyHeal ? { ...playerState.emergencyHeal } : null;
+		player.powerUpStacks = { ...(playerState.powerUpStacks || player.powerUpStacks) };
+		player.activeSynergies = new Set(playerState.activeSynergies || []);
+		player.setExternalModifiers({
+			regenMultiplier: this.modifierState.playerRegenMultiplier,
+			turnSpeedMultiplier: this.modifierState.playerTurnSpeedMultiplier,
+		});
 	}
 }

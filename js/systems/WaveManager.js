@@ -31,6 +31,11 @@ export class WaveManager {
         this.waveComplete = false;
         this.waveCompletionTimer = 0;
         this.isBossWave = false;
+        this.difficultyPreset = GameConfig.DIFFICULTY_PRESETS.normal;
+    }
+
+    setDifficulty(difficulty = 'normal') {
+        this.difficultyPreset = GameConfig.DERIVED.getDifficultyPreset(difficulty);
     }
 
     /**
@@ -57,9 +62,13 @@ export class WaveManager {
         this.game.applyWaveModifier(modifierKey);
 
         const enemyCount = GameConfig.DERIVED.getEnemyCountForWave(this.currentWave);
+        const adjustedEnemyCount = Math.max(1, Math.floor(enemyCount * this.difficultyPreset.enemyCountMultiplier));
         // Boss waves are boss-only (regular spawns disabled)
-        this.enemiesToSpawn = this.isBossWave ? 0 : enemyCount;
-        this.enemySpawnInterval = GameConfig.DERIVED.getSpawnIntervalForWave(this.currentWave);
+        this.enemiesToSpawn = this.isBossWave ? 0 : adjustedEnemyCount;
+        this.enemySpawnInterval = Math.max(
+            GameConfig.WAVE.MIN_SPAWN_INTERVAL,
+            GameConfig.DERIVED.getSpawnIntervalForWave(this.currentWave) * this.difficultyPreset.spawnIntervalMultiplier
+        );
         this.waveScaling = GameConfig.DERIVED.getScalingForWave(this.currentWave);
         this.enemySpawnTimer = 0;
 
@@ -143,10 +152,10 @@ export class WaveManager {
         }
         
         // Apply wave scaling to the created enemy
-        enemy.health *= this.waveScaling.health;
-        enemy.maxHealth *= this.waveScaling.health;
-        enemy.speed *= this.waveScaling.speed;
-        enemy.damage *= this.waveScaling.damage;
+        enemy.health *= this.waveScaling.health * this.difficultyPreset.enemyHealthMultiplier;
+        enemy.maxHealth *= this.waveScaling.health * this.difficultyPreset.enemyHealthMultiplier;
+        enemy.speed *= this.waveScaling.speed * this.difficultyPreset.enemySpeedMultiplier;
+        enemy.damage *= this.waveScaling.damage * this.difficultyPreset.enemyDamageMultiplier;
         
         // Set game reference for enemies that need it (like splitters)
         enemy.setGameReference(this.game);
@@ -200,6 +209,36 @@ export class WaveManager {
         const timeBonus = completionTime < 30000 ? 3 : 0;
         
         return baseReward + waveBonus + timeBonus;
+    }
+
+    getSaveSnapshot() {
+        return {
+            currentWave: this.currentWave,
+            enemiesSpawned: this.enemiesSpawned,
+            enemiesKilled: this.enemiesKilled,
+            enemiesToSpawn: this.enemiesToSpawn,
+            enemySpawnTimer: this.enemySpawnTimer,
+            enemySpawnInterval: this.enemySpawnInterval,
+            waveScaling: this.waveScaling,
+            waveStartTime: this.waveStartTime,
+            waveComplete: this.waveComplete,
+            waveCompletionTimer: this.waveCompletionTimer,
+            isBossWave: this.isBossWave
+        };
+    }
+
+    restoreFromSave(snapshot = {}) {
+        this.currentWave = snapshot.currentWave || 1;
+        this.enemiesSpawned = snapshot.enemiesSpawned || 0;
+        this.enemiesKilled = snapshot.enemiesKilled || 0;
+        this.enemiesToSpawn = snapshot.enemiesToSpawn || 0;
+        this.enemySpawnTimer = snapshot.enemySpawnTimer || 0;
+        this.enemySpawnInterval = snapshot.enemySpawnInterval || GameConfig.WAVE.BASE_SPAWN_INTERVAL;
+        this.waveScaling = snapshot.waveScaling || GameConfig.DERIVED.getScalingForWave(this.currentWave);
+        this.waveStartTime = snapshot.waveStartTime || Date.now();
+        this.waveComplete = !!snapshot.waveComplete;
+        this.waveCompletionTimer = snapshot.waveCompletionTimer || 0;
+        this.isBossWave = !!snapshot.isBossWave;
     }
 
     /**

@@ -25,6 +25,16 @@
     width: 95vw;
     max-height: 85svh;
   }
+
+  .settings-panel {
+    width: 95vw;
+    max-height: 85svh;
+    overflow-y: auto;
+  }
+
+  .settings-row {
+    font-size: 13px;
+  }
   
   .shop-tabs {
     padding: 15px 10px;
@@ -168,6 +178,21 @@
     width: 98vw;
     max-height: 90svh;
   }
+
+  .settings-panel {
+    width: 98vw;
+    max-height: 90svh;
+    padding: var(--spacing-lg);
+  }
+
+  .settings-row {
+    font-size: 12px;
+    gap: var(--spacing-md);
+  }
+
+  .settings-help {
+    font-size: 10px;
+  }
   
   .shop-tabs {
     padding: 10px 5px;
@@ -273,8 +298,7 @@
     transform: translateX(-50%);
   }
 
-  #muteBtn,
-  #consentManageBtn {
+  #settingsBtn {
     font-size: 12px;
     padding: 4px 8px;
   }

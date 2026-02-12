@@ -37,14 +37,14 @@
   font-size: 16px;
 }
 
-/* Mute Button - Audio control */
-#muteButton {
+/* Settings Button */
+#settingsButton {
   position: absolute;
   top: 0;
   right: 0;
 }
 
-#muteBtn {
+#settingsBtn {
   background: #222;
   border: 2px solid var(--color-secondary-neon);
   color: var(--color-secondary-neon);
@@ -56,7 +56,7 @@
   box-shadow: 0 0 5px var(--color-secondary-neon);
 }
 
-#muteBtn:hover {
+#settingsBtn:hover {
   background: #333;
   box-shadow: 0 0 15px var(--color-secondary-neon);
   transform: translateY(-2px);

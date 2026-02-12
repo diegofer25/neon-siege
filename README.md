@@ -11,6 +11,8 @@ A browser-based 2D tower defense game with infinite wave survival, auto-targetin
 - **Power-up Shop**: 15+ upgrades across offense, defense, and utility categories
 - **Stackable Upgrades**: Build your perfect loadout with combinable power-ups
 - **Smart Enemy AI**: Enemies with varied movement patterns and behaviors
+- **Run Save/Load**: Save your run to localStorage and load it from start, settings, or game over
+- **Recovery Flow**: After game over, choose to start again, load save, or watch a rewarded ad to restore save
 
 ### 🎨 Visual Effects
 - **Neon Aesthetic**: Synthwave-inspired visual design
@@ -18,6 +20,7 @@ A browser-based 2D tower defense game with infinite wave survival, auto-targetin
 - **Screen Shake**: Responsive feedback for impacts and explosions
 - **Glowing Elements**: All game objects feature neon glow effects
 - **Animated UI**: Smooth transitions and floating damage text
+- **Settings Overlay**: In-game settings panel that pauses gameplay while open and resumes when closed
 
 ### ⚡ Performance
 - **Object Pooling**: Optimized memory management for particles and projectiles
@@ -101,6 +104,7 @@ Notes:
 - **Automatic Aiming**: Player automatically targets nearest enemy
 - **P Key**: Pause/unpause game
 - **Mouse**: Navigate menus and shop interface
+- **⚙️ Settings Button**: Open settings to change audio, difficulty, performance, and save/load controls
 
 ### Gameplay Loop
 1. **Survive Waves**: Your character auto-fires at approaching enemies
@@ -359,6 +363,7 @@ See `docs/monetization-telemetry.md` for event definitions and integration notes
 - Audio may not autoplay in some browsers due to autoplay policies
 - Performance may degrade on very old mobile devices (pre-2018)
 - High DPI scaling may cause slight blurriness on some displays
+- Save restore intentionally uses a safe checkpoint wave start, not full frame-perfect mid-combat state
 
 ## 📝 License
 
@@ -372,14 +377,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📈 Roadmap
 
-- [ ] **Audio System**: Add sound effects and background music
+- [x] **Audio System**: Sound effects and background music with in-game settings controls
 - [x] **Enemy Varieties**: Multiple enemy types with unique behaviors  
 - [x] **Boss Battles**: Special boss enemies every 10 waves with enhanced visibility and combat feedback
 - [ ] **Achievements**: Unlock system for milestone rewards
 - [ ] **Leaderboards**: High score tracking and sharing
 - [ ] **Mobile Controls**: Touch-friendly interface improvements
 - [ ] **Visual Polish**: Enhanced particle effects and animations
-- [ ] **Save System**: Progress persistence between sessions
+- [x] **Save System**: localStorage run save/load with game-over recovery options
 
 ---
 

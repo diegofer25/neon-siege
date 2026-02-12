@@ -69,6 +69,9 @@ export class PerformanceManager {
         
         /** @type {boolean} Whether to significantly reduce particle counts */
         this.reduceParticleCount = false;
+
+        /** @type {boolean} Whether performance mode is manually forced by user settings */
+        this.forcedPerformanceMode = false;
     }
     
     /**
@@ -121,6 +124,13 @@ export class PerformanceManager {
      * @private
      */
     updateOptimizationFlags() {
+        if (this.forcedPerformanceMode) {
+            this.enableParticleOptimization = true;
+            this.enableTrailOptimization = true;
+            this.reduceParticleCount = true;
+            return;
+        }
+
         const avgFps = this.getAverageFps();
         
         // Aggressive optimization for critical performance issues

@@ -8,6 +8,9 @@ import { Game } from './Game.js';
 import { GameConfig } from './config/GameConfig.js';
 import { telemetry } from './managers/TelemetryManager.js';
 import { consentManager } from './managers/ConsentManager.js';
+import { settingsManager } from './managers/SettingsManager.js';
+import { saveStateManager } from './managers/SaveStateManager.js';
+import { monetizationManager } from './managers/MonetizationManager.js';
 import { SOUND_EFFECT_MANIFEST } from '../scripts/sfx-manifest.mjs';
 
 //=============================================================================
@@ -25,6 +28,8 @@ let showPerformanceStats = false;
 
 /** @type {number|null} Active animation frame request id */
 let animationFrameId = null;
+let settingsModalWasPlaying = false;
+let adRestoreConsumedThisGameOver = false;
 
 const APP_RUNTIME_KEY = '__NEON_TD_RUNTIME__';
 const appRuntime = window[APP_RUNTIME_KEY] || (window[APP_RUNTIME_KEY] = {
@@ -85,7 +90,8 @@ function shouldSkipTransientMobileResize(nextViewport) {
 const audio = {
     bgm: null,
     sfx: {},
-    enabled: true
+    soundEnabled: true,
+    musicEnabled: true
 };
 
 const SFX_VARIANTS = 2;
@@ -120,6 +126,18 @@ export const input = {
     keys: {},
     canvas: null
 };
+
+function getInputElement(id) {
+    return /** @type {HTMLInputElement} */ (document.getElementById(id));
+}
+
+function getSelectElement(id) {
+    return /** @type {HTMLSelectElement} */ (document.getElementById(id));
+}
+
+function getButtonElement(id) {
+    return /** @type {HTMLButtonElement} */ (document.getElementById(id));
+}
 
 //=============================================================================
 // INITIALIZATION AND SETUP
@@ -160,19 +178,16 @@ function init() {
     
     // Initialize audio system
     loadAudio();
-    
-    // Restore user audio preferences from localStorage
-    if (localStorage.getItem('mute') === 'true') {
-        toggleMute();
-    }
 
-    // Check for performance stats URL parameter
+    // Check for performance stats URL parameter fallback
     const urlParams = new URLSearchParams(window.location.search);
-    showPerformanceStats = urlParams.get('stats') === 'true';
-    
-    if (showPerformanceStats) {
-        document.getElementById('performanceStats').style.display = 'flex';
+    const statsFromQuery = urlParams.get('stats') === 'true';
+
+    const initialSettings = settingsManager.getSettings();
+    if (statsFromQuery && !initialSettings.showPerformanceStats) {
+        settingsManager.update({ showPerformanceStats: true });
     }
+    applySettings(initialSettings);
 
     // Display initial start screen
     document.getElementById('startScreen').classList.add('show');
@@ -188,7 +203,19 @@ function init() {
 
     // Listen for start button click to begin game
     document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('loadSaveBtn').addEventListener('click', () => loadGameFromSave('start_screen'));
     document.getElementById('restartBtn').addEventListener('click', restartGame);
+    document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+    document.getElementById('closeSettingsBtn').addEventListener('click', closeSettingsModal);
+    document.getElementById('saveGameBtn').addEventListener('click', handleSaveFromSettings);
+    document.getElementById('loadGameBtn').addEventListener('click', () => loadGameFromSave('settings_menu'));
+    document.getElementById('clearSaveBtn').addEventListener('click', clearSavedGame);
+    document.getElementById('resetSettingsBtn').addEventListener('click', resetSettingsToDefaults);
+    document.getElementById('loadAfterGameOverBtn').addEventListener('click', () => loadGameFromSave('game_over'));
+    document.getElementById('restoreFromAdBtn').addEventListener('click', restoreAfterAdWatch);
+
+    setupSettingsControls();
+    syncSaveButtons();
 }
 
 /**
@@ -310,6 +337,10 @@ function setupInputHandlers() {
         if (e.code === 'KeyP' && (game && game.gameState === 'playing' || game.gameState === 'paused')) {
             togglePause();
         }
+
+        if (e.code === 'Escape' && document.getElementById('settingsModal').classList.contains('show')) {
+            closeSettingsModal();
+        }
         
         // Prevent spacebar page scrolling
         if (e.code === 'Space') {
@@ -320,9 +351,6 @@ function setupInputHandlers() {
     document.addEventListener('keyup', (e) => {
         input.keys[e.code] = false;
     });
-
-    // Audio mute toggle button
-    document.getElementById('muteBtn').addEventListener('click', toggleMute);
 
     // Disable right-click context menu on canvas
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -362,7 +390,7 @@ function loadAudio() {
  * @param {string} soundName - Name of the sound effect to play
  */
 export function playSFX(soundName) {
-    if (!audio.enabled) return;
+    if (!audio.soundEnabled) return;
 
     const canonicalName = SFX_ALIASES[soundName] || soundName;
     const pool = audio.sfx[canonicalName];
@@ -382,27 +410,16 @@ export function playSFX(soundName) {
 }
 
 /**
- * Toggle audio mute state and update UI
- * Saves preference to localStorage for persistence
+ * Legacy mute toggle helper retained for compatibility
+ * Internally updates the settings manager
  */
 export function toggleMute() {
-    if (audio.enabled) {
-        playSFX('ui_click');
-    }
-
-    audio.enabled = !audio.enabled;
-    const muteBtn = document.getElementById('muteBtn');
-    
-    if (audio.enabled) {
-        muteBtn.textContent = '🔊';
-        if (audio.bgm) audio.bgm.volume = 0.3;
-    } else {
-        muteBtn.textContent = '🔇';
-        if (audio.bgm) audio.bgm.volume = 0;
-    }
-    
-    // Persist mute preference
-    localStorage.setItem('mute', JSON.stringify(!audio.enabled));
+    const nextEnabled = !audio.soundEnabled;
+    settingsManager.update({
+        soundEnabled: nextEnabled,
+        musicEnabled: nextEnabled
+    });
+    applySettings(settingsManager.getSettings());
 }
 
 //=============================================================================
@@ -420,7 +437,9 @@ export function startGame() {
     }
 
     document.getElementById('startScreen').classList.remove('show');
+    document.getElementById('gameOver').classList.remove('show');
     playSFX('ui_start_game');
+    adRestoreConsumedThisGameOver = false;
 
     telemetry.startSession({
         entryPoint: 'start_screen',
@@ -428,12 +447,13 @@ export function startGame() {
     });
     
     // Start background music if audio is enabled
-    if (audio.enabled && audio.bgm) {
+    if (audio.musicEnabled && audio.bgm) {
         audio.bgm.play().catch(e => console.log('BGM play failed:', e));
     }
     
     // Initialize game state and start main loop
     game.start();
+    syncSaveButtons();
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -448,7 +468,9 @@ export function startGame() {
  */
 function restartGame() {
     document.getElementById('gameOver').classList.remove('show');
+    document.getElementById('startScreen').classList.remove('show');
     playSFX('ui_restart_game');
+    adRestoreConsumedThisGameOver = false;
 
     telemetry.track('run_restart', {
         fromWave: game.wave,
@@ -456,6 +478,7 @@ function restartGame() {
     });
 
     game.restart();
+    syncSaveButtons();
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -473,7 +496,11 @@ export function togglePause() {
         playSFX('ui_pause_on');
         game.pause();
         document.getElementById('pauseScreen').classList.add('show');
+        syncSaveButtons();
     } else if (game.gameState === 'paused') {
+        if (document.getElementById('settingsModal').classList.contains('show')) {
+            return;
+        }
         playSFX('ui_pause_off');
         game.resume();
         document.getElementById('pauseScreen').classList.remove('show');
@@ -483,6 +510,7 @@ export function togglePause() {
         }
         lastTime = performance.now();
         animationFrameId = requestAnimationFrame(gameLoop);
+        syncSaveButtons();
     }
 }
 
@@ -699,6 +727,12 @@ function updatePerformanceStats() {
 function showGameOver() {
     document.getElementById('finalWave').textContent = game.wave.toString();
     document.getElementById('gameOver').classList.add('show');
+    syncSaveButtons();
+
+    const hasSave = saveStateManager.hasSave();
+    document.getElementById('loadAfterGameOverBtn').style.display = hasSave ? 'inline-block' : 'none';
+    document.getElementById('restoreFromAdBtn').style.display = hasSave && !adRestoreConsumedThisGameOver ? 'inline-block' : 'none';
+
     playSFX('game_over');
 
     telemetry.endSession('game_over', {
@@ -712,6 +746,231 @@ function showGameOver() {
         audio.bgm.pause();
         audio.bgm.currentTime = 0;
     }
+}
+
+function applySettings(settings) {
+    audio.soundEnabled = settings.soundEnabled;
+    audio.musicEnabled = settings.musicEnabled;
+
+    if (audio.bgm) {
+        if (audio.musicEnabled) {
+            audio.bgm.volume = GameConfig.AUDIO.BGM_VOLUME;
+            if ((game?.gameState === 'playing' || game?.gameState === 'powerup') && audio.bgm.paused) {
+                audio.bgm.play().catch(() => {});
+            }
+        } else {
+            audio.bgm.volume = 0;
+            audio.bgm.pause();
+        }
+    }
+
+    showPerformanceStats = settings.showPerformanceStats;
+    document.getElementById('performanceStats').style.display = showPerformanceStats ? 'flex' : 'none';
+
+    document.getElementById('keybindHintsText').style.display = settings.showKeybindHints ? 'block' : 'none';
+
+    game?.setRuntimeSettings({
+        difficulty: settings.difficulty,
+        screenShakeEnabled: settings.screenShakeEnabled,
+        performanceModeEnabled: settings.performanceModeEnabled
+    });
+
+    if (game?.performanceManager) {
+        game.performanceManager.forcedPerformanceMode = settings.performanceModeEnabled;
+    }
+
+    updateSettingsModalUI(settings);
+}
+
+function updateSettingsModalUI(settings = settingsManager.getSettings()) {
+    getInputElement('settingSoundEnabled').checked = settings.soundEnabled;
+    getInputElement('settingMusicEnabled').checked = settings.musicEnabled;
+    getSelectElement('settingDifficulty').value = settings.difficulty;
+    getInputElement('settingScreenShake').checked = settings.screenShakeEnabled;
+    getInputElement('settingPerformanceMode').checked = settings.performanceModeEnabled;
+    getInputElement('settingShowStats').checked = settings.showPerformanceStats;
+    getInputElement('settingKeybindHints').checked = settings.showKeybindHints;
+}
+
+function setupSettingsControls() {
+    document.getElementById('settingSoundEnabled').addEventListener('change', (event) => {
+        const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+        const next = settingsManager.update({ soundEnabled: target.checked });
+        applySettings(next);
+    });
+
+    document.getElementById('settingMusicEnabled').addEventListener('change', (event) => {
+        const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+        const next = settingsManager.update({ musicEnabled: target.checked });
+        applySettings(next);
+    });
+
+    document.getElementById('settingDifficulty').addEventListener('change', (event) => {
+        const target = /** @type {HTMLSelectElement} */ (event.currentTarget);
+        const next = settingsManager.update({ difficulty: target.value });
+        applySettings(next);
+    });
+
+    document.getElementById('settingScreenShake').addEventListener('change', (event) => {
+        const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+        const next = settingsManager.update({ screenShakeEnabled: target.checked });
+        applySettings(next);
+    });
+
+    document.getElementById('settingPerformanceMode').addEventListener('change', (event) => {
+        const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+        const next = settingsManager.update({ performanceModeEnabled: target.checked });
+        applySettings(next);
+    });
+
+    document.getElementById('settingShowStats').addEventListener('change', (event) => {
+        const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+        const next = settingsManager.update({ showPerformanceStats: target.checked });
+        applySettings(next);
+    });
+
+    document.getElementById('settingKeybindHints').addEventListener('change', (event) => {
+        const target = /** @type {HTMLInputElement} */ (event.currentTarget);
+        const next = settingsManager.update({ showKeybindHints: target.checked });
+        applySettings(next);
+    });
+}
+
+function openSettingsModal() {
+    updateSettingsModalUI();
+    syncSaveButtons();
+    settingsModalWasPlaying = game?.gameState === 'playing';
+
+    if (settingsModalWasPlaying) {
+        game.pause();
+        if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+    }
+
+    document.getElementById('settingsModal').classList.add('show');
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').classList.remove('show');
+
+    if (settingsModalWasPlaying && game?.gameState === 'paused') {
+        game.resume();
+        if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+        }
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    settingsModalWasPlaying = false;
+}
+
+function handleSaveFromSettings() {
+    if (!game || !game.canSaveCurrentRun()) {
+        return;
+    }
+
+    const saved = saveStateManager.saveSnapshot(game.getSaveSnapshot());
+    if (saved) {
+        playSFX('ui_purchase_success');
+        syncSaveButtons();
+    }
+}
+
+function loadGameFromSave(source = 'unknown') {
+    const rawSave = saveStateManager.getRawSave();
+    if (!rawSave || !game) {
+        return false;
+    }
+
+    const wasMenuOrGameOver = game.gameState === 'menu' || game.gameState === 'gameover';
+    const restored = game.restoreFromSave(rawSave);
+    if (!restored) {
+        return false;
+    }
+
+    playSFX('ui_click');
+    document.getElementById('startScreen').classList.remove('show');
+    document.getElementById('gameOver').classList.remove('show');
+    document.getElementById('pauseScreen').classList.remove('show');
+    document.getElementById('settingsModal').classList.remove('show');
+
+    if (wasMenuOrGameOver) {
+        telemetry.startSession({
+            entryPoint: 'save_load',
+            source
+        });
+    }
+
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+    }
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
+
+    if (audio.musicEnabled && audio.bgm) {
+        audio.bgm.play().catch(() => {});
+    }
+
+    settingsModalWasPlaying = false;
+    adRestoreConsumedThisGameOver = source === 'game_over_ad' ? true : adRestoreConsumedThisGameOver;
+    syncSaveButtons();
+    return true;
+}
+
+function clearSavedGame() {
+    if (saveStateManager.clearSave()) {
+        playSFX('ui_click');
+        syncSaveButtons();
+    }
+}
+
+function syncSaveButtons() {
+    const hasSave = saveStateManager.hasSave();
+
+    document.getElementById('loadSaveBtn').style.display = hasSave ? 'inline-block' : 'none';
+    getButtonElement('loadGameBtn').disabled = !hasSave;
+    getButtonElement('clearSaveBtn').disabled = !hasSave;
+
+    const canSaveRun = game?.canSaveCurrentRun() || false;
+    getButtonElement('saveGameBtn').disabled = !canSaveRun;
+}
+
+async function restoreAfterAdWatch() {
+    if (adRestoreConsumedThisGameOver || !saveStateManager.hasSave()) {
+        return;
+    }
+
+    telemetry.track('restore_ad_requested', {
+        wave: game.wave
+    });
+
+    const result = await monetizationManager.tryShowRewarded(
+        'game_over_restore_save',
+        { wave: game.wave },
+        null
+    );
+
+    if (!result?.rewardGranted) {
+        telemetry.track('restore_ad_failed', {
+            wave: game.wave,
+            shown: !!result?.shown
+        });
+        return;
+    }
+
+    adRestoreConsumedThisGameOver = true;
+    telemetry.track('restore_ad_completed', {
+        wave: game.wave
+    });
+    loadGameFromSave('game_over_ad');
+}
+
+function resetSettingsToDefaults() {
+    const defaults = settingsManager.resetToDefaults();
+    applySettings(defaults);
 }
 
 //=============================================================================

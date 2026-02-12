@@ -48,6 +48,9 @@ export class EffectsManager {
      * @param {number} duration - Shake duration in milliseconds
      */
     addScreenShake(intensity, duration) {
+        if (this.game?.runtimeSettings?.screenShakeEnabled === false) {
+            return;
+        }
         this.screenShake.intensity = intensity;
         this.screenShake.duration = duration;
     }
@@ -74,7 +77,9 @@ export class EffectsManager {
      * @param {number} delta - Time elapsed since last frame
      */
     updateParticles(delta) {
-        const particleLimit = this.game.performanceManager.reduceParticleCount ? 
+        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
+        const shouldReduceParticles = this.game.performanceManager.reduceParticleCount || performanceModeEnabled;
+        const particleLimit = shouldReduceParticles ? 
             GameConfig.VFX.PARTICLE_LIMITS.MAX_PARTICLES / 2 : 
             GameConfig.VFX.PARTICLE_LIMITS.MAX_PARTICLES;
             
@@ -106,7 +111,9 @@ export class EffectsManager {
      * @param {number} [particleCount=8] - Number of particles to create
      */
     createExplosion(x, y, particleCount = 8) {
-        const actualCount = this.game.performanceManager.reduceParticleCount ? 
+        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
+        const shouldReduceParticles = this.game.performanceManager.reduceParticleCount || performanceModeEnabled;
+        const actualCount = shouldReduceParticles ? 
             Math.floor(particleCount / 2) : particleCount;
             
         for (let i = 0; i < actualCount; i++) {
@@ -147,7 +154,8 @@ export class EffectsManager {
      * @param {number} y - Hit location Y coordinate
      */
     createHitEffect(x, y) {
-        const particleCount = this.game.performanceManager.reduceParticleCount ? 2 : 4;
+        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
+        const particleCount = (this.game.performanceManager.reduceParticleCount || performanceModeEnabled) ? 2 : 4;
         
         for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
