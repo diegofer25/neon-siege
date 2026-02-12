@@ -1,0 +1,58 @@
+export const SOUND_EFFECT_MANIFEST = [
+    { key: 'ui_click', category: 'ui', durationSeconds: 1.0, promptInfluence: 0.4, text: 'Short neon arcade button click, bright digital tick, clean transient, no voice, no melody.' },
+    { key: 'ui_start_game', category: 'ui', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Arcade start game confirm sound, rising synth blip with confident finish, no voice.' },
+    { key: 'ui_restart_game', category: 'ui', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Retro game restart stinger, quick down-up synth cue, punchy and clean, no voice.' },
+    { key: 'ui_pause_on', category: 'ui', durationSeconds: 1.2, promptInfluence: 0.35, text: 'Arcade pause engage cue, short descending electronic tone, soft but clear, no voice.' },
+    { key: 'ui_pause_off', category: 'ui', durationSeconds: 1.2, promptInfluence: 0.35, text: 'Arcade pause release cue, short ascending electronic tone, crisp and clean, no voice.' },
+    { key: 'ui_shop_open', category: 'ui', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Neon shop open swoosh with subtle synth sparkle, welcoming and futuristic, no voice.' },
+    { key: 'ui_shop_close', category: 'ui', durationSeconds: 1.5, promptInfluence: 0.35, text: 'Neon shop close cue, compact reverse-swoosh ending in a muted click, no voice.' },
+    { key: 'ui_tab_switch', category: 'ui', durationSeconds: 1.0, promptInfluence: 0.4, text: 'Fast interface tab switch sound, tiny digital sweep and click, clean and minimal, no voice.' },
+    { key: 'ui_purchase_success', category: 'ui', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Arcade purchase success sound, optimistic synth chime, rewarding but short, no voice.' },
+    { key: 'ui_purchase_fail', category: 'ui', durationSeconds: 1.4, promptInfluence: 0.35, text: 'Arcade purchase failed cue, low digital buzz and short negative blip, no voice.' },
+    { key: 'game_over', category: 'system', durationSeconds: 2.8, promptInfluence: 0.3, text: 'Retro neon game over stinger, dramatic descending synth with soft impact, no voice.' },
+
+    { key: 'player_shoot_basic', category: 'combat', durationSeconds: 1.1, promptInfluence: 0.45, text: 'Short plasma shot sound for top-down arcade shooter, tight punchy transient, no voice.' },
+    { key: 'player_shoot_triple', category: 'combat', durationSeconds: 1.3, promptInfluence: 0.45, text: 'Three-way burst shot sound, layered plasma pulses with slight spread feel, no voice.' },
+    { key: 'player_shoot_overcharge', category: 'combat', durationSeconds: 1.8, promptInfluence: 0.4, text: 'Charged weapon release sound, brief energy build then strong plasma discharge, no voice.' },
+    { key: 'player_critical_hit', category: 'combat', durationSeconds: 1.4, promptInfluence: 0.4, text: 'Critical shot accent, bright high-energy synth crack with extra punch, no voice.' },
+    { key: 'player_hurt', category: 'combat', durationSeconds: 1.4, promptInfluence: 0.35, text: 'Player damage hit sound, sharp electronic impact with brief distortion tail, no voice.' },
+    { key: 'player_heal', category: 'combat', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Healing pickup sound, uplifting neon synth shimmer, concise and positive, no voice.' },
+    { key: 'player_shield_hit', category: 'combat', durationSeconds: 1.3, promptInfluence: 0.4, text: 'Energy shield absorbs damage sound, bright crackle and contained impact, no voice.' },
+    { key: 'player_shield_break', category: 'combat', durationSeconds: 2.0, promptInfluence: 0.35, text: 'Shield break sound, crystalline electronic shatter with quick power-down tail, no voice.' },
+    { key: 'player_barrier_on', category: 'combat', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Defensive barrier activation sound, rising energy hum into stable pulse, no voice.' },
+    { key: 'player_barrier_off', category: 'combat', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Defensive barrier ending sound, smooth energy fade with subtle click, no voice.' },
+
+    { key: 'impact_enemy_hit', category: 'impact', durationSeconds: 1.0, promptInfluence: 0.45, text: 'Projectile impacts enemy sound, small neon spark burst, tight and readable, no voice.' },
+    { key: 'impact_explosion_small', category: 'impact', durationSeconds: 1.8, promptInfluence: 0.4, text: 'Small sci-fi explosion for arcade game, punchy low end and brief crackle, no voice.' },
+    { key: 'impact_explosion_big', category: 'impact', durationSeconds: 2.2, promptInfluence: 0.35, text: 'Large stylized plasma explosion, deep impact with neon high-frequency fizz, no voice.' },
+    { key: 'impact_pierce', category: 'impact', durationSeconds: 1.2, promptInfluence: 0.45, text: 'Piercing projectile pass-through sound, quick slicing energy streak, no voice.' },
+
+    { key: 'enemy_spawn_basic', category: 'enemy', durationSeconds: 1.2, promptInfluence: 0.35, text: 'Basic enemy spawn cue, short synthetic materialization pop, no voice.' },
+    { key: 'enemy_spawn_fast', category: 'enemy', durationSeconds: 1.1, promptInfluence: 0.4, text: 'Fast enemy spawn cue, high-pitched digital flicker and quick whoosh, no voice.' },
+    { key: 'enemy_spawn_tank', category: 'enemy', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Tank enemy spawn cue, heavier low-frequency synth thump with electric texture, no voice.' },
+    { key: 'enemy_spawn_splitter', category: 'enemy', durationSeconds: 1.5, promptInfluence: 0.35, text: 'Splitter enemy spawn cue, unstable pulsing electronic growl, no voice.' },
+    { key: 'enemy_split', category: 'enemy', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Enemy splitting into smaller units sound, elastic energy tear and two short pops, no voice.' },
+    { key: 'enemy_death', category: 'enemy', durationSeconds: 1.7, promptInfluence: 0.4, text: 'Enemy death pop sound, compact plasma burst and brief debris crackle, no voice.' },
+
+    { key: 'wave_start', category: 'wave', durationSeconds: 2.0, promptInfluence: 0.3, text: 'Wave start announcement cue, energetic retro synth pulse, action-ready tone, no voice.' },
+    { key: 'wave_complete', category: 'wave', durationSeconds: 2.2, promptInfluence: 0.3, text: 'Wave complete reward cue, celebratory short synth flourish, no voice.' },
+    { key: 'wave_boss_alert', category: 'wave', durationSeconds: 2.4, promptInfluence: 0.3, text: 'Boss incoming alert stinger, tense electronic warning with rising pressure, no voice.' },
+
+    { key: 'boss_spawn_classic', category: 'boss', durationSeconds: 2.8, promptInfluence: 0.3, text: 'Classic boss spawn intro, heavy neon synth impact and ominous pulse, no voice.' },
+    { key: 'boss_spawn_shield', category: 'boss', durationSeconds: 2.8, promptInfluence: 0.3, text: 'Shield boss spawn intro, layered energy shield hum with dramatic arrival impact, no voice.' },
+    { key: 'boss_attack_projectile_burst', category: 'boss', durationSeconds: 1.8, promptInfluence: 0.4, text: 'Boss projectile burst attack sound, repeated plasma spits in fast sequence, no voice.' },
+    { key: 'boss_attack_charge_windup', category: 'boss', durationSeconds: 2.0, promptInfluence: 0.35, text: 'Boss charge attack windup, rising energy whine with increasing tension, no voice.' },
+    { key: 'boss_attack_charge_impact', category: 'boss', durationSeconds: 2.0, promptInfluence: 0.35, text: 'Boss charge impact hit, strong low-end slam and electronic crack, no voice.' },
+    { key: 'boss_summon_minions', category: 'boss', durationSeconds: 2.1, promptInfluence: 0.35, text: 'Boss summons minions sound, arcane-tech pulse and multi-point spawn pops, no voice.' },
+    { key: 'boss_shield_up', category: 'boss', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Boss shield activation sound, thick energy field powering up, no voice.' },
+    { key: 'boss_shield_break', category: 'boss', durationSeconds: 2.1, promptInfluence: 0.35, text: 'Boss shield breaking sound, loud electronic fracture with fading sparks, no voice.' },
+    { key: 'boss_laser_charge', category: 'boss', durationSeconds: 2.0, promptInfluence: 0.35, text: 'Boss laser charging cue, focused high-energy buildup and resonant hum, no voice.' },
+    { key: 'boss_laser_fire', category: 'boss', durationSeconds: 1.9, promptInfluence: 0.35, text: 'Boss laser firing blast, sharp concentrated beam release with hot tail, no voice.' },
+    { key: 'boss_defeat', category: 'boss', durationSeconds: 3.0, promptInfluence: 0.3, text: 'Boss defeat stinger, triumphant but intense synth finish with explosion tail, no voice.' },
+
+    { key: 'reward_offer_available', category: 'reward', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Reward available cue, enticing but subtle neon notification chime, no voice.' },
+    { key: 'reward_claim_success', category: 'reward', durationSeconds: 2.0, promptInfluence: 0.3, text: 'Reward claim success sound, celebratory arcade synth flourish, no voice.' },
+    { key: 'reward_claim_fail', category: 'reward', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Reward claim failed sound, soft digital error cue with short low buzz, no voice.' }
+];
+
+export const SOUND_STYLE_PREFIX = 'Retro synthwave arcade game sound effect. Stylized, punchy, clean mix, no vocals, no spoken words. '; 

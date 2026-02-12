@@ -68,6 +68,33 @@ python -m http.server 8080
 npx live-server --port=8080
 ```
 
+## 🔊 Generate Sound Effects (ElevenLabs)
+
+Sound effects are generated offline and saved under `assets/audio/sfx`.
+
+```bash
+export ELEVENLABS_API_KEY="<your-api-key>"
+
+# Preview generated filenames only (no API calls)
+npm run sfx:plan
+
+# Generate full catalog (2 variants per event by default)
+npm run sfx:generate
+```
+
+Optional flags:
+
+```bash
+npm run sfx:generate -- --only=player_shoot_basic,enemy_death
+npm run sfx:generate -- --force
+npm run sfx:generate -- --variants=2 --concurrency=2
+```
+
+Notes:
+- The script does not run at game runtime; it is a one-time/offline pipeline step.
+- Existing files are skipped by default to keep generation incremental and cost-aware.
+- Sound prompts are manifest-driven in `scripts/sfx-manifest.mjs`.
+
 ## 🎮 How to Play
 
 ### Basic Controls

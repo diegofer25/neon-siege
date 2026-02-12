@@ -9,7 +9,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix"
+    "lint:fix": "eslint . --ext .js --fix",
+    "sfx:generate": "node scripts/generate-sfx.mjs",
+    "sfx:plan": "node scripts/generate-sfx.mjs --dry-run"
   },
   "keywords": [
     "game",
