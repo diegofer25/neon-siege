@@ -1,6 +1,7 @@
 import { Enemy } from './Enemy.js';
 import { GameConfig } from './config/GameConfig.js';
 import { Projectile } from './Projectile.js';
+import { playSFX } from './main.js';
 
 export class Boss extends Enemy {
     constructor(x, y, health, damage, game) {
@@ -98,6 +99,7 @@ export class Boss extends Enemy {
     }
 
     projectileBurst() {
+        playSFX('boss_attack_projectile_burst');
         const projectileCount = 16;
         for (let i = 0; i < projectileCount; i++) {
             const angle = (Math.PI * 2 / projectileCount) * i;
@@ -113,6 +115,7 @@ export class Boss extends Enemy {
     }
 
     charge(player) {
+        playSFX('boss_attack_charge_windup');
         const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
             ? this.game.modifierState.enemySpeedMultiplier
             : 1;
@@ -130,6 +133,7 @@ export class Boss extends Enemy {
     }
 
     spawnMinions() {
+        playSFX('boss_summon_minions');
         const minionCount = 2;
         for (let i = 0; i < minionCount; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -289,6 +293,7 @@ export class ShieldBoss extends Boss {
             this.shieldActive = false;
             this.vulnerabilityPhase = true;
             this.vulnerabilityTimer = 0;
+            playSFX('boss_shield_break');
             // Create shield break explosion effect
             this.game.createExplosion(this.x, this.y, 16);
             this.game.addScreenShake(15, 400);
@@ -299,6 +304,7 @@ export class ShieldBoss extends Boss {
             this.shieldActive = true;
             this.vulnerabilityPhase = false;
             this.shield = this.maxShield;
+            playSFX('boss_shield_up');
         }
     }
     
@@ -434,6 +440,7 @@ export class ShieldBoss extends Boss {
     }
     
     shieldBurst() {
+        playSFX('impact_explosion_small');
         // Create expanding ring of projectiles
         const rings = 3;
         const projectilesPerRing = 12;
@@ -462,9 +469,11 @@ export class ShieldBoss extends Boss {
         this.laserChargeTimer = 0;
         this.laserTargetX = player.x;
         this.laserTargetY = player.y;
+        playSFX('boss_laser_charge');
     }
     
     fireLaser() {
+        playSFX('boss_laser_fire');
         // Fire a powerful laser beam
         const laserLength = 800;
         const angle = Math.atan2(this.laserTargetY - this.y, this.laserTargetX - this.x);
@@ -488,6 +497,7 @@ export class ShieldBoss extends Boss {
         
         // Screen shake for laser impact
         this.game.addScreenShake(8, 300);
+        playSFX('boss_attack_charge_impact');
     }
     
     takeDamage(damage, projectile = null) {

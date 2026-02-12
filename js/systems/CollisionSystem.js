@@ -101,6 +101,11 @@ export class CollisionSystem {
         // Handle explosive projectiles
         if (projectile.explosive) {
             projectile.explode(this.game);
+            playSFX('impact_explosion_small');
+        } else if (projectile.piercing) {
+            playSFX('impact_pierce');
+        } else {
+            playSFX('impact_enemy_hit');
         }
 
         // Non-piercing projectiles are consumed on first hit
@@ -119,6 +124,8 @@ export class CollisionSystem {
      * @param {number} enemyIndex - Index of enemy in array
      */
     _handlePlayerHit(enemy, enemyIndex) {
+        const shieldBeforeHit = this.game.player.shieldHp;
+
         // Damage player
         this.game.player.takeDamage(enemy.damage);
         
@@ -129,7 +136,11 @@ export class CollisionSystem {
         );
         
         screenFlash();
-        playSFX('hurt');
+        if (shieldBeforeHit > 0) {
+            playSFX(this.game.player.shieldHp <= 0 ? 'player_shield_break' : 'player_shield_hit');
+        } else {
+            playSFX('player_hurt');
+        }
         
         // Show damage text
         this._showPlayerDamageText(enemy.damage);
@@ -195,13 +206,19 @@ export class CollisionSystem {
      * @param {number} projectileIndex - Index of projectile in array
      */
     _handleEnemyProjectileHit(projectile, projectileIndex) {
+        const shieldBeforeHit = this.game.player.shieldHp;
+
         // Damage player
         this.game.player.takeDamage(projectile.damage, 'enemyProjectile');
         
         // Visual and audio feedback
         this.game.effectsManager.addScreenShake(8, 200);
         screenFlash();
-        playSFX('hurt');
+        if (shieldBeforeHit > 0) {
+            playSFX(this.game.player.shieldHp <= 0 ? 'player_shield_break' : 'player_shield_hit');
+        } else {
+            playSFX('player_hurt');
+        }
         
         // Show damage text
         this._showPlayerDamageText(projectile.damage);

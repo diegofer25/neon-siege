@@ -1,5 +1,6 @@
 import { GameConfig } from './config/GameConfig.js';
 import { PowerUp } from './PowerUp.js';
+import { playSFX } from './main.js';
 
 /**
  * Shop class manages the in-game power-up purchasing system.
@@ -227,6 +228,7 @@ export class Shop {
         
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
+                playSFX('ui_tab_switch');
                 // Update visual state
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
@@ -258,6 +260,7 @@ export class Shop {
         closeButton.parentNode.replaceChild(newCloseButton, closeButton);
         
         newCloseButton.addEventListener('click', () => {
+            playSFX('ui_click');
             onContinue ? onContinue() : this.closeShop();
         });
     }
@@ -281,6 +284,7 @@ export class Shop {
         newRewardButton.textContent = 'Watch Ad: +50% Wave Coins';
 
         newRewardButton.addEventListener('click', async () => {
+            playSFX('ui_click');
             newRewardButton.disabled = true;
             newRewardButton.textContent = 'Loading...';
 
@@ -289,8 +293,10 @@ export class Shop {
 
                 if (result?.rewardGranted) {
                     newRewardButton.textContent = 'Reward Claimed';
+                    playSFX('reward_claim_success');
                 } else {
                     newRewardButton.textContent = 'Ad Unavailable';
+                    playSFX('reward_claim_fail');
                     setTimeout(() => {
                         newRewardButton.textContent = 'Watch Ad: +50% Wave Coins';
                         newRewardButton.disabled = false;
@@ -299,6 +305,7 @@ export class Shop {
             } catch {
                 newRewardButton.textContent = 'Try Again';
                 newRewardButton.disabled = false;
+                playSFX('reward_claim_fail');
             }
 
             this.refreshShop();
@@ -468,6 +475,7 @@ export class Shop {
         // Add click handler for purchasable items
         if (canAfford && !isMaxed) {
             card.addEventListener('click', () => {
+                playSFX('ui_click');
                 onPurchase(powerUp, price);
                 // Refresh shop after purchase to update state
                 setTimeout(() => {

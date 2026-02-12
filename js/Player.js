@@ -401,6 +401,7 @@ export class Player {
             this.barrierPhaseDuration -= delta;
             if (this.barrierPhaseDuration <= 0) {
                 this.barrierPhaseActive = false;
+                playSFX('player_barrier_off');
             }
         }
         
@@ -639,16 +640,16 @@ export class Player {
         
         if (isOverchargeBurst) {
             this._fireOverchargeBurst(game, damage, firingAngle);
+            playSFX('player_shoot_overcharge');
         } else if (this.hasTripleShot) {
             this._fireTripleShot(game, damage, firingAngle);
+            playSFX('player_shoot_triple');
         } else {
             this._fireSingleShot(game, damage, firingAngle);
+            playSFX('player_shoot_basic');
         }
         
         this.createMuzzleFlash(game);
-        
-        // Play shoot sound effect if available
-        playSFX('shoot');
     }
     
     /**
@@ -900,6 +901,7 @@ export class Player {
         this.barrierPhaseActive = true;
         this.barrierPhaseCooldown = this.barrierPhaseMaxCooldown;
         this.barrierPhaseDuration = 3000; // Reset duration to 3 seconds
+        playSFX('player_barrier_on');
         
         // Visual indicator - could add particle effects here
         console.log('Barrier Phase activated! Invulnerable for 3 seconds!');
@@ -913,6 +915,7 @@ export class Player {
         const healAmount = Math.floor(this.maxHp * this.emergencyHeal.healTarget);
         this.hp = Math.min(this.maxHp, healAmount);
         this.emergencyHeal.cooldown = this.emergencyHeal.maxCooldown;
+        playSFX('player_heal');
         
         console.log(`Emergency Heal activated! Restored to ${Math.floor(this.emergencyHeal.healTarget * 100)}% health!`);
     }

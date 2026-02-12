@@ -7,6 +7,7 @@
 import { Game } from './Game.js';
 import { telemetry } from './managers/TelemetryManager.js';
 import { consentManager } from './managers/ConsentManager.js';
+import { SOUND_EFFECT_MANIFEST } from '../scripts/sfx-manifest.mjs';
 
 //=============================================================================
 // GLOBAL STATE AND CONFIGURATION
@@ -33,14 +34,18 @@ let animationFrameId = null;
  */
 const audio = {
     bgm: null,
-    sfx: {
-        shoot: null,
-        explode: null,
-        hurt: null,
-        powerup: null,
-        click: null
-    },
+    sfx: {},
     enabled: true
+};
+
+const SFX_VARIANTS = 2;
+
+const SFX_ALIASES = {
+    shoot: 'player_shoot_basic',
+    explode: 'enemy_death',
+    hurt: 'player_hurt',
+    powerup: 'ui_purchase_success',
+    click: 'ui_click'
 };
 
 /**
@@ -263,18 +268,23 @@ function setupInputHandlers() {
  */
 function loadAudio() {
     // Background music setup
-    audio.bgm = new Audio();
+    audio.bgm = new Audio('assets/audio/synthwave.mp3');
+    audio.bgm.preload = 'auto';
     audio.bgm.loop = true;
     audio.bgm.volume = 0.3;
-    
-    // Initialize sound effect audio elements
-    Object.keys(audio.sfx).forEach(key => {
-        audio.sfx[key] = new Audio();
-        audio.sfx[key].volume = 0.5;
+
+    // Initialize sound effect audio variants from manifest-generated files
+    audio.sfx = {};
+    SOUND_EFFECT_MANIFEST.forEach(({ key }) => {
+        const variants = [];
+        for (let variant = 1; variant <= SFX_VARIANTS; variant += 1) {
+            const sound = new Audio(`assets/audio/sfx/${key}_v${variant}.mp3`);
+            sound.preload = 'auto';
+            sound.volume = 0.5;
+            variants.push(sound);
+        }
+        audio.sfx[key] = variants;
     });
-    
-    // Note: In production, load actual audio files here
-    // For demo purposes, audio files are skipped
 }
 
 /**
@@ -282,11 +292,16 @@ function loadAudio() {
  * @param {string} soundName - Name of the sound effect to play
  */
 export function playSFX(soundName) {
-    if (!audio.enabled || !audio.sfx[soundName]) return;
+    if (!audio.enabled) return;
+
+    const canonicalName = SFX_ALIASES[soundName] || soundName;
+    const pool = audio.sfx[canonicalName];
+    if (!pool || pool.length === 0) return;
     
     try {
+        const source = pool[Math.floor(Math.random() * pool.length)];
         // Clone audio node to allow overlapping sounds
-        const sound = audio.sfx[soundName].cloneNode();
+        const sound = source.cloneNode();
         sound.play().catch(e => console.log('Audio play failed:', e));
     } catch (e) {
         console.log('Audio error:', e);
@@ -298,6 +313,10 @@ export function playSFX(soundName) {
  * Saves preference to localStorage for persistence
  */
 export function toggleMute() {
+    if (audio.enabled) {
+        playSFX('ui_click');
+    }
+
     audio.enabled = !audio.enabled;
     const muteBtn = document.getElementById('muteBtn');
     
@@ -328,6 +347,7 @@ export function startGame() {
     }
 
     document.getElementById('startScreen').classList.remove('show');
+    playSFX('ui_start_game');
 
     telemetry.startSession({
         entryPoint: 'start_screen',
@@ -355,6 +375,7 @@ export function startGame() {
  */
 function restartGame() {
     document.getElementById('gameOver').classList.remove('show');
+    playSFX('ui_restart_game');
 
     telemetry.track('run_restart', {
         fromWave: game.wave,
@@ -376,9 +397,11 @@ function restartGame() {
  */
 export function togglePause() {
     if (game.gameState === 'playing') {
+        playSFX('ui_pause_on');
         game.pause();
         document.getElementById('pauseScreen').classList.add('show');
     } else if (game.gameState === 'paused') {
+        playSFX('ui_pause_off');
         game.resume();
         document.getElementById('pauseScreen').classList.remove('show');
         if (animationFrameId !== null) {
@@ -603,6 +626,7 @@ function updatePerformanceStats() {
 function showGameOver() {
     document.getElementById('finalWave').textContent = game.wave.toString();
     document.getElementById('gameOver').classList.add('show');
+    playSFX('game_over');
 
     telemetry.endSession('game_over', {
         finalWave: game.wave,

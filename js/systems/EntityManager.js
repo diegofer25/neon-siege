@@ -54,7 +54,12 @@ export class EntityManager {
         this.game.score += 10;
         
         // Audio feedback
-        playSFX('explode');
+        if (enemy.isBoss) {
+            playSFX('boss_defeat');
+            playSFX('impact_explosion_big');
+        } else {
+            playSFX('enemy_death');
+        }
     }
 
     /**

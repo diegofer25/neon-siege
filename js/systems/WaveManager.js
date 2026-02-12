@@ -1,6 +1,7 @@
 import { Enemy } from '../Enemy.js';
 import { Boss } from '../Boss.js';
 import { GameConfig } from '../config/GameConfig.js';
+import { playSFX } from '../main.js';
 
 /**
  * Manages wave progression, enemy spawning, and wave completion logic.
@@ -44,6 +45,7 @@ export class WaveManager {
         this.waveCompletionTimer = 0;
         this.waveStartTime = Date.now();
         this.isBossWave = this.currentWave > 0 && this.currentWave % 10 === 0;
+        playSFX(this.isBossWave ? 'wave_boss_alert' : 'wave_start');
 
         // Apply a wave modifier (or none) at the start of each wave.
         // Boss waves intentionally have no modifier to keep tuning simpler.
@@ -84,6 +86,7 @@ export class WaveManager {
     spawnBoss() {
         const boss = Boss.createBoss(this.game);
         this.game.enemies.push(boss);
+        playSFX(boss.bossType === 'Shield' ? 'boss_spawn_shield' : 'boss_spawn_classic');
     }
 
     /**
@@ -147,6 +150,18 @@ export class WaveManager {
         enemy.setGameReference(this.game);
         
         this.game.enemies.push(enemy);
+
+        if (this.enemiesSpawned === 0) {
+            if (enemy.isSplitter) {
+                playSFX('enemy_spawn_splitter');
+            } else if (enemy.color === '#f0f') {
+                playSFX('enemy_spawn_fast');
+            } else if (enemy.color === '#ff0') {
+                playSFX('enemy_spawn_tank');
+            } else {
+                playSFX('enemy_spawn_basic');
+            }
+        }
     }
 
     /**

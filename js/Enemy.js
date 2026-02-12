@@ -1,4 +1,5 @@
 import { GameConfig } from "./config/GameConfig.js";
+import { playSFX } from './main.js';
 
 /**
  * Represents an enemy unit in the tower defense game.
@@ -396,6 +397,8 @@ export class SplitterEnemy extends Enemy {
         if (this.generation >= this.maxGeneration || !this.game) {
             return;
         }
+
+        playSFX('enemy_split');
         
         // Create explosion effect
         if (this.game.createExplosion) {

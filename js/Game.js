@@ -320,6 +320,7 @@ export class Game {
 	 */
 	completeWave() {
 		this.gameState = "powerup";
+		playSFX("wave_complete");
 
 		// Calculate and award coins
 		const totalCoins = this.waveManager.calculateWaveReward();
@@ -346,6 +347,7 @@ export class Game {
 	 * Display the shop interface for power-up purchases.
 	 */
 	showShop() {
+		playSFX("ui_shop_open");
 		this.shop.showShop(
 			this.player,
 			this.player.coins,
@@ -362,7 +364,7 @@ export class Game {
 		if (this.player.spendCoins(price)) {
 			powerUp.apply(this.player);
 			this.player.evaluateSynergies();
-			playSFX("powerup");
+			playSFX("ui_purchase_success");
 			telemetry.track("shop_purchase", {
 				wave: this.wave,
 				powerUp: powerUp.name,
@@ -370,6 +372,7 @@ export class Game {
 				coinsAfterPurchase: this.player.coins
 			});
 		} else {
+			playSFX("ui_purchase_fail");
 			telemetry.track("shop_purchase_failed", {
 				wave: this.wave,
 				powerUp: powerUp.name,
@@ -384,6 +387,7 @@ export class Game {
 	 */
 	continueToNextWave() {
 		this.shop.closeShop();
+		playSFX("ui_shop_close");
 		this.wave++;
 		this.gameState = "playing";
 
