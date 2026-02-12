@@ -164,8 +164,9 @@ export class Shop {
      * @param {number} coins - Player's available coins
      * @param {Function} onPurchase - Callback executed when power-up is purchased
      * @param {Function} onContinue - Callback executed when shop is closed
+     * @param {Function|null} onRewardedBoost - Callback executed when rewarded boost button is clicked
      */
-    showShop(player, coins, onPurchase, onContinue) {
+    showShop(player, coins, onPurchase, onContinue, onRewardedBoost = null) {
         const modal = document.getElementById('powerUpModal');
         
         // Store current state for refresh operations
@@ -178,6 +179,7 @@ export class Shop {
         // Initialize tab system and event handlers
         this.setupTabs();
         this.setupCloseButton(onContinue);
+        this.setupRewardedButton(onRewardedBoost);
         
         // Display the current tab content
         this.showTab(this.currentTab, player, coins, onPurchase);
@@ -257,6 +259,49 @@ export class Shop {
         
         newCloseButton.addEventListener('click', () => {
             onContinue ? onContinue() : this.closeShop();
+        });
+    }
+
+    setupRewardedButton(onRewardedBoost) {
+        const rewardButton = document.querySelector('.shop-reward-btn');
+        if (!rewardButton) {
+            return;
+        }
+
+        const newRewardButton = rewardButton.cloneNode(true);
+        rewardButton.parentNode.replaceChild(newRewardButton, rewardButton);
+
+        if (typeof onRewardedBoost !== 'function') {
+            newRewardButton.style.display = 'none';
+            return;
+        }
+
+        newRewardButton.style.display = 'inline-block';
+        newRewardButton.disabled = false;
+        newRewardButton.textContent = 'Watch Ad: +50% Wave Coins';
+
+        newRewardButton.addEventListener('click', async () => {
+            newRewardButton.disabled = true;
+            newRewardButton.textContent = 'Loading...';
+
+            try {
+                const result = await onRewardedBoost();
+
+                if (result?.rewardGranted) {
+                    newRewardButton.textContent = 'Reward Claimed';
+                } else {
+                    newRewardButton.textContent = 'Ad Unavailable';
+                    setTimeout(() => {
+                        newRewardButton.textContent = 'Watch Ad: +50% Wave Coins';
+                        newRewardButton.disabled = false;
+                    }, 1500);
+                }
+            } catch {
+                newRewardButton.textContent = 'Try Again';
+                newRewardButton.disabled = false;
+            }
+
+            this.refreshShop();
         });
     }
 

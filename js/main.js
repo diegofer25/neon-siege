@@ -5,6 +5,8 @@
  */
 
 import { Game } from './Game.js';
+import { telemetry } from './managers/TelemetryManager.js';
+import { consentManager } from './managers/ConsentManager.js';
 
 //=============================================================================
 // GLOBAL STATE AND CONFIGURATION
@@ -108,6 +110,15 @@ function init() {
 
     // Display initial start screen
     document.getElementById('startScreen').classList.add('show');
+
+    // Initialize consent controls and prompt when no decision is stored
+    consentManager.bindUI();
+
+    telemetry.track('app_initialized', {
+        userAgent: navigator.userAgent,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight
+    });
 
     // Listen for start button click to begin game
     document.getElementById('startBtn').addEventListener('click', startGame);
@@ -311,7 +322,17 @@ export function toggleMute() {
  * Hides start screen, starts audio, and begins game loop
  */
 export function startGame() {
+    if (!consentManager.hasDecision()) {
+        consentManager.showConsentPrompt();
+        return;
+    }
+
     document.getElementById('startScreen').classList.remove('show');
+
+    telemetry.startSession({
+        entryPoint: 'start_screen',
+        statsOverlayEnabled: showPerformanceStats
+    });
     
     // Start background music if audio is enabled
     if (audio.enabled && audio.bgm) {
@@ -334,6 +355,12 @@ export function startGame() {
  */
 function restartGame() {
     document.getElementById('gameOver').classList.remove('show');
+
+    telemetry.track('run_restart', {
+        fromWave: game.wave,
+        score: game.score
+    });
+
     game.restart();
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
@@ -576,6 +603,12 @@ function updatePerformanceStats() {
 function showGameOver() {
     document.getElementById('finalWave').textContent = game.wave.toString();
     document.getElementById('gameOver').classList.add('show');
+
+    telemetry.endSession('game_over', {
+        finalWave: game.wave,
+        finalScore: game.score,
+        finalCoins: game.player.coins
+    });
     
     // Stop and reset background music
     if (audio.bgm) {
@@ -631,3 +664,7 @@ export function screenFlash() {
 
 // Initialize application when DOM content is fully loaded
 document.addEventListener('DOMContentLoaded', init);
+
+window.addEventListener('beforeunload', () => {
+    telemetry.endSession('window_unload');
+});

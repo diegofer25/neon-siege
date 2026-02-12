@@ -106,6 +106,41 @@
   border-top: 1px solid rgba(143, 0, 255, 0.3);
   flex-shrink: 0;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.shop-reward-btn {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  background: linear-gradient(45deg, var(--color-tertiary-neon), var(--color-secondary-neon));
+  border: 2px solid var(--color-secondary-neon);
+  color: #fff;
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: var(--transition-normal);
+  box-shadow:
+    0 0 10px var(--color-secondary-neon),
+    0 0 var(--spacing-xl) rgba(255, 45, 236, 0.25);
+  font-weight: bold;
+}
+
+.shop-reward-btn:hover:enabled {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 var(--spacing-xl) var(--color-secondary-neon),
+    0 0 40px rgba(255, 45, 236, 0.45);
+}
+
+.shop-reward-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .shop-close-btn {

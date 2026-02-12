@@ -37,6 +37,9 @@
             <div id="muteButton" class="hud-element">
                 <button id="muteBtn">🔊</button>
             </div>
+            <div id="consentButton" class="hud-element">
+                <button id="consentManageBtn" title="Privacy preferences">⚖️</button>
+            </div>
             <div id="statsDisplay" class="hud-element">
                 <div class="stat-item">
                     <span class="stat-icon">⚔️</span>
@@ -90,6 +93,41 @@
             <button id="startBtn">CLICK TO START</button>
         </div>
 
+        <!-- Consent Screen -->
+        <div id="consentScreen" class="overlay">
+            <div class="consent-panel">
+                <h2>Privacy Preferences</h2>
+                <p>Choose how your data is used for analytics and ads.</p>
+                <p>You can change this anytime with the ⚖️ button.</p>
+
+                <div class="consent-options">
+                    <label>
+                        <input id="consentAnalytics" type="checkbox">
+                        Allow analytics
+                    </label>
+                    <label>
+                        <input id="consentAds" type="checkbox">
+                        Allow ads
+                    </label>
+                    <label>
+                        <input id="consentPersonalizedAds" type="checkbox">
+                        Allow personalized ads
+                    </label>
+                </div>
+
+                <div class="consent-actions">
+                    <button id="consentEssentialBtn">Essential Only</button>
+                    <button id="consentSaveBtn">Save Choices</button>
+                    <button id="consentAcceptAllBtn" class="primary">Accept All</button>
+                </div>
+
+                <p class="consent-note">
+                    Replace this placeholder URL before launch:
+                    <a href="https://example.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                </p>
+            </div>
+        </div>
+
         <!-- Power-Up Modal -->
         <div id="powerUpModal" class="overlay">
             <div class="shop-container">
@@ -105,6 +143,7 @@
                     </div>
                 </div>
                 <div class="shop-footer">
+                    <button class="shop-reward-btn">Watch Ad: +50% Wave Coins</button>
                     <button class="shop-close-btn">Continue to Next Wave</button>
                 </div>
             </div>

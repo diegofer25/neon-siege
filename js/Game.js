@@ -11,6 +11,8 @@ import { EffectsManager } from "./systems/EffectsManager.js";
 import { EntityManager } from "./systems/EntityManager.js";
 import { playSFX } from "./main.js";
 import { ProgressionManager } from "./managers/ProgressionManager.js";
+import { telemetry } from "./managers/TelemetryManager.js";
+import { monetizationManager } from "./managers/MonetizationManager.js";
 
 /**
  * Main game class - now focused on coordination between systems rather than direct management.
@@ -186,10 +188,17 @@ export class Game {
 		this.enemies = [];
 		this.projectiles = [];
 		this.particles = [];
+		this._gameOverTracked = false;
 
 		this.player.reset();
 		this.waveManager.reset();
 		this.waveManager.startWave(this.wave);
+
+		telemetry.track("run_start", {
+			wave: this.wave,
+			playerHp: this.player.hp,
+			playerMaxHp: this.player.maxHp
+		});
 	}
 
 	/**
@@ -291,6 +300,18 @@ export class Game {
 		// Check game over
 		if (this.player.hp <= 0) {
 			this.gameState = "gameover";
+			if (!this._gameOverTracked) {
+				this._gameOverTracked = true;
+				telemetry.track("game_over", {
+					wave: this.wave,
+					score: this.score,
+					coins: this.player.coins
+				});
+				monetizationManager.registerOpportunity("game_over", {
+					wave: this.wave,
+					score: this.score
+				});
+			}
 		}
 	}
 
@@ -305,6 +326,19 @@ export class Game {
 		this.player.addCoins(totalCoins);
 		this.progressionManager.recordWaveCompletion(this.wave, this.waveManager.isBossWave);
 
+		telemetry.track("wave_complete", {
+			wave: this.wave,
+			coinsRewarded: totalCoins,
+			remainingHp: this.player.hp,
+			isBossWave: this.waveManager.isBossWave
+		});
+
+		monetizationManager.registerOpportunity("between_waves", {
+			wave: this.wave,
+			coinsRewarded: totalCoins,
+			isBossWave: this.waveManager.isBossWave
+		});
+
 		this.showShop();
 	}
 
@@ -316,7 +350,8 @@ export class Game {
 			this.player,
 			this.player.coins,
 			(powerUp, price) => this.purchasePowerUp(powerUp, price),
-			() => this.continueToNextWave()
+			() => this.continueToNextWave(),
+			() => this.showRewardedCoinBoost()
 		);
 	}
 
@@ -327,7 +362,20 @@ export class Game {
 		if (this.player.spendCoins(price)) {
 			powerUp.apply(this.player);
 			this.player.evaluateSynergies();
-			playSFX("powerup")
+			playSFX("powerup");
+			telemetry.track("shop_purchase", {
+				wave: this.wave,
+				powerUp: powerUp.name,
+				price,
+				coinsAfterPurchase: this.player.coins
+			});
+		} else {
+			telemetry.track("shop_purchase_failed", {
+				wave: this.wave,
+				powerUp: powerUp.name,
+				price,
+				coinsAvailable: this.player.coins
+			});
 		}
 	}
 
@@ -339,9 +387,31 @@ export class Game {
 		this.wave++;
 		this.gameState = "playing";
 
+		telemetry.track("wave_start", {
+			wave: this.wave,
+			playerHp: this.player.hp,
+			coins: this.player.coins
+		});
+
 		setTimeout(() => {
 			this.waveManager.startWave(this.wave);
 		}, 1000);
+	}
+
+	async showRewardedCoinBoost() {
+		const bonus = Math.max(1, Math.ceil(this.waveManager.calculateWaveReward() * 0.5));
+		return monetizationManager.tryShowRewarded(
+			"between_waves_coin_boost",
+			{ wave: this.wave, proposedBonus: bonus },
+			() => {
+				this.player.addCoins(bonus);
+				telemetry.track("rewarded_bonus_applied", {
+					placement: "between_waves_coin_boost",
+					wave: this.wave,
+					bonus
+				});
+			}
+		);
 	}
 
 	getActiveParticleLimit() {
