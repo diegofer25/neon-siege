@@ -13,6 +13,8 @@ const DEFAULTS = {
     retries: 3
 };
 
+const STYLE_CONSTRAINTS = 'Avoid retro, 8-bit, chiptune, vintage arcade, and old-school synthwave aesthetics. Prioritize modern sound design and contemporary game-audio texture.';
+
 function parseArgs(argv) {
     const args = {
         dryRun: false,
@@ -67,7 +69,7 @@ function extensionFromOutputFormat(outputFormat) {
 }
 
 function buildPrompt(entry) {
-    return `${SOUND_STYLE_PREFIX}${entry.text}`;
+    return `${SOUND_STYLE_PREFIX}${entry.text} ${STYLE_CONSTRAINTS}`;
 }
 
 async function exists(filePath) {

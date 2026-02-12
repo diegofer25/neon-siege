@@ -67,4 +67,4 @@ export const SOUND_EFFECT_MANIFEST = [
     { key: 'reward_claim_fail', category: 'reward', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Reward claim failed sound, soft digital error cue with short low buzz, no voice.' }
 ];
 
-export const SOUND_STYLE_PREFIX = 'Retro synthwave arcade game sound effect. Stylized, punchy, clean mix, no vocals, no spoken words. '; 
+export const SOUND_STYLE_PREFIX = 'Modern high-fidelity sci-fi game sound effect. Polished, professional, punchy, clean transients, fun and energetic, cinematic mix, no vocals, no spoken words. ';
