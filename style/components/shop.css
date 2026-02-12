@@ -67,6 +67,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .shop-cards-container {
@@ -78,6 +79,8 @@
   flex-wrap: wrap;
   justify-content: center;
   align-content: flex-start;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 /* Custom Scrollbar for Shop */
@@ -113,6 +116,10 @@
   align-items: center;
 }
 
+.shop-footer button {
+  margin: 0;
+}
+
 .shop-reward-btn {
   width: auto;
   min-width: 180px;
@@ -130,6 +137,7 @@
     0 0 8px var(--color-tertiary-neon),
     0 0 14px rgba(143, 0, 255, 0.2);
   font-weight: bold;
+  line-height: 1.2;
 }
 
 .shop-reward-btn:hover:enabled {
@@ -162,6 +170,7 @@
     0 0 10px var(--color-primary-neon),
     0 0 var(--spacing-xl) rgba(0, 255, 255, 0.3);
   font-weight: bold;
+  line-height: 1.2;
 }
 
 .shop-close-btn:hover {

@@ -27,7 +27,8 @@ export class Enemy {
         this.health = health;
         this.maxHealth = health;
         this.damage = damage;
-        this.radius = 20; // Collision radius in pixels
+        this.baseRadius = 20; // Collision radius baseline in pixels
+        this.radius = this.baseRadius;
         
         // Velocity tracking for predictive targeting
         this.vx = 0; // Velocity X component in pixels per second
@@ -86,9 +87,10 @@ export class Enemy {
             const normalizedDy = dy / distance;
             
             const speedMultiplier = (game && game.modifierState && game.modifierState.enemySpeedMultiplier) ? game.modifierState.enemySpeedMultiplier : 1;
+            const arenaScale = game?.getArenaScale?.() || 1;
 
             // Convert speed from pixels per second to pixels per frame
-            const actualSpeed = this.speed * speedMultiplier * this.slowFactor * (delta / 1000);
+            const actualSpeed = this.speed * arenaScale * speedMultiplier * this.slowFactor * (delta / 1000);
             
             // Store previous position for velocity calculation
             this.prevX = this.x;
@@ -240,6 +242,24 @@ export class Enemy {
      */
     setGameReference(game) {
         this.game = game;
+        this.applyResponsiveScale(game?.getEntityScale?.() || 1);
+    }
+
+    /**
+     * Sets enemy base radius and reapplies responsive scaling.
+     * @param {number} radius
+     */
+    setBaseRadius(radius) {
+        this.baseRadius = radius;
+        this.applyResponsiveScale(this.game?.getEntityScale?.() || 1);
+    }
+
+    /**
+     * Applies responsive radius scaling based on arena size.
+     * @param {number} scale
+     */
+    applyResponsiveScale(scale = 1) {
+        this.radius = this.baseRadius * scale;
     }
     
     /**
@@ -284,7 +304,7 @@ export class Enemy {
         // Visual differentiation
         enemy.color = '#f0f'; // Magenta
         enemy.glowColor = '#f0f';
-        enemy.radius = 15; // Smaller collision radius
+        enemy.setBaseRadius(15); // Smaller collision radius
         
         return enemy;
     }
@@ -311,7 +331,7 @@ export class Enemy {
         // Visual differentiation
         enemy.color = '#ff0'; // Yellow
         enemy.glowColor = '#ff0';
-        enemy.radius = 25; // Larger collision radius
+        enemy.setBaseRadius(25); // Larger collision radius
         
         return enemy;
     }
@@ -369,19 +389,19 @@ export class SplitterEnemy extends Enemy {
                 // Original splitter - orange
                 this.color = '#ff8000';
                 this.glowColor = '#ff8000';
-                this.radius = 22;
+                this.setBaseRadius(22);
                 break;
             case 2:
                 // First split - red-orange
                 this.color = '#ff4000';
                 this.glowColor = '#ff4000';
-                this.radius = 18;
+                this.setBaseRadius(18);
                 break;
             case 3:
                 // Second split - red
                 this.color = '#ff2000';
                 this.glowColor = '#ff2000';
-                this.radius = 15;
+                this.setBaseRadius(15);
                 break;
         }
     }
@@ -446,7 +466,7 @@ export class SplitterEnemy extends Enemy {
             );
             
             // Set game reference for potential future splits
-            splitEnemy.game = this.game;
+            splitEnemy.setGameReference(this.game);
             
             // Add slight random velocity to spread out
             const spreadVelocity = 50;
@@ -465,7 +485,7 @@ export class SplitterEnemy extends Enemy {
      * @param {import('./Game.js').Game} game - Game instance
      */
     setGameReference(game) {
-        this.game = game;
+        super.setGameReference(game);
     }
     
     /**

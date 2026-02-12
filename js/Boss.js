@@ -7,7 +7,7 @@ export class Boss extends Enemy {
     constructor(x, y, health, damage, game) {
         super(x, y, GameConfig.BOSS.SPEED, health, damage);
         this.game = game;
-        this.radius = GameConfig.BOSS.RADIUS;
+        this.setBaseRadius(GameConfig.BOSS.RADIUS);
         this.color = '#ff00ff'; // Bright magenta for the boss
         this.glowColor = '#ff00ff';
         this.isBoss = true;
@@ -34,6 +34,7 @@ export class Boss extends Enemy {
         const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
             ? this.game.modifierState.enemySpeedMultiplier
             : 1;
+        const arenaScale = this.game?.getArenaScale?.() || 1;
 
         // Store previous position for velocity calculation
         this.prevX = this.x;
@@ -52,7 +53,7 @@ export class Boss extends Enemy {
         } else if (distance > 200) { // Keep some distance
             const normalizedDx = dx / distance;
             const normalizedDy = dy / distance;
-            const actualSpeed = this.speed * speedMultiplier * deltaSeconds;
+            const actualSpeed = this.speed * arenaScale * speedMultiplier * deltaSeconds;
             this.x += normalizedDx * actualSpeed;
             this.y += normalizedDy * actualSpeed;
         }
@@ -119,7 +120,8 @@ export class Boss extends Enemy {
         const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
             ? this.game.modifierState.enemySpeedMultiplier
             : 1;
-        const chargeSpeed = this.speed * 3 * speedMultiplier;
+        const arenaScale = this.game?.getArenaScale?.() || 1;
+        const chargeSpeed = this.speed * 3 * arenaScale * speedMultiplier;
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -199,7 +201,9 @@ export class Boss extends Enemy {
 
         const centerX = canvasWidth / 2;
         const centerY = canvasHeight / 2;
-        const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+        const arenaScale = game.getArenaScale?.() || 1;
+        const spawnMargin = GameConfig.ENEMY.SPAWN_MARGIN * arenaScale;
+        const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + spawnMargin;
         const angle = Math.random() * Math.PI * 2;
         const x = centerX + Math.cos(angle) * spawnRadius;
         const y = centerY + Math.sin(angle) * spawnRadius;

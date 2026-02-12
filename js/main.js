@@ -5,6 +5,7 @@
  */
 
 import { Game } from './Game.js';
+import { GameConfig } from './config/GameConfig.js';
 import { telemetry } from './managers/TelemetryManager.js';
 import { consentManager } from './managers/ConsentManager.js';
 import { SOUND_EFFECT_MANIFEST } from '../scripts/sfx-manifest.mjs';
@@ -30,6 +31,50 @@ const appRuntime = window[APP_RUNTIME_KEY] || (window[APP_RUNTIME_KEY] = {
     initialized: false
 });
 
+const MOBILE_RESIZE_MAX_EDGE = 1024;
+const MOBILE_MINOR_WIDTH_DELTA = 80;
+const MOBILE_MINOR_HEIGHT_DELTA = 140;
+
+let viewportState = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    orientation: window.innerWidth >= window.innerHeight ? 'landscape' : 'portrait'
+};
+
+function getViewportState() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    return {
+        width,
+        height,
+        orientation: width >= height ? 'landscape' : 'portrait'
+    };
+}
+
+function getCanvasLogicalSize(canvas) {
+    return {
+        width: canvas.logicalWidth || parseInt(canvas.style.width, 10) || canvas.clientWidth || canvas.width,
+        height: canvas.logicalHeight || parseInt(canvas.style.height, 10) || canvas.clientHeight || canvas.height
+    };
+}
+
+function shouldSkipTransientMobileResize(nextViewport) {
+    const maxEdge = Math.max(nextViewport.width, nextViewport.height);
+    if (maxEdge > MOBILE_RESIZE_MAX_EDGE) {
+        return false;
+    }
+
+    const orientationChanged = nextViewport.orientation !== viewportState.orientation;
+    if (orientationChanged) {
+        return false;
+    }
+
+    const widthDelta = Math.abs(nextViewport.width - viewportState.width);
+    const heightDelta = Math.abs(nextViewport.height - viewportState.height);
+    const minorResize = widthDelta <= MOBILE_MINOR_WIDTH_DELTA && heightDelta <= MOBILE_MINOR_HEIGHT_DELTA;
+    return minorResize && game?.gameState === 'playing';
+}
+
 /**
  * Audio system configuration and state
  * @type {Object}
@@ -52,6 +97,12 @@ const SFX_ALIASES = {
     powerup: 'ui_purchase_success',
     click: 'ui_click'
 };
+const SFX_VARIATION_PREFIX_ALLOWLIST = [
+    'player_shoot_',
+    'impact_',
+    'enemy_spawn_',
+    'boss_attack_'
+];
 
 /**
  * Input handling state and configuration
@@ -150,28 +201,28 @@ function setupCanvas() {
     const container = document.getElementById('gameContainer');
     
     // Target aspect ratio for consistent gameplay experience
-    const targetAspectRatio = 4/3; // 800/600 = 4/3
+    const targetAspectRatio = GameConfig.CANVAS.TARGET_ASPECT_RATIO;
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
     const containerAspectRatio = containerWidth / containerHeight;
+    const isCompactViewport = Math.min(containerWidth, containerHeight) <= 500;
+    const viewportFillScale = isCompactViewport ? 0.98 : 0.95;
     
     let canvasWidth, canvasHeight;
     
     // Calculate optimal canvas size based on container aspect ratio
     if (containerAspectRatio > targetAspectRatio) {
-        // Container is wider, fit to height with more generous scaling for mobile
-        const mobileScale = containerWidth <= 480 ? 0.98 : 0.95;
-        canvasHeight = Math.min(containerHeight * mobileScale, 600);
+        // Container is wider, fit to height
+        canvasHeight = Math.min(containerHeight * viewportFillScale, GameConfig.CANVAS.MAX_HEIGHT);
         canvasWidth = canvasHeight * targetAspectRatio;
     } else {
-        // Container is taller, fit to width with more generous scaling for mobile
-        const mobileScale = containerWidth <= 480 ? 0.98 : 0.95;
-        canvasWidth = Math.min(containerWidth * mobileScale, 800);
+        // Container is taller, fit to width
+        canvasWidth = Math.min(containerWidth * viewportFillScale, GameConfig.CANVAS.MAX_WIDTH);
         canvasHeight = canvasWidth / targetAspectRatio;
     }
     
     // Ensure minimum playable size on small screens
-    const minWidth = 320;
+    const minWidth = GameConfig.CANVAS.MIN_WIDTH;
     const minHeight = minWidth / targetAspectRatio;
     
     if (canvasWidth < minWidth) {
@@ -214,11 +265,20 @@ function handleResize() {
     // Debounce resize events to improve performance
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
+        const nextViewport = getViewportState();
+        if (shouldSkipTransientMobileResize(nextViewport)) {
+            viewportState = nextViewport;
+            return;
+        }
+
         if (game) {
+            const previousCanvasSize = getCanvasLogicalSize(input.canvas);
             setupCanvas();
             // Notify game of canvas size changes
-            game.updateCanvasSize();
+            game.updateCanvasSize(previousCanvasSize);
         }
+
+        viewportState = nextViewport;
     }, 100);
 }
 
@@ -309,7 +369,10 @@ export function playSFX(soundName) {
     if (!pool || pool.length === 0) return;
     
     try {
-        const source = pool[Math.floor(Math.random() * pool.length)];
+        const useVariation = SFX_VARIATION_PREFIX_ALLOWLIST.some(prefix => canonicalName.startsWith(prefix));
+        const source = useVariation
+            ? pool[Math.floor(Math.random() * pool.length)]
+            : pool[0];
         // Clone audio node to allow overlapping sounds
         const sound = source.cloneNode();
         sound.play().catch(e => console.log('Audio play failed:', e));

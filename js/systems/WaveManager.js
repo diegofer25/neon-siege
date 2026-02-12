@@ -98,7 +98,9 @@ export class WaveManager {
 
         const centerX = canvasWidth / 2;
         const centerY = canvasHeight / 2;
-        const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+        const arenaScale = this.game.getArenaScale?.() || 1;
+        const spawnMargin = GameConfig.ENEMY.SPAWN_MARGIN * arenaScale;
+        const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + spawnMargin;
         
         const angle = Math.random() * Math.PI * 2;
         const x = centerX + Math.cos(angle) * spawnRadius;

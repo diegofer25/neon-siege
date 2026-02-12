@@ -185,19 +185,49 @@ export class Game {
 	 * Initialize the game world and create the player.
 	 */
 	init() {
-		// Get logical canvas dimensions with fallback chain for better reliability
-		const logicalWidth = this.canvas.logicalWidth || 
-			parseInt(this.canvas.style.width) || 
-			this.canvas.clientWidth || 
-			this.canvas.width;
-		const logicalHeight = this.canvas.logicalHeight || 
-			parseInt(this.canvas.style.height) || 
-			this.canvas.clientHeight || 
-			this.canvas.height;
+		const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
 		
 		const centerX = logicalWidth / 2;
 		const centerY = logicalHeight / 2;
 		this.player = new Player(centerX, centerY);
+		this.applyResponsiveEntityScale();
+	}
+
+	getLogicalCanvasSize() {
+		return {
+			width:
+				this.canvas.logicalWidth ||
+				parseInt(this.canvas.style.width, 10) ||
+				this.canvas.clientWidth ||
+				this.canvas.width,
+			height:
+				this.canvas.logicalHeight ||
+				parseInt(this.canvas.style.height, 10) ||
+				this.canvas.clientHeight ||
+				this.canvas.height,
+		};
+	}
+
+	getArenaScale() {
+		const { width, height } = this.getLogicalCanvasSize();
+		const widthScale = width / GameConfig.CANVAS.MAX_WIDTH;
+		const heightScale = height / GameConfig.CANVAS.MAX_HEIGHT;
+		return Math.max(0.2, Math.min(widthScale, heightScale));
+	}
+
+	getEntityScale() {
+		return Math.max(0.72, Math.min(this.getArenaScale(), 1));
+	}
+
+	applyResponsiveEntityScale() {
+		const entityScale = this.getEntityScale();
+		if (this.player?.baseRadius) {
+			this.player.radius = this.player.baseRadius * entityScale;
+		}
+
+		this.enemies.forEach((enemy) => {
+			enemy.applyResponsiveScale?.(entityScale);
+		});
 	}
 
 	/**
@@ -213,6 +243,7 @@ export class Game {
 		this._gameOverTracked = false;
 
 		this.player.reset();
+		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
 		this.waveManager.startWave(this.wave);
 
@@ -252,16 +283,10 @@ export class Game {
 	/**
 	 * Update canvas-dependent positions when canvas size changes.
 	 */
-	updateCanvasSize() {
-		// Get logical canvas dimensions with fallback chain for better reliability
-		const logicalWidth = this.canvas.logicalWidth || 
-			parseInt(this.canvas.style.width) || 
-			this.canvas.clientWidth || 
-			this.canvas.width;
-		const logicalHeight = this.canvas.logicalHeight || 
-			parseInt(this.canvas.style.height) || 
-			this.canvas.clientHeight || 
-			this.canvas.height;
+	updateCanvasSize(previousSize = null) {
+		const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
+		const prevWidth = previousSize?.width || logicalWidth;
+		const prevHeight = previousSize?.height || logicalHeight;
 		
 		const centerX = logicalWidth / 2;
 		const centerY = logicalHeight / 2;
@@ -271,15 +296,19 @@ export class Game {
 			this.player.y = centerY;
 		}
 
-		// Update enemy positions to maintain relative positions from center
+		this.applyResponsiveEntityScale();
+
+		// Preserve enemy relative placement when canvas dimensions change.
 		this.enemies.forEach((enemy) => {
+			enemy.x = (enemy.x / prevWidth) * logicalWidth;
+			enemy.y = (enemy.y / prevHeight) * logicalHeight;
+
 			const dx = enemy.x - centerX;
 			const dy = enemy.y - centerY;
 			const distance = Math.sqrt(dx * dx + dy * dy);
-
-			// If enemy is off-screen due to resize, move it to visible area
 			const maxDistance =
-				Math.max(logicalWidth, logicalHeight) / 2 + 50;
+				Math.max(logicalWidth, logicalHeight) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+
 			if (distance > maxDistance) {
 				const angle = Math.atan2(dy, dx);
 				enemy.x = centerX + Math.cos(angle) * maxDistance;
@@ -287,8 +316,9 @@ export class Game {
 			}
 		});
 
-		// Remove projectiles and particles that are now off-screen
 		this.projectiles = this.projectiles.filter((proj) => {
+			proj.x = (proj.x / prevWidth) * logicalWidth;
+			proj.y = (proj.y / prevHeight) * logicalHeight;
 			return (
 				proj.x >= 0 &&
 				proj.x <= logicalWidth &&

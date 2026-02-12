@@ -44,8 +44,10 @@ export class Player {
         this.x = x;
         /** @type {number} Current y position */
         this.y = y;
+        /** @type {number} Base player collision radius before responsive scaling */
+        this.baseRadius = GameConfig.PLAYER.RADIUS;
         /** @type {number} Player collision radius */
-        this.radius = GameConfig.PLAYER.RADIUS;
+        this.radius = this.baseRadius;
         /** @type {number} Current facing angle in radians */
         this.angle = 0;
         

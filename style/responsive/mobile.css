@@ -23,7 +23,7 @@
   
   .shop-container {
     width: 95vw;
-    max-height: 85vh;
+    max-height: 85svh;
   }
   
   .shop-tabs {
@@ -33,7 +33,8 @@
   
   .tab-button {
     padding: var(--spacing-md) 10px;
-    font-size: 8px;
+    font-size: 10px;
+    line-height: 1.2;
   }
   
   .shop-cards-container {
@@ -73,7 +74,7 @@
   
   .shop-close-btn {
     font-size: 10px;
-    padding: 10px var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-lg);
   }
 
   .shop-footer {
@@ -98,6 +99,16 @@
     left: 5px;
     right: 5px;
     bottom: 5px;
+  }
+
+  #waveCounter {
+    top: 4px;
+    left: 60%;
+    transform: translateX(-50%);
+  }
+
+  #wave {
+    font-size: 11px;
   }
   
   .healthbar {
@@ -155,7 +166,7 @@
   
   .shop-container {
     width: 98vw;
-    max-height: 90vh;
+    max-height: 90svh;
   }
   
   .shop-tabs {
@@ -165,19 +176,20 @@
   
   .tab-button {
     padding: 5px var(--spacing-sm);
-    font-size: 7px;
+    font-size: 9px;
+    line-height: 1.2;
   }
   
   .shop-cards-container {
     padding: 10px 5px;
-    gap: 10px;
+    gap: 8px;
     justify-content: space-around;
   }
   
   .card {
-    width: 120px;
-    min-height: 180px;
-    padding: 10px;
+    width: 116px;
+    min-height: 168px;
+    padding: 8px;
   }
   
   .card-icon {
@@ -210,13 +222,21 @@
   }
 
   .shop-reward-btn {
-    font-size: 7px;
+    font-size: 8px;
     padding: var(--spacing-sm);
   }
   
   #statsDisplay {
     transform: scale(0.85);
     transform-origin: bottom right;
+  }
+
+  #waveCounter {
+    left: 64%;
+  }
+
+  #wave {
+    font-size: 10px;
   }
   
   .performance-stats {
@@ -230,4 +250,123 @@
   .stat-item { min-width: 80px; }
   .stat-label, .stat-value { font-size: 6px; }
   .stat-icon { font-size: 8px; }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  #gameContainer {
+    padding: 2px;
+  }
+
+  #hud {
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+  }
+
+  #wave {
+    font-size: 12px;
+  }
+
+  #waveCounter {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  #muteBtn,
+  #consentManageBtn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .coin-display {
+    padding: 4px 8px;
+  }
+
+  .coin-amount {
+    font-size: 10px;
+  }
+
+  #statsDisplay {
+    transform: scale(0.9);
+    transform-origin: bottom right;
+  }
+
+  .shop-container {
+    width: min(96vw, 860px);
+    max-height: 96svh;
+    border-radius: var(--radius-xl);
+  }
+
+  .shop-container h2 {
+    margin-top: var(--spacing-md);
+    font-size: 22px;
+  }
+
+  .shop-tabs {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .tab-button {
+    max-width: none;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .shop-cards-container {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .card {
+    width: 112px;
+    min-height: 150px;
+    padding: 8px;
+  }
+
+  .card-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    font-size: 8px;
+    margin-bottom: 8px;
+  }
+
+  .card-description {
+    font-size: 7px;
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+
+  .card-price {
+    font-size: 7px;
+    margin-bottom: 4px;
+  }
+
+  .status-text {
+    font-size: 6px;
+  }
+
+  .shop-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .shop-reward-btn,
+  .shop-close-btn {
+    min-width: 0;
+    width: calc(50% - 4px);
+    max-width: none;
+    padding: 8px 10px;
+    font-size: 8px;
+  }
 }
