@@ -127,7 +127,10 @@ export const GameConfig = {
         /** @type {number} Number of particles in muzzle flash effect */
         MUZZLE_FLASH_PARTICLES: 3,
         /** @type {number} Distance from player center to muzzle flash */
-        MUZZLE_FLASH_DISTANCE: 10
+        MUZZLE_FLASH_DISTANCE: 10,
+
+        /** @type {number} Brief invulnerability window after taking enemy projectile damage (ms) */
+        ENEMY_PROJECTILE_IFRAMES_MS: 120
     },
 
     /**

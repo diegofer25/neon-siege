@@ -196,7 +196,7 @@ export class CollisionSystem {
      */
     _handleEnemyProjectileHit(projectile, projectileIndex) {
         // Damage player
-        this.game.player.takeDamage(projectile.damage);
+        this.game.player.takeDamage(projectile.damage, 'enemyProjectile');
         
         // Visual and audio feedback
         this.game.effectsManager.addScreenShake(8, 200);

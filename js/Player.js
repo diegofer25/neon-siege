@@ -94,6 +94,11 @@ export class Player {
         };
         /** @type {number} Persistent critical chance bonuses from meta/synergies */
         this.persistentCritBonus = 0;
+
+        /** @type {number} Time remaining for enemy projectile invulnerability (ms) */
+        this.enemyProjectileIFrames = 0;
+        /** @type {number} Duration applied after an enemy projectile hit (ms) */
+        this.enemyProjectileIFrameDuration = GameConfig.PLAYER.ENEMY_PROJECTILE_IFRAMES_MS;
     }
     
     /**
@@ -251,6 +256,8 @@ export class Player {
         this.hp = this.maxHp;
         this.fireCooldown = 0;
         this.angle = 0;
+
+        this.enemyProjectileIFrames = 0;
         
         // Reset rotation system
         this.targetAngle = null;
@@ -333,6 +340,10 @@ export class Player {
     update(delta, input, game) {
         // Skip all updates if game is not in playing state
         if (game.gameState !== 'playing') return;
+
+        if (this.enemyProjectileIFrames > 0) {
+            this.enemyProjectileIFrames = Math.max(0, this.enemyProjectileIFrames - delta);
+        }
         
         // Find and acquire target
         const nearestEnemy = this.findNearestEnemy(game.enemies);
@@ -820,9 +831,16 @@ export class Player {
      * @example
      * player.takeDamage(25); // Applies 25 damage to shield first, then health
      */
-    takeDamage(amount) {
+    takeDamage(amount, source = 'generic') {
         if (amount < 0) {
             throw new Error('Damage amount cannot be negative');
+        }
+
+        if (source === 'enemyProjectile') {
+            if (this.enemyProjectileIFrames > 0) {
+                return;
+            }
+            this.enemyProjectileIFrames = this.enemyProjectileIFrameDuration;
         }
         
         // Check if Barrier Phase is active (invulnerability)
