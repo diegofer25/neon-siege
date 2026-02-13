@@ -91,6 +91,8 @@ function shouldSkipTransientMobileResize(nextViewport) {
  */
 const audio = {
     bgm: null,
+    musicTracks: {},
+    currentMusicKey: null,
     sfx: {},
     soundVolume: GameConfig.AUDIO.SFX_VOLUME,
     musicVolume: GameConfig.AUDIO.BGM_VOLUME
@@ -104,6 +106,23 @@ const SFX_ALIASES = {
     hurt: 'player_hurt',
     powerup: 'ui_purchase_success',
     click: 'ui_click'
+};
+
+const MUSIC_TRACKS = {
+    music_menu_main: { src: 'assets/audio/music/music_menu_main.mp3', loop: true },
+    music_menu_settings: { src: 'assets/audio/music/music_menu_settings.mp3', loop: true },
+    music_menu_consent: { src: 'assets/audio/music/music_menu_consent.mp3', loop: true },
+    music_run_wave_early: { src: 'assets/audio/music/music_run_wave_early.mp3', loop: true },
+    music_run_wave_mid: { src: 'assets/audio/music/music_run_wave_mid.mp3', loop: true },
+    music_run_wave_late: { src: 'assets/audio/music/music_run_wave_late.mp3', loop: true },
+    music_wave_countdown_stinger: { src: 'assets/audio/music/music_wave_countdown_stinger.mp3', loop: false },
+    music_shop_between_waves: { src: 'assets/audio/music/music_shop_between_waves.mp3', loop: true },
+    music_boss_classic: { src: 'assets/audio/music/music_boss_classic.mp3', loop: true },
+    music_boss_shield: { src: 'assets/audio/music/music_boss_shield.mp3', loop: true },
+    music_pause_overlay: { src: 'assets/audio/music/music_pause_overlay.mp3', loop: true },
+    music_gameover_defeat: { src: 'assets/audio/music/music_gameover_defeat.mp3', loop: false },
+    music_restore_resume_stinger: { src: 'assets/audio/music/music_restore_resume_stinger.mp3', loop: false },
+    music_run_resume_stinger: { src: 'assets/audio/music/music_run_resume_stinger.mp3', loop: false }
 };
 let lastMenuScrollSfxAt = 0;
 let lastSettingsPanelScrollTop = null;
@@ -136,6 +155,70 @@ function setupMenuScrollSoundHooks() {
     settingsPanel.addEventListener('scroll', () => {
         playMenuScrollSfx(settingsPanel.scrollTop);
     }, { passive: true });
+}
+
+function getWaveMusicKey(wave = 1) {
+    if (wave >= 31) return 'music_run_wave_late';
+    if (wave >= 11) return 'music_run_wave_mid';
+    return 'music_run_wave_early';
+}
+
+function resolveMusicKeyForState() {
+    if (!game) return 'music_menu_main';
+
+    if (game.gameState === 'gameover') return 'music_gameover_defeat';
+    if (game.gameState === 'paused') return 'music_pause_overlay';
+    if (game.gameState === 'powerup') return 'music_shop_between_waves';
+
+    if (game.gameState === 'playing') {
+        if (game.waveManager?.isBossWave) {
+            return game.wave % 20 === 0 ? 'music_boss_shield' : 'music_boss_classic';
+        }
+        return getWaveMusicKey(game.wave);
+    }
+
+    return 'music_menu_main';
+}
+
+function shouldPlayMusicForState() {
+    if (!game) return false;
+    return ['menu', 'playing', 'powerup', 'paused', 'gameover'].includes(game.gameState);
+}
+
+function syncMusicTrack({ restart = false } = {}) {
+    const desiredKey = resolveMusicKeyForState();
+    const nextTrack = audio.musicTracks[desiredKey];
+    if (!nextTrack) {
+        return;
+    }
+
+    if (audio.currentMusicKey === desiredKey) {
+        if (restart) {
+            nextTrack.currentTime = 0;
+        }
+        if (audio.musicVolume > 0 && shouldPlayMusicForState() && nextTrack.paused) {
+            nextTrack.play().catch(() => {});
+        }
+        return;
+    }
+
+    if (audio.bgm) {
+        audio.bgm.pause();
+        audio.bgm.currentTime = 0;
+    }
+
+    audio.currentMusicKey = desiredKey;
+    audio.bgm = nextTrack;
+
+    if (restart) {
+        audio.bgm.currentTime = 0;
+    }
+
+    audio.bgm.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.BGM_VOLUME * audio.musicVolume));
+
+    if (audio.musicVolume > 0 && shouldPlayMusicForState()) {
+        audio.bgm.play().catch(() => {});
+    }
 }
 
 /**
@@ -348,6 +431,7 @@ function init() {
     
     // Initialize audio system
     loadAudio();
+    syncMusicTrack();
 
     // Check for performance stats URL parameter fallback
     const urlParams = new URLSearchParams(window.location.search);
@@ -540,10 +624,16 @@ function setupInputHandlers() {
  */
 function loadAudio() {
     // Background music setup
-    audio.bgm = new Audio('assets/audio/synthwave.mp3');
-    audio.bgm.preload = 'auto';
-    audio.bgm.loop = true;
-    audio.bgm.volume = audio.musicVolume;
+    audio.musicTracks = {};
+    Object.entries(MUSIC_TRACKS).forEach(([key, trackConfig]) => {
+        const track = new Audio(trackConfig.src);
+        track.preload = 'auto';
+        track.loop = trackConfig.loop;
+        track.volume = audio.musicVolume;
+        audio.musicTracks[key] = track;
+    });
+    audio.bgm = audio.musicTracks.music_menu_main || null;
+    audio.currentMusicKey = audio.bgm ? 'music_menu_main' : null;
 
     // Initialize sound effect audio variants from manifest-generated files
     audio.sfx = {};
@@ -622,10 +712,7 @@ export function startGame() {
     game.setRunDifficulty(selectedDifficulty);
     syncStartDifficultyUI(selectedDifficulty);
     
-    // Start background music if audio is enabled
-    if (audio.musicVolume > 0 && audio.bgm) {
-        audio.bgm.play().catch(e => console.log('BGM play failed:', e));
-    }
+    syncMusicTrack({ restart: true });
     
     // Initialize game state and start main loop
     game.start();
@@ -654,6 +741,7 @@ function restartGame() {
     });
 
     game.restart();
+    syncMusicTrack({ restart: true });
     syncStartDifficultyUI(game.getRunDifficulty());
     syncSaveButtons();
     if (animationFrameId !== null) {
@@ -672,6 +760,7 @@ export function togglePause() {
     if (game.gameState === 'playing') {
         playSFX('ui_pause_on');
         game.pause();
+        syncMusicTrack();
         document.getElementById('pauseScreen').classList.add('show');
         syncSaveButtons();
     } else if (game.gameState === 'paused') {
@@ -680,6 +769,7 @@ export function togglePause() {
         }
         playSFX('ui_pause_off');
         game.resume();
+        syncMusicTrack();
         document.getElementById('pauseScreen').classList.remove('show');
         if (animationFrameId !== null) {
             cancelAnimationFrame(animationFrameId);
@@ -713,6 +803,7 @@ function gameLoop(timestamp = 0) {
     
     // Update performance manager with current game state
     game.performanceManager?.update(delta, game.gameState);
+    syncMusicTrack();
     
     // Only update and render when game is in active states
     if (game.gameState === 'playing' || game.gameState === 'powerup') {
@@ -903,12 +994,8 @@ function showGameOver() {
         finalScore: game.score,
         finalCoins: game.player.coins
     });
-    
-    // Stop and reset background music
-    if (audio.bgm) {
-        audio.bgm.pause();
-        audio.bgm.currentTime = 0;
-    }
+
+    syncMusicTrack({ restart: true });
 }
 
 function applySettings(settings) {
@@ -917,14 +1004,16 @@ function applySettings(settings) {
     audio.soundVolume = sliderValueToUnit(soundSliderValue, GameConfig.AUDIO.SFX_VOLUME);
     audio.musicVolume = sliderValueToUnit(musicSliderValue, GameConfig.AUDIO.BGM_VOLUME);
 
+    Object.values(audio.musicTracks).forEach((track) => {
+        track.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.BGM_VOLUME * audio.musicVolume));
+    });
+
     if (audio.bgm) {
         if (audio.musicVolume > 0) {
-            audio.bgm.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.BGM_VOLUME * audio.musicVolume));
-            if ((game?.gameState === 'playing' || game?.gameState === 'powerup') && audio.bgm.paused) {
+            if (shouldPlayMusicForState() && audio.bgm.paused) {
                 audio.bgm.play().catch(() => {});
             }
         } else {
-            audio.bgm.volume = 0;
             audio.bgm.pause();
         }
     }
@@ -1009,6 +1098,7 @@ function openSettingsModal() {
 
     if (settingsModalWasPlaying) {
         game.pause();
+        syncMusicTrack();
         if (animationFrameId !== null) {
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
@@ -1023,6 +1113,7 @@ function closeSettingsModal() {
 
     if (settingsModalWasPlaying && game?.gameState === 'paused') {
         game.resume();
+        syncMusicTrack();
         if (animationFrameId !== null) {
             cancelAnimationFrame(animationFrameId);
         }
@@ -1076,9 +1167,7 @@ function loadGameFromSave(source = 'unknown') {
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
 
-    if (audio.musicVolume > 0 && audio.bgm) {
-        audio.bgm.play().catch(() => {});
-    }
+    syncMusicTrack();
 
     syncStartDifficultyUI(game.getRunDifficulty());
 
