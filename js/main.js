@@ -91,7 +91,6 @@ function shouldSkipTransientMobileResize(nextViewport) {
  */
 const audio = {
     bgm: null,
-    musicTracks: {},
     currentMusicKey: null,
     sfx: {},
     soundVolume: GameConfig.AUDIO.SFX_VOLUME,
@@ -187,34 +186,37 @@ function shouldPlayMusicForState() {
 
 function syncMusicTrack({ restart = false } = {}) {
     const desiredKey = resolveMusicKeyForState();
-    const nextTrack = audio.musicTracks[desiredKey];
+    const nextTrack = MUSIC_TRACKS[desiredKey];
     if (!nextTrack) {
+        return;
+    }
+
+    if (!audio.bgm) {
         return;
     }
 
     if (audio.currentMusicKey === desiredKey) {
         if (restart) {
-            nextTrack.currentTime = 0;
+            audio.bgm.currentTime = 0;
         }
-        if (audio.musicVolume > 0 && shouldPlayMusicForState() && nextTrack.paused) {
-            nextTrack.play().catch(() => {});
+        if (audio.musicVolume > 0 && shouldPlayMusicForState() && audio.bgm.paused) {
+            audio.bgm.play().catch(() => {});
         }
         return;
     }
 
-    if (audio.bgm) {
-        audio.bgm.pause();
-        audio.bgm.currentTime = 0;
-    }
+    audio.bgm.pause();
+    audio.bgm.currentTime = 0;
 
     audio.currentMusicKey = desiredKey;
-    audio.bgm = nextTrack;
+    audio.bgm.src = nextTrack.src;
+    audio.bgm.loop = nextTrack.loop;
 
     if (restart) {
         audio.bgm.currentTime = 0;
     }
 
-    audio.bgm.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.BGM_VOLUME * audio.musicVolume));
+    audio.bgm.volume = Math.max(0, Math.min(1, audio.musicVolume));
 
     if (audio.musicVolume > 0 && shouldPlayMusicForState()) {
         audio.bgm.play().catch(() => {});
@@ -624,16 +626,11 @@ function setupInputHandlers() {
  */
 function loadAudio() {
     // Background music setup
-    audio.musicTracks = {};
-    Object.entries(MUSIC_TRACKS).forEach(([key, trackConfig]) => {
-        const track = new Audio(trackConfig.src);
-        track.preload = 'auto';
-        track.loop = trackConfig.loop;
-        track.volume = audio.musicVolume;
-        audio.musicTracks[key] = track;
-    });
-    audio.bgm = audio.musicTracks.music_menu_main || null;
-    audio.currentMusicKey = audio.bgm ? 'music_menu_main' : null;
+    audio.bgm = new Audio(MUSIC_TRACKS.music_menu_main.src);
+    audio.bgm.preload = 'auto';
+    audio.bgm.loop = MUSIC_TRACKS.music_menu_main.loop;
+    audio.bgm.volume = Math.max(0, Math.min(1, audio.musicVolume));
+    audio.currentMusicKey = 'music_menu_main';
 
     // Initialize sound effect audio variants from manifest-generated files
     audio.sfx = {};
@@ -1004,11 +1001,8 @@ function applySettings(settings) {
     audio.soundVolume = sliderValueToUnit(soundSliderValue, GameConfig.AUDIO.SFX_VOLUME);
     audio.musicVolume = sliderValueToUnit(musicSliderValue, GameConfig.AUDIO.BGM_VOLUME);
 
-    Object.values(audio.musicTracks).forEach((track) => {
-        track.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.BGM_VOLUME * audio.musicVolume));
-    });
-
     if (audio.bgm) {
+        audio.bgm.volume = Math.max(0, Math.min(1, audio.musicVolume));
         if (audio.musicVolume > 0) {
             if (shouldPlayMusicForState() && audio.bgm.paused) {
                 audio.bgm.play().catch(() => {});
