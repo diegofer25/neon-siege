@@ -94,7 +94,8 @@ const audio = {
     musicEnabled: true
 };
 
-const SFX_VARIANTS = 2;
+const SFX_DYNAMIC_VARIANTS = 4;
+const SFX_STATIC_VARIANTS = 1;
 
 const SFX_ALIASES = {
     shoot: 'player_shoot_basic',
@@ -107,8 +108,14 @@ const SFX_VARIATION_PREFIX_ALLOWLIST = [
     'player_shoot_',
     'impact_',
     'enemy_spawn_',
-    'boss_attack_'
+    'enemy_death',
+    'enemy_split',
+    'boss_'
 ];
+
+function shouldUseSfxVariation(canonicalName) {
+    return SFX_VARIATION_PREFIX_ALLOWLIST.some(prefix => canonicalName.startsWith(prefix));
+}
 
 /**
  * Input handling state and configuration
@@ -375,7 +382,8 @@ function loadAudio() {
     audio.sfx = {};
     SOUND_EFFECT_MANIFEST.forEach(({ key }) => {
         const variants = [];
-        for (let variant = 1; variant <= SFX_VARIANTS; variant += 1) {
+        const variantCount = shouldUseSfxVariation(key) ? SFX_DYNAMIC_VARIANTS : SFX_STATIC_VARIANTS;
+        for (let variant = 1; variant <= variantCount; variant += 1) {
             const sound = new Audio(`assets/audio/sfx/${key}_v${variant}.mp3`);
             sound.preload = 'auto';
             sound.volume = 0.5;
@@ -397,7 +405,7 @@ export function playSFX(soundName) {
     if (!pool || pool.length === 0) return;
     
     try {
-        const useVariation = SFX_VARIATION_PREFIX_ALLOWLIST.some(prefix => canonicalName.startsWith(prefix));
+        const useVariation = shouldUseSfxVariation(canonicalName);
         const source = useVariation
             ? pool[Math.floor(Math.random() * pool.length)]
             : pool[0];
