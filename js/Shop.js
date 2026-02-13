@@ -553,10 +553,11 @@ export class Shop {
      */
     createPowerUpCard(powerUpState, onPurchase) {
         const { powerUp, currentStacks, price, canAfford, isMaxed } = powerUpState;
+        const rarity = PowerUp.RARITY[powerUp.name] || 'common';
         const card = document.createElement('div');
-        card.className = `card shop-card ${!canAfford ? 'unaffordable' : ''} ${isMaxed ? 'maxed' : ''}`;
+        card.className = `card shop-card rarity-${rarity} ${!canAfford ? 'unaffordable' : ''} ${isMaxed ? 'maxed' : ''}`;
         card.setAttribute('data-powerup-name', powerUp.name);
-        
+
         // Add stack level indicator for stackable power-ups
         let stackInfo = '';
         if (powerUp.stackable && currentStacks > 0) {
@@ -571,7 +572,10 @@ export class Shop {
             statusText = '<div class="status-text unaffordable">Can\'t Afford</div>';
         }
 
+        const rarityLabel = PowerUp.RARITY_LABELS[rarity] || 'Common';
+
         card.innerHTML = `
+            <div class="card-rarity-badge rarity-${rarity}">${rarityLabel}</div>
             <div class="card-icon">${powerUp.icon}</div>
             <div class="card-title">${powerUp.name}</div>
             <div class="shop-card-meta">
@@ -648,6 +652,8 @@ export class Shop {
         }
 
         const { powerUp, currentStacks, price, canAfford, isMaxed, requirementDesc } = powerUpState;
+        const rarity = PowerUp.RARITY[powerUp.name] || 'common';
+        const rarityLabel = PowerUp.RARITY_LABELS[rarity] || 'Common';
         const levelText = powerUp.stackable ? `Level ${currentStacks + 1}` : 'Single Upgrade';
         const ownershipText = currentStacks > 0 ? `Owned: ${currentStacks}` : 'Owned: 0';
         const statusText = isMaxed ? 'Maxed Out' : (canAfford ? 'Ready to Purchase' : 'Need More Coins');
@@ -658,7 +664,7 @@ export class Shop {
                 <div class="shop-details-icon">${powerUp.icon}</div>
                 <div>
                     <div class="shop-details-title">${powerUp.name}</div>
-                    <div class="shop-details-subtitle">${levelText} • ${ownershipText}</div>
+                    <div class="shop-details-subtitle">${rarityLabel} • ${levelText} • ${ownershipText}</div>
                 </div>
             </div>
             <div class="shop-details-body">

@@ -883,7 +883,55 @@ function updateHUD() {
     
     // Refresh player statistics display
     updateStatsDisplay();
-    
+
+    // Update score display
+    const scoreValueEl = document.getElementById('scoreValue');
+    if (scoreValueEl) scoreValueEl.textContent = game.score.toLocaleString();
+    const scoreMultiplierEl = document.getElementById('scoreMultiplier');
+    if (scoreMultiplierEl) {
+        const mult = game.comboSystem.getScoreMultiplier();
+        if (mult > 1) {
+            scoreMultiplierEl.style.display = 'inline';
+            scoreMultiplierEl.textContent = `x${mult.toFixed(1)}`;
+        } else {
+            scoreMultiplierEl.style.display = 'none';
+        }
+    }
+
+    // Update XP bar
+    const xpFill = document.getElementById('xpFill');
+    const xpLevel = document.getElementById('xpLevel');
+    if (xpFill) xpFill.style.width = ((game.xp / game.xpToNextLevel) * 100).toFixed(1) + '%';
+    if (xpLevel) xpLevel.textContent = `Lv.${game.level}`;
+
+    // Update combo counter
+    const comboCounter = document.getElementById('comboCounter');
+    if (comboCounter) {
+        const tierInfo = game.comboSystem.getCurrentTierInfo();
+        if (tierInfo && game.comboSystem.currentStreak >= 5) {
+            comboCounter.style.display = 'flex';
+            document.getElementById('comboLabel').textContent = tierInfo.label;
+            document.getElementById('comboCount').textContent = game.comboSystem.currentStreak.toString();
+            document.getElementById('comboTimerFill').style.width = (game.comboSystem.getTimerProgress() * 100) + '%';
+            comboCounter.style.borderColor = tierInfo.color;
+            document.getElementById('comboLabel').style.color = tierInfo.color;
+            document.getElementById('comboCount').style.color = tierInfo.color;
+            document.getElementById('comboTimerFill').style.background = tierInfo.color;
+        } else {
+            comboCounter.style.display = 'none';
+        }
+    }
+
+    // Update challenge display
+    const challengeDisplay = document.getElementById('challengeDisplay');
+    if (challengeDisplay && game.challengeSystem.activeChallenges.length > 0) {
+        challengeDisplay.style.display = 'block';
+        challengeDisplay.innerHTML = game.challengeSystem.activeChallenges.map(c => {
+            const cls = c.completed ? 'challenge-item completed' : 'challenge-item';
+            return `<div class="${cls}"><span class="challenge-icon">${c.icon}</span><span class="challenge-progress">${c.progress}/${c.target}</span></div>`;
+        }).join('');
+    }
+
     // Update performance statistics if enabled
     if (showPerformanceStats && game) {
         updatePerformanceStats();
@@ -989,7 +1037,34 @@ function updatePerformanceStats() {
  * Stops background music and shows final wave reached
  */
 function showGameOver() {
+    // Populate enhanced game over stats
     document.getElementById('finalWave').textContent = game.wave.toString();
+    document.getElementById('finalScore').textContent = game.score.toLocaleString();
+    document.getElementById('finalCombo').textContent = (game.comboSystem.maxStreakThisRun || 0).toString();
+    document.getElementById('finalLevel').textContent = game.level.toString();
+
+    // Check personal bests using stored result from recordRunEnd (called before showGameOver)
+    const runResult = game._lastRunResult;
+    const isNewBest = !!(runResult && (runResult.isNewBestScore || runResult.isNewBestWave));
+    const newRecordBanner = document.getElementById('newRecordBanner');
+    if (newRecordBanner) {
+        newRecordBanner.style.display = isNewBest ? 'block' : 'none';
+    }
+
+    // Near-miss psychology - use snapshot (bests are already updated, so compare directly)
+    const nearMissInfo = document.getElementById('nearMissInfo');
+    if (nearMissInfo) {
+        const snap = game.progressionManager.getSnapshot();
+        // bestWave is now updated; if NOT a new best, show how close we were
+        const waveDiff = (snap.bestWave || 0) - game.wave;
+        if (waveDiff > 0 && waveDiff <= 5 && !isNewBest) {
+            nearMissInfo.style.display = 'block';
+            nearMissInfo.textContent = `Only ${waveDiff} wave${waveDiff > 1 ? 's' : ''} from your best!`;
+        } else {
+            nearMissInfo.style.display = 'none';
+        }
+    }
+
     document.getElementById('gameOver').classList.add('show');
     syncSaveButtons();
 

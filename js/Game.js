@@ -9,7 +9,12 @@ import { CollisionSystem } from "./systems/CollisionSystem.js";
 import { WaveManager } from "./systems/WaveManager.js";
 import { EffectsManager } from "./systems/EffectsManager.js";
 import { EntityManager } from "./systems/EntityManager.js";
-import { playSFX } from "./main.js";
+import { ComboSystem } from "./systems/ComboSystem.js";
+import { LootSystem } from "./systems/LootSystem.js";
+import { AchievementSystem } from "./systems/AchievementSystem.js";
+import { ChallengeSystem } from "./systems/ChallengeSystem.js";
+import { getMilestoneForWave, isMiniMilestone } from "./config/MilestoneConfig.js";
+import { playSFX, createFloatingText, screenFlash } from "./main.js";
 import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
 import { monetizationManager } from "./managers/MonetizationManager.js";
@@ -123,6 +128,10 @@ export class Game {
 		this.waveManager = new WaveManager(this);
 		this.effectsManager = new EffectsManager(this);
 		this.entityManager = new EntityManager(this);
+		this.comboSystem = new ComboSystem(this);
+		this.lootSystem = new LootSystem(this);
+		this.achievementSystem = new AchievementSystem(this);
+		this.challengeSystem = new ChallengeSystem(this);
 	}
 
 	/**
@@ -181,6 +190,10 @@ export class Game {
 	_initializeGameState() {
 		this.wave = 0;
 		this.score = 0;
+		this.xp = 0;
+		this.level = 1;
+		this.xpToNextLevel = 50;
+		this._waveStartTime = 0;
 		this._waveCountdownTimeouts = [];
 	}
 
@@ -354,16 +367,26 @@ export class Game {
 		this.gameState = "playing";
 		this.wave = 1;
 		this.score = 0;
+		this.xp = 0;
+		this.level = 1;
+		this.xpToNextLevel = 50;
 		this.enemies = [];
 		this.projectiles = [];
 		this.particles = [];
 		this._gameOverTracked = false;
+		this._lastRunResult = null;
 
 		this.player.reset();
 		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
 		this.waveManager.setDifficulty(this.runDifficulty);
+		this.comboSystem.resetForRun();
+		this.lootSystem.resetForRun();
+		this.achievementSystem.resetForRun();
+		this.challengeSystem.selectChallenges();
 		this._runWaveCountdown(() => {
+			this._waveStartTime = performance.now();
+			this.challengeSystem.onWaveStart();
 			this.waveManager.startWave(this.wave);
 		});
 
@@ -485,6 +508,9 @@ export class Game {
 		this.effectsManager.update(delta);
 		this.waveManager.update(delta);
 		this.entityManager.updateAll(delta, input);
+		this.comboSystem.update(delta);
+		this.lootSystem.update(delta);
+		this.achievementSystem.update(delta);
 
 		// Handle collisions
 		this.collisionSystem.checkAllCollisions();
@@ -499,6 +525,12 @@ export class Game {
 			});
 			if (!this._gameOverTracked) {
 				this._gameOverTracked = true;
+				this._lastRunResult = this.progressionManager.recordRunEnd(
+					this.wave,
+					this.score,
+					this.comboSystem.maxStreakThisRun,
+					this.achievementSystem.killsThisRun
+				);
 				telemetry.track("game_over", {
 					wave: this.wave,
 					score: this.score,
@@ -537,6 +569,37 @@ export class Game {
 			coinsAfter: this.player.coins,
 		});
 		this.progressionManager.recordWaveCompletion(this.wave, this.waveManager.isBossWave);
+
+		// Wave completion score bonus
+		const completionTime = performance.now() - this._waveStartTime;
+		const waveClearBonus = 100 * this.wave;
+		const speedBonus = completionTime < 30000 ? 200 : (completionTime < 60000 ? 100 : 0);
+		const perfectBonus = (this.player.hp === this.player.maxHp) ? 300 : 0;
+		this.score += waveClearBonus + speedBonus + perfectBonus;
+
+		// XP for wave clear
+		this.addXP(20 + this.wave * 5);
+
+		// Milestone celebrations
+		const milestone = getMilestoneForWave(this.wave);
+		if (milestone) {
+			const { width, height } = this.getLogicalCanvasSize();
+			screenFlash();
+			this.effectsManager.addScreenShake(12, 500);
+			createFloatingText(milestone.label, width / 2, height / 2 - 40, 'milestone-major');
+			this.player.addCoins(milestone.bonusCoins);
+			this.progressionManager._incrementCurrency('LEGACY_TOKENS', milestone.bonusTokens);
+			this.progressionManager._saveState();
+			playSFX('boss_defeat');
+		} else if (isMiniMilestone(this.wave)) {
+			const { width, height } = this.getLogicalCanvasSize();
+			createFloatingText(`WAVE ${this.wave} CLEAR!`, width / 2, height / 2 - 40, 'milestone-minor');
+		}
+
+		// Reset combo for new wave, notify subsystems
+		this.comboSystem.resetForWave();
+		this.challengeSystem.onWaveComplete();
+		this.achievementSystem.onWaveComplete();
 
 		telemetry.track("wave_complete", {
 			wave: this.wave,
@@ -589,6 +652,8 @@ export class Game {
 			this.player.evaluateSynergies();
 			this._pushShopUndoSnapshot(beforePurchaseSnapshot);
 			this.shopNetPurchasesThisVisit += 1;
+			this.achievementSystem.onPurchase(price);
+			this.challengeSystem.onShopPurchase(this.shopNetPurchasesThisVisit);
 			playSFX("ui_purchase_success");
 			telemetry.track("shop_purchase", {
 				wave: this.wave,
@@ -635,6 +700,8 @@ export class Game {
 		});
 
 		this._runWaveCountdown(() => {
+			this._waveStartTime = performance.now();
+			this.challengeSystem.onWaveStart();
 			this.waveManager.startWave(this.wave);
 		});
 	}
@@ -722,6 +789,40 @@ export class Game {
 
 	clearShopUndoHistory() {
 		this.shopUndoSnapshots.length = 0;
+	}
+
+	addXP(amount) {
+		this.xp += amount;
+		while (this.xp >= this.xpToNextLevel) {
+			this.xp -= this.xpToNextLevel;
+			this.level++;
+			this.xpToNextLevel = Math.floor(50 * Math.pow(1.3, this.level - 1));
+			this._onLevelUp();
+		}
+	}
+
+	_onLevelUp() {
+		const { width, height } = this.getLogicalCanvasSize();
+		createFloatingText(`LEVEL ${this.level}!`, width / 2, height / 2, 'level-up');
+		this.effectsManager.addScreenShake(5, 200);
+		playSFX('ui_purchase_success');
+
+		if (this.level % 5 === 0) {
+			// Every 5th level: permanent +5% damage
+			this.player.damageMod *= 1.05;
+		} else if (this.level % 2 === 0) {
+			// Even levels: bonus coins
+			this.player.addCoins(5 * this.level);
+		} else {
+			// Odd levels: 3s fire rate boost handled by loot system temp buff pattern
+			const originalRate = this.player.fireRateMod;
+			this.player.fireRateMod *= 1.5;
+			setTimeout(() => {
+				if (this.player.fireRateMod > originalRate) {
+					this.player.fireRateMod = originalRate;
+				}
+			}, 3000);
+		}
 	}
 
 	getActiveParticleLimit() {

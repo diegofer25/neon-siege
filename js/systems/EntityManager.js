@@ -43,30 +43,56 @@ export class EntityManager {
             enemyDying: enemy.dying,
             enemiesBefore: this.game.enemies.length
         });
-        
+
         // Create visual explosion effect
         this.game.effectsManager.createExplosion(enemy.x, enemy.y, 10);
-        
+
         // Apply life steal if player has this upgrade
         if (this.game.player.hasLifeSteal) {
             this.game.player.onEnemyKill(enemy);
         }
-        
+
         // Calculate and award coin reward
         const coinReward = this._calculateCoinReward();
         const coinsBefore = this.game.player.coins;
         this.game.player.addCoins(coinReward);
+
+        // Coin burst visual effect
+        this.game.effectsManager.createCoinBurst(enemy.x, enemy.y, coinReward);
+
         this.game.trace('coins.award.enemyKill', {
             enemyId: enemy.id,
             amount: coinReward,
             coinsBefore,
             coinsAfter: this.game.player.coins
         });
-        
+
         // Remove enemy and update counters
         this.game.enemies.splice(index, 1);
         this.game.waveManager.onEnemyKilled();
-        this.game.score += 10;
+
+        // Combo system
+        const comboMultiplier = this.game.comboSystem.onEnemyKilled();
+
+        // Score with combo multiplier and wave scaling
+        const baseScore = this._getEnemyBaseScore(enemy);
+        const waveMultiplier = 1 + (this.game.wave * 0.1);
+        this.game.score += Math.floor(baseScore * comboMultiplier * waveMultiplier);
+
+        // XP per kill
+        this.game.addXP(this._getEnemyXP(enemy));
+
+        // Loot drops
+        const comboTier = this.game.comboSystem.comboTier;
+        const drop = this.game.lootSystem.rollForDrop(enemy, comboTier);
+        if (drop) {
+            this.game.lootSystem.applyDrop(drop, enemy.x, enemy.y);
+        }
+
+        // Achievement & challenge tracking
+        this.game.achievementSystem.onEnemyKilled(enemy);
+        this.game.challengeSystem.onEnemyKilled(enemy);
+
         this.game.trace('enemy.death.process.end', {
             enemyId: enemy.id,
             enemyIndex: index,
@@ -74,13 +100,33 @@ export class EntityManager {
             enemiesKilled: this.game.waveManager.enemiesKilled,
             score: this.game.score
         });
-        
+
         // Audio feedback
         if (enemy.isBoss) {
             playSFX('boss_defeat');
             playSFX('impact_explosion_big');
         } else {
             playSFX('enemy_death');
+        }
+    }
+
+    _getEnemyBaseScore(enemy) {
+        if (enemy.isBoss) return 500;
+        if (enemy.isSplitter) return 20;
+        switch (enemy.color) {
+            case '#f0f': return 15;
+            case '#ff0': return 25;
+            default: return 10;
+        }
+    }
+
+    _getEnemyXP(enemy) {
+        if (enemy.isBoss) return 100;
+        if (enemy.isSplitter) return 10;
+        switch (enemy.color) {
+            case '#f0f': return 8;
+            case '#ff0': return 15;
+            default: return 5;
         }
     }
 

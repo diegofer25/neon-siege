@@ -175,6 +175,36 @@ export class EffectsManager {
     }
 
     /**
+     * Create gold coin burst particles at a location.
+     * @param {number} x - Burst center X coordinate
+     * @param {number} y - Burst center Y coordinate
+     * @param {number} coinAmount - Amount of coins (affects particle count)
+     */
+    createCoinBurst(x, y, coinAmount) {
+        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
+        const shouldReduce = this.game.performanceManager.reduceParticleCount || performanceModeEnabled;
+        const count = shouldReduce
+            ? Math.min(4, Math.max(1, Math.floor(coinAmount / 3)))
+            : Math.min(10, Math.max(2, Math.floor(coinAmount / 2)));
+
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 / count) * i + Math.random() * 0.4;
+            const speed = MathUtils.random(30, 80);
+            const life = MathUtils.random(300, 600);
+
+            const particle = this.game.particlePool.get(
+                x, y,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                life,
+                '#ffd700'
+            );
+
+            this.game.particles.push(particle);
+        }
+    }
+
+    /**
      * Create DOM-based explosion ring overlay for maximum visibility.
      * @private
      * @param {number} x - Explosion center X coordinate

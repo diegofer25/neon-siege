@@ -60,6 +60,30 @@
                 </div>
             </div>
             
+            <!-- Score Display -->
+            <div id="scoreDisplay" class="score-display">
+                <span id="scoreValue" class="score-value">0</span>
+                <span id="scoreMultiplier" class="score-multiplier" style="display: none;">x1.0</span>
+            </div>
+
+            <!-- XP Bar -->
+            <div id="xpBar" class="xp-bar">
+                <div id="xpFill" class="xp-fill"></div>
+                <span id="xpLevel" class="xp-level">Lv.1</span>
+            </div>
+
+            <!-- Combo Counter -->
+            <div id="comboCounter" class="combo-counter" style="display: none;">
+                <span id="comboLabel" class="combo-label">COMBO</span>
+                <span id="comboCount" class="combo-count">0</span>
+                <div class="combo-timer-bar">
+                    <div id="comboTimerFill" class="combo-timer-fill"></div>
+                </div>
+            </div>
+
+            <!-- Challenges -->
+            <div id="challengeDisplay" class="challenge-display" style="display: none;"></div>
+
             <!-- Performance Statistics (only shown with ?stats=true) -->
             <div id="performanceStats" class="performance-stats" style="display: none;">
                 <div class="perf-stat-item">
@@ -238,10 +262,26 @@
         <!-- Game Over Screen -->
         <div id="gameOver" class="overlay">
             <h1>GAME OVER</h1>
-            <p>Waves Survived: <span id="finalWave">0</span></p>
+            <div id="newRecordBanner" class="new-record" style="display: none;">NEW PERSONAL BEST!</div>
+            <div class="game-over-stats">
+                <div class="go-stat-row"><span>Wave Reached</span><span id="finalWave">0</span></div>
+                <div class="go-stat-row"><span>Final Score</span><span id="finalScore">0</span></div>
+                <div class="go-stat-row"><span>Best Combo</span><span id="finalCombo">0</span></div>
+                <div class="go-stat-row"><span>Level Reached</span><span id="finalLevel">1</span></div>
+            </div>
+            <div id="nearMissInfo" class="near-miss" style="display: none;"></div>
             <button id="restoreFromAdBtn" style="display: none;">WATCH AD TO RESTORE SAVE</button>
             <button id="loadAfterGameOverBtn" style="display: none;">LOAD LAST SAVE</button>
             <button id="restartBtn">START AGAIN</button>
+        </div>
+
+        <!-- Achievement Toast -->
+        <div id="achievementToast" class="achievement-toast">
+            <span id="achievementIcon" class="achievement-icon"></span>
+            <div class="achievement-text">
+                <span class="achievement-label">ACHIEVEMENT UNLOCKED</span>
+                <span id="achievementName" class="achievement-name"></span>
+            </div>
         </div>
 
         <!-- Pause Screen -->

@@ -396,6 +396,41 @@ export class PowerUp {
 	 * - DEFENSE: Health, shields, and survivability improvements
 	 * - UTILITY: Special abilities and field effects
 	 */
+	static RARITY = {
+		'Damage Boost': 'common',
+		'Fire Rate': 'common',
+		'Speed Boost': 'common',
+		'Turn Speed': 'common',
+		'Max Health': 'common',
+		'Coin Magnet': 'common',
+		'Full Heal': 'uncommon',
+		'Shield': 'uncommon',
+		'Slow Field': 'uncommon',
+		'Regeneration': 'uncommon',
+		'Lucky Shots': 'uncommon',
+		'Piercing Shots': 'uncommon',
+		'Triple Shot': 'uncommon',
+		'Bigger Explosions': 'uncommon',
+		'Shield Regen': 'uncommon',
+		'Life Steal': 'rare',
+		'Rapid Fire': 'rare',
+		'Immolation Aura': 'rare',
+		'Emergency Heal': 'rare',
+		'Explosive Shots': 'rare',
+		'Double Damage': 'epic',
+		'Adaptive Targeting': 'epic',
+		'Shield Breaker': 'epic',
+		'Overcharge Burst': 'epic',
+		'Barrier Phase': 'epic',
+	};
+
+	static RARITY_LABELS = {
+		common: 'Common',
+		uncommon: 'Uncommon',
+		rare: 'Rare',
+		epic: 'Epic',
+	};
+
 	static CATEGORIES = {
 		OFFENSE: [
 			"Damage Boost",

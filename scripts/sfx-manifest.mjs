@@ -14,7 +14,7 @@ export const SOUND_EFFECT_MANIFEST = [
     { key: 'ui_purchase_fail', category: 'ui', durationSeconds: 1.4, promptInfluence: 0.35, text: 'Arcade purchase failed cue, low digital buzz and short negative blip, no voice.' },
     { key: 'game_over', category: 'system', durationSeconds: 2.8, promptInfluence: 0.3, text: 'Retro neon game over stinger, dramatic descending synth with soft impact, no voice.' },
 
-    { key: 'player_shoot_basic', category: 'combat', durationSeconds: 1.1, promptInfluence: 0.45, text: 'Short plasma shot sound for top-down arcade shooter, tight punchy transient, no voice.' },
+    { key: 'player_shoot_basic', category: 'combat', durationSeconds: 1.0, promptInfluence: 0.45, text: 'Modern precise energy rifle shot, tight clean transient with controlled low-end, polished and realistic-futuristic, no voice.' },
     { key: 'player_shoot_rapid', category: 'combat', durationSeconds: 1.0, promptInfluence: 0.45, text: 'Rapid-fire blaster shot, crisp short neon pulse built for repeated cadence, no voice.' },
     { key: 'player_shoot_heavy', category: 'combat', durationSeconds: 1.4, promptInfluence: 0.4, text: 'Heavy cannon-like plasma shot, low-end thump with bright synth crack, no voice.' },
     { key: 'player_shoot_triple', category: 'combat', durationSeconds: 1.3, promptInfluence: 0.45, text: 'Three-way burst shot sound, layered plasma pulses with slight spread feel, no voice.' },
@@ -40,7 +40,7 @@ export const SOUND_EFFECT_MANIFEST = [
     { key: 'enemy_spawn_tank', category: 'enemy', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Tank enemy spawn cue, heavier low-frequency synth thump with electric texture, no voice.' },
     { key: 'enemy_spawn_splitter', category: 'enemy', durationSeconds: 1.5, promptInfluence: 0.35, text: 'Splitter enemy spawn cue, unstable pulsing electronic growl, no voice.' },
     { key: 'enemy_split', category: 'enemy', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Enemy splitting into smaller units sound, elastic energy tear and two short pops, no voice.' },
-    { key: 'enemy_death', category: 'enemy', durationSeconds: 1.7, promptInfluence: 0.4, text: 'Enemy death pop sound, compact plasma burst and brief debris crackle, no voice.' },
+    { key: 'enemy_death', category: 'enemy', durationSeconds: 1.6, promptInfluence: 0.4, text: 'Modern enemy destruction impact, compact high-quality sci-fi blast with subtle debris texture, punchy but not cartoonish, no voice.' },
     { key: 'enemy_death_basic', category: 'enemy', durationSeconds: 1.5, promptInfluence: 0.4, text: 'Basic enemy destruction sound, compact cyan-electric pop with short tail, no voice.' },
     { key: 'enemy_death_fast', category: 'enemy', durationSeconds: 1.3, promptInfluence: 0.45, text: 'Fast enemy death sound, sharp high-pitched digital snap and spark, no voice.' },
     { key: 'enemy_death_tank', category: 'enemy', durationSeconds: 2.1, promptInfluence: 0.35, text: 'Tank enemy destruction sound, heavier low-frequency blast with metallic breakup, no voice.' },

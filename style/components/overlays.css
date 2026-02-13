@@ -476,3 +476,126 @@
     transform: scale(1);
   }
 }
+
+/* ============================================================================
+   ACHIEVEMENT TOAST
+   ============================================================================ */
+
+.achievement-toast {
+  position: absolute;
+  top: 60px;
+  right: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid var(--color-accent-yellow);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 15px rgba(255, 255, 0, 0.3),
+    inset 0 0 10px rgba(255, 255, 0, 0.08);
+  z-index: calc(var(--z-overlay) + 10);
+  transform: translateX(120%);
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.achievement-toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.achievement-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 0, 0.5));
+}
+
+.achievement-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.achievement-label {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--color-accent-yellow);
+  text-shadow: 0 0 4px var(--color-accent-yellow);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.achievement-name {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 0 0 3px #fff;
+}
+
+/* ============================================================================
+   ENHANCED GAME OVER SCREEN
+   ============================================================================ */
+
+.new-record {
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  color: var(--color-accent-yellow);
+  text-shadow:
+    0 0 8px var(--color-accent-yellow),
+    0 0 16px var(--color-accent-yellow);
+  margin-bottom: var(--spacing-lg);
+  animation: recordPulse 1s ease-in-out infinite alternate;
+  letter-spacing: 2px;
+}
+
+.game-over-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-sm);
+  width: 300px;
+  max-width: 90%;
+  margin-bottom: var(--spacing-lg);
+}
+
+.go-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+}
+
+.go-stat-row span:first-child {
+  color: #aaa;
+  font-size: 14px;
+}
+
+.go-stat-row span:last-child {
+  font-family: var(--font-pixel);
+  color: var(--color-primary-neon);
+  text-shadow: 0 0 4px var(--color-primary-neon);
+  font-size: 12px;
+}
+
+.near-miss {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--color-secondary-neon);
+  text-shadow: 0 0 6px var(--color-secondary-neon);
+  margin-bottom: var(--spacing-lg);
+  animation: nearMissPulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes recordPulse {
+  from { opacity: 0.8; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes nearMissPulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}

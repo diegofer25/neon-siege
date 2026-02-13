@@ -1,0 +1,110 @@
+import { playSFX, createFloatingText } from '../main.js';
+
+const COMBO_TIERS = [
+    { kills: 5,  label: 'COMBO x5',       multiplier: 1.25, bonusCoins: 1,  color: '#fff' },
+    { kills: 10, label: 'STREAK x10!',    multiplier: 1.5,  bonusCoins: 3,  color: '#0ff' },
+    { kills: 20, label: 'RAMPAGE x20!',   multiplier: 2.0,  bonusCoins: 5,  color: '#ff0' },
+    { kills: 35, label: 'UNSTOPPABLE!',   multiplier: 2.5,  bonusCoins: 10, color: '#f0f' },
+    { kills: 50, label: 'GOD MODE!!',     multiplier: 3.0,  bonusCoins: 20, color: '#ff2dec' },
+];
+
+const COMBO_TIMEOUT_MS = 2000;
+
+export class ComboSystem {
+    constructor(game) {
+        this.game = game;
+        this.currentStreak = 0;
+        this.comboTimer = 0;
+        this.comboTier = 0;
+        this.maxStreakThisWave = 0;
+        this.maxStreakThisRun = 0;
+        this.totalBonusCoins = 0;
+    }
+
+    onEnemyKilled() {
+        this.currentStreak++;
+        this.comboTimer = 0;
+
+        if (this.currentStreak > this.maxStreakThisWave) {
+            this.maxStreakThisWave = this.currentStreak;
+        }
+        if (this.currentStreak > this.maxStreakThisRun) {
+            this.maxStreakThisRun = this.currentStreak;
+        }
+
+        const newTier = this._calculateTier();
+        if (newTier > this.comboTier) {
+            this.comboTier = newTier;
+            const tier = COMBO_TIERS[newTier - 1];
+            this._onTierReached(tier);
+        }
+
+        return this.getScoreMultiplier();
+    }
+
+    update(delta) {
+        if (this.currentStreak > 0) {
+            this.comboTimer += delta;
+            if (this.comboTimer >= COMBO_TIMEOUT_MS) {
+                this.breakCombo();
+            }
+        }
+    }
+
+    breakCombo() {
+        if (this.currentStreak >= 5) {
+            const { width, height } = this.game.getLogicalCanvasSize();
+            createFloatingText('Combo Ended', width / 2, height / 2 + 40, 'combo-break');
+        }
+        this.currentStreak = 0;
+        this.comboTier = 0;
+        this.comboTimer = 0;
+    }
+
+    getScoreMultiplier() {
+        const tier = this._calculateTier();
+        if (tier === 0) return 1.0;
+        return COMBO_TIERS[tier - 1].multiplier;
+    }
+
+    getTimerProgress() {
+        if (this.currentStreak === 0) return 0;
+        return Math.max(0, 1 - (this.comboTimer / COMBO_TIMEOUT_MS));
+    }
+
+    getCurrentTierInfo() {
+        if (this.comboTier === 0) return null;
+        return COMBO_TIERS[this.comboTier - 1];
+    }
+
+    resetForWave() {
+        this.maxStreakThisWave = 0;
+        this.breakCombo();
+    }
+
+    resetForRun() {
+        this.maxStreakThisRun = 0;
+        this.totalBonusCoins = 0;
+        this.resetForWave();
+    }
+
+    _calculateTier() {
+        for (let i = COMBO_TIERS.length - 1; i >= 0; i--) {
+            if (this.currentStreak >= COMBO_TIERS[i].kills) {
+                return i + 1;
+            }
+        }
+        return 0;
+    }
+
+    _onTierReached(tier) {
+        const { width, height } = this.game.getLogicalCanvasSize();
+        createFloatingText(tier.label, width / 2, height / 2 - 20, 'combo-tier');
+
+        this.game.player.addCoins(tier.bonusCoins);
+        this.totalBonusCoins += tier.bonusCoins;
+
+        this.game.effectsManager.addScreenShake(4 + this.comboTier * 2, 200);
+        playSFX('wave_complete');
+    }
+}

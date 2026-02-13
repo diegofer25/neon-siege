@@ -90,6 +90,34 @@ export class ProgressionManager {
     }
 
     /**
+     * Record the end of a run for personal best tracking.
+     * @param {number} wave
+     * @param {number} score
+     * @param {number} maxCombo
+     * @param {number} totalKills
+     * @returns {{isNewBestWave: boolean, isNewBestScore: boolean, isNewBestCombo: boolean}}
+     */
+    recordRunEnd(wave, score, maxCombo, totalKills) {
+        this.state.totalRuns = (this.state.totalRuns ?? 0) + 1;
+        this.state.totalKills = (this.state.totalKills ?? 0) + totalKills;
+
+        const isNewBestWave = wave > (this.state.bestWave ?? 0);
+        const isNewBestScore = score > (this.state.bestScore ?? 0);
+        const isNewBestCombo = maxCombo > (this.state.bestCombo ?? 0);
+
+        if (isNewBestWave) this.state.bestWave = wave;
+        if (isNewBestScore) this.state.bestScore = score;
+        if (isNewBestCombo) this.state.bestCombo = maxCombo;
+
+        if (!this.state.runHistory) this.state.runHistory = [];
+        this.state.runHistory.push({ wave, score, date: Date.now() });
+        if (this.state.runHistory.length > 10) this.state.runHistory.shift();
+
+        this._saveState();
+        return { isNewBestWave, isNewBestScore, isNewBestCombo };
+    }
+
+    /**
      * Reset all stored progression.
      */
     reset() {
@@ -163,7 +191,14 @@ export class ProgressionManager {
             totalWavesCompleted: 0,
             bossWavesCleared: 0,
             currencies: defaultCurrencies,
-            unlocks: {}
+            unlocks: {},
+            bestWave: 0,
+            bestScore: 0,
+            bestCombo: 0,
+            totalRuns: 0,
+            totalKills: 0,
+            runHistory: [],
+            achievements: {}
         };
     }
 }

@@ -160,3 +160,112 @@
   background: rgba(255, 0, 0, 0.3);
   border: 1px solid var(--color-accent-red);
 }
+
+/* ============================================================================
+   RARITY TIER SYSTEM
+   ============================================================================ */
+
+/* Rarity Badge - top-right corner label */
+.card-rarity-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.card-rarity-badge.rarity-common {
+  color: #ccc;
+  background: rgba(200, 200, 200, 0.12);
+  border: 1px solid rgba(200, 200, 200, 0.3);
+}
+
+.card-rarity-badge.rarity-uncommon {
+  color: var(--color-primary-neon);
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.35);
+}
+
+.card-rarity-badge.rarity-rare {
+  color: var(--color-accent-yellow);
+  background: rgba(255, 255, 0, 0.1);
+  border: 1px solid rgba(255, 255, 0, 0.35);
+}
+
+.card-rarity-badge.rarity-epic {
+  color: var(--color-secondary-neon);
+  background: rgba(255, 45, 236, 0.1);
+  border: 1px solid rgba(255, 45, 236, 0.35);
+}
+
+/* Rarity Card Border Colors */
+.shop-card.rarity-common {
+  border-color: rgba(200, 200, 200, 0.3);
+}
+
+.shop-card.rarity-common:hover {
+  border-color: rgba(200, 200, 200, 0.6);
+  box-shadow:
+    0 0 12px rgba(200, 200, 200, 0.2),
+    inset 0 0 10px rgba(200, 200, 200, 0.06);
+}
+
+.shop-card.rarity-uncommon {
+  border-color: rgba(0, 255, 255, 0.35);
+}
+
+.shop-card.rarity-uncommon:hover {
+  border-color: var(--color-primary-neon);
+  box-shadow:
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 12px rgba(0, 255, 255, 0.08);
+}
+
+.shop-card.rarity-rare {
+  border-color: rgba(255, 255, 0, 0.4);
+}
+
+.shop-card.rarity-rare:hover {
+  border-color: var(--color-accent-yellow);
+  box-shadow:
+    0 0 18px rgba(255, 255, 0, 0.35),
+    inset 0 0 14px rgba(255, 255, 0, 0.1);
+}
+
+.shop-card.rarity-epic {
+  border-color: rgba(255, 45, 236, 0.45);
+  box-shadow:
+    0 0 10px rgba(255, 45, 236, 0.2),
+    inset 0 0 8px rgba(255, 45, 236, 0.06);
+}
+
+.shop-card.rarity-epic:hover {
+  border-color: var(--color-secondary-neon);
+  box-shadow:
+    0 0 22px rgba(255, 45, 236, 0.45),
+    inset 0 0 16px rgba(255, 45, 236, 0.12);
+}
+
+/* Selected card overrides rarity hover */
+.shop-card.selected.rarity-uncommon {
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.38),
+    inset 0 0 16px rgba(0, 255, 255, 0.12);
+}
+
+.shop-card.selected.rarity-rare {
+  box-shadow:
+    0 0 20px rgba(255, 255, 0, 0.38),
+    inset 0 0 16px rgba(255, 255, 0, 0.12);
+}
+
+.shop-card.selected.rarity-epic {
+  box-shadow:
+    0 0 20px rgba(255, 45, 236, 0.4),
+    inset 0 0 16px rgba(255, 45, 236, 0.14);
+}
