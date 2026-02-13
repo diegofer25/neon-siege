@@ -9,6 +9,7 @@ const COMBO_TIERS = [
 ];
 
 const COMBO_TIMEOUT_MS = 2000;
+const COMBO_BREAK_SFX_MIN_STREAK = 10;
 
 export class ComboSystem {
     constructor(game) {
@@ -52,9 +53,13 @@ export class ComboSystem {
     }
 
     breakCombo() {
-        if (this.currentStreak >= 5) {
-            const { width, height } = this.game.getLogicalCanvasSize();
-            createFloatingText('Combo Ended', width / 2, height / 2 + 40, 'combo-break');
+        const streakBeforeBreak = this.currentStreak;
+        if (streakBeforeBreak >= 5) {
+            const { x, y } = this._getPlayerTextScreenPosition(38);
+            createFloatingText('Combo Ended', x, y, 'combo-break');
+        }
+        if (streakBeforeBreak >= COMBO_BREAK_SFX_MIN_STREAK) {
+            playSFX('combo_break');
         }
         this.currentStreak = 0;
         this.comboTier = 0;
@@ -98,13 +103,37 @@ export class ComboSystem {
     }
 
     _onTierReached(tier) {
-        const { width, height } = this.game.getLogicalCanvasSize();
-        createFloatingText(tier.label, width / 2, height / 2 - 20, 'combo-tier');
+        const { x, y } = this._getPlayerTextScreenPosition(64);
+        createFloatingText(tier.label, x, y, 'combo-tier');
 
         this.game.player.addCoins(tier.bonusCoins);
         this.totalBonusCoins += tier.bonusCoins;
 
         this.game.effectsManager.addScreenShake(4 + this.comboTier * 2, 200);
-        playSFX('wave_complete');
+        playSFX(this._getTierSfxKey());
+    }
+
+    _getTierSfxKey() {
+        if (this.comboTier >= 5) return 'combo_tier_max';
+        if (this.comboTier >= 3) return 'combo_tier_high';
+        if (this.comboTier >= 2) return 'combo_tier_mid';
+        return 'combo_tier_low';
+    }
+
+    _getPlayerTextScreenPosition(offsetY = 40) {
+        const player = this.game?.player;
+        const canvas = this.game?.canvas;
+        if (!player || !canvas) {
+            const { width, height } = this.game.getLogicalCanvasSize();
+            return { x: width / 2, y: height / 2 };
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const canvasWidth = canvas.logicalWidth || canvas.width;
+        const canvasHeight = canvas.logicalHeight || canvas.height;
+        return {
+            x: player.x * (rect.width / canvasWidth) + rect.left,
+            y: (player.y - offsetY) * (rect.height / canvasHeight) + rect.top,
+        };
     }
 }

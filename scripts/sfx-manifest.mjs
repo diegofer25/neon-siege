@@ -67,7 +67,15 @@ export const SOUND_EFFECT_MANIFEST = [
 
     { key: 'reward_offer_available', category: 'reward', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Reward available cue, enticing but subtle neon notification chime, no voice.' },
     { key: 'reward_claim_success', category: 'reward', durationSeconds: 2.0, promptInfluence: 0.3, text: 'Reward claim success sound, celebratory arcade synth flourish, no voice.' },
-    { key: 'reward_claim_fail', category: 'reward', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Reward claim failed sound, soft digital error cue with short low buzz, no voice.' }
+    { key: 'reward_claim_fail', category: 'reward', durationSeconds: 1.6, promptInfluence: 0.35, text: 'Reward claim failed sound, soft digital error cue with short low buzz, no voice.' },
+
+    { key: 'achievement_unlock', category: 'progression', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Achievement unlocked cue, satisfying neon chime with a brief triumphant lift, no voice.' },
+    { key: 'challenge_complete', category: 'progression', durationSeconds: 2.0, promptInfluence: 0.35, text: 'Challenge completed cue, energetic arcade success stinger with futuristic polish, no voice.' },
+    { key: 'combo_tier_low', category: 'progression', durationSeconds: 1.3, promptInfluence: 0.4, text: 'Early combo tier reached cue, quick punchy synth accent with momentum, no voice.' },
+    { key: 'combo_tier_mid', category: 'progression', durationSeconds: 1.5, promptInfluence: 0.4, text: 'Mid combo tier reached cue, brighter layered synth hit with confident arcade energy, no voice.' },
+    { key: 'combo_tier_high', category: 'progression', durationSeconds: 1.7, promptInfluence: 0.35, text: 'High combo tier reached cue, intense celebratory electronic burst with strong impact, no voice.' },
+    { key: 'combo_tier_max', category: 'progression', durationSeconds: 1.9, promptInfluence: 0.35, text: 'Maximum combo tier cue, elite neon triumph stinger, powerful and clean, no voice.' },
+    { key: 'combo_break', category: 'progression', durationSeconds: 1.2, promptInfluence: 0.4, text: 'Combo streak broken cue, short downward digital fall with subtle disappointment, no voice.' }
 ];
 
 export const SOUND_STYLE_PREFIX = 'Modern high-fidelity sci-fi game sound effect. Polished, professional, punchy, clean transients, fun and energetic, cinematic mix, no vocals, no spoken words. ';

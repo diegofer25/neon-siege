@@ -132,8 +132,23 @@ export class ChallengeSystem {
     _completeChallenge(challenge) {
         challenge.completed = true;
 
-        const { width, height } = this.game.getLogicalCanvasSize();
-        createFloatingText(`${challenge.icon} Challenge Complete!`, width / 2, height / 2 + 60, 'challenge-complete');
+        const player = this.game?.player;
+        const canvas = this.game?.canvas;
+        let textX;
+        let textY;
+        if (player && canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const canvasWidth = canvas.logicalWidth || canvas.width;
+            const canvasHeight = canvas.logicalHeight || canvas.height;
+            textX = player.x * (rect.width / canvasWidth) + rect.left;
+            textY = (player.y - 72) * (rect.height / canvasHeight) + rect.top;
+        } else {
+            const { width, height } = this.game.getLogicalCanvasSize();
+            textX = width / 2;
+            textY = height / 2;
+        }
+
+        createFloatingText(`${challenge.icon} Challenge Complete!`, textX, textY, 'challenge-complete');
 
         this.game.player.addCoins(challenge.reward.coins);
         if (challenge.reward.tokens > 0) {
@@ -141,7 +156,7 @@ export class ChallengeSystem {
             this.game.progressionManager._saveState();
         }
 
-        playSFX('reward_claim_success');
+        playSFX('challenge_complete');
         this.game.effectsManager.addScreenShake(6, 300);
     }
 }

@@ -108,6 +108,13 @@
   animation: comboFloat 1.2s ease-out forwards;
 }
 
+.floating-text.achievement-unlock {
+  color: var(--color-primary-neon);
+  text-shadow: 0 0 10px var(--color-primary-neon), 0 0 20px var(--color-primary-neon);
+  font-size: 20px;
+  animation: comboFloat 1.2s ease-out forwards;
+}
+
 @keyframes comboFloat {
   0% { opacity: 1; transform: translateY(0) scale(1.3); }
   50% { opacity: 1; transform: translateY(-20px) scale(1); }

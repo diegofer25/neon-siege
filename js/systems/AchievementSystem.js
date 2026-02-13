@@ -1,4 +1,4 @@
-import { playSFX } from '../main.js';
+import { playSFX, createFloatingText } from '../main.js';
 
 const ACHIEVEMENTS = [
     // Kill-based
@@ -169,6 +169,17 @@ export class AchievementSystem {
         this._toastActive = true;
         this._toastTimer = TOAST_DURATION_MS;
 
+        const player = this.game?.player;
+        const canvas = this.game?.canvas;
+        if (player && canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const canvasWidth = canvas.logicalWidth || canvas.width;
+            const canvasHeight = canvas.logicalHeight || canvas.height;
+            const textX = player.x * (rect.width / canvasWidth) + rect.left;
+            const textY = (player.y - 90) * (rect.height / canvasHeight) + rect.top;
+            createFloatingText(`🏆 ${achievement.name}`, textX, textY, 'achievement-unlock');
+        }
+
         const toast = document.getElementById('achievementToast');
         if (!toast) return;
 
@@ -176,7 +187,7 @@ export class AchievementSystem {
         document.getElementById('achievementName').textContent = achievement.name;
         toast.classList.add('show');
 
-        playSFX('reward_offer_available');
+        playSFX('achievement_unlock');
     }
 
     _hideToast() {
