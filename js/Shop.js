@@ -36,6 +36,9 @@ export class Shop {
         this.currentOnPurchase = null;
 
         this._tabsInitialized = false;
+        this._shopScrollSfxInitialized = false;
+        this._shopScrollSfxLastAt = 0;
+        this._cardHoverSfxLastAt = 0;
     }
 
     /**
@@ -179,6 +182,7 @@ export class Shop {
         
         // Initialize tab system and event handlers
         this.setupTabs();
+        this.setupShopScrollSfx();
         this.setupCloseButton(onContinue);
         this.setupRewardedButton(onRewardedBoost);
         
@@ -243,6 +247,39 @@ export class Shop {
                 }
             });
         });
+    }
+
+    setupShopScrollSfx() {
+        if (this._shopScrollSfxInitialized) {
+            return;
+        }
+
+        const cardsContainer = document.getElementById('powerUpCards');
+        if (!cardsContainer) {
+            return;
+        }
+
+        this._shopScrollSfxInitialized = true;
+        cardsContainer.addEventListener('wheel', () => this.playShopScrollSfx(), { passive: true });
+        cardsContainer.addEventListener('touchmove', () => this.playShopScrollSfx(), { passive: true });
+    }
+
+    playShopScrollSfx() {
+        const now = performance.now();
+        if (now - this._shopScrollSfxLastAt < 120) {
+            return;
+        }
+        this._shopScrollSfxLastAt = now;
+        playSFX('ui_menu_scroll');
+    }
+
+    playCardHoverSfx() {
+        const now = performance.now();
+        if (now - this._cardHoverSfxLastAt < 90) {
+            return;
+        }
+        this._cardHoverSfxLastAt = now;
+        playSFX('ui_card_hover');
     }
 
     /**
@@ -471,6 +508,10 @@ export class Shop {
             <div class="card-price">${price} coins</div>
             ${statusText}
         `;
+
+        card.addEventListener('mouseenter', () => {
+            this.playCardHoverSfx();
+        });
         
         // Add click handler for purchasable items
         if (canAfford && !isMaxed) {

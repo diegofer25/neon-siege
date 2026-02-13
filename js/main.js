@@ -94,8 +94,7 @@ const audio = {
     musicEnabled: true
 };
 
-const SFX_DYNAMIC_VARIANTS = 4;
-const SFX_STATIC_VARIANTS = 1;
+const SFX_VARIANTS = 1;
 
 const SFX_ALIASES = {
     shoot: 'player_shoot_basic',
@@ -104,17 +103,21 @@ const SFX_ALIASES = {
     powerup: 'ui_purchase_success',
     click: 'ui_click'
 };
-const SFX_VARIATION_PREFIX_ALLOWLIST = [
-    'player_shoot_',
-    'impact_',
-    'enemy_spawn_',
-    'enemy_death',
-    'enemy_split',
-    'boss_'
-];
+let lastMenuScrollSfxAt = 0;
 
-function shouldUseSfxVariation(canonicalName) {
-    return SFX_VARIATION_PREFIX_ALLOWLIST.some(prefix => canonicalName.startsWith(prefix));
+function playMenuScrollSfx() {
+    const now = performance.now();
+    if (now - lastMenuScrollSfxAt < 120) return;
+    lastMenuScrollSfxAt = now;
+    playSFX('ui_menu_scroll');
+}
+
+function setupMenuScrollSoundHooks() {
+    const settingsPanel = document.querySelector('.settings-panel');
+    if (!settingsPanel) return;
+
+    settingsPanel.addEventListener('wheel', playMenuScrollSfx, { passive: true });
+    settingsPanel.addEventListener('touchmove', playMenuScrollSfx, { passive: true });
 }
 
 /**
@@ -222,6 +225,7 @@ function init() {
     document.getElementById('restoreFromAdBtn').addEventListener('click', restoreAfterAdWatch);
 
     setupSettingsControls();
+    setupMenuScrollSoundHooks();
     syncSaveButtons();
 }
 
@@ -382,8 +386,7 @@ function loadAudio() {
     audio.sfx = {};
     SOUND_EFFECT_MANIFEST.forEach(({ key }) => {
         const variants = [];
-        const variantCount = shouldUseSfxVariation(key) ? SFX_DYNAMIC_VARIANTS : SFX_STATIC_VARIANTS;
-        for (let variant = 1; variant <= variantCount; variant += 1) {
+        for (let variant = 1; variant <= SFX_VARIANTS; variant += 1) {
             const sound = new Audio(`assets/audio/sfx/${key}_v${variant}.mp3`);
             sound.preload = 'auto';
             sound.volume = 0.5;
@@ -405,10 +408,7 @@ export function playSFX(soundName) {
     if (!pool || pool.length === 0) return;
     
     try {
-        const useVariation = shouldUseSfxVariation(canonicalName);
-        const source = useVariation
-            ? pool[Math.floor(Math.random() * pool.length)]
-            : pool[0];
+        const source = pool[0];
         // Clone audio node to allow overlapping sounds
         const sound = source.cloneNode();
         sound.play().catch(e => console.log('Audio play failed:', e));
