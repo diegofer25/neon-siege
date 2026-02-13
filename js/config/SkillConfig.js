@@ -9,6 +9,7 @@
  * - Ascension modifiers (pick 1 of 3 every 10 waves)
  * - XP/level curve targeting 15-20 levels in a 50-wave run
  */
+// cspell:words Technomancer TECHNOMANCER cooldowns crits aimbot Aimbot Debuffs
 
 // ─── ATTRIBUTES ────────────────────────────────────────────────────────────────
 

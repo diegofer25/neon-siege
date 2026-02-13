@@ -6,20 +6,24 @@
  */
 export class RewardedAdAdapter {
     /**
-     * @param {string} _placement
-     * @param {Object} _context
+     * @param {string} placement
+     * @param {Object} context
      * @returns {Promise<boolean>}
      */
-    async isRewardedAvailable() {
+    async isRewardedAvailable(placement, context) {
+        void placement;
+        void context;
         return false;
     }
 
     /**
-     * @param {string} _placement
-     * @param {Object} _context
+     * @param {string} placement
+     * @param {Object} context
      * @returns {Promise<{ shown: boolean, completed: boolean, rewardGranted?: boolean, metadata?: Object }>} 
      */
-    async showRewarded() {
+    async showRewarded(placement, context) {
+        void placement;
+        void context;
         return {
             shown: false,
             completed: false,

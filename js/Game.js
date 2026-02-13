@@ -478,7 +478,7 @@ export class Game {
 				wave: this.wave,
 				score: this.score,
 				level: this.skillManager.level,
-				archetype: this.skillManager.archetype,
+				archetype: this.skillManager.chosenArchetype,
 			});
 			if (!this._gameOverTracked) {
 				this._gameOverTracked = true;
@@ -492,7 +492,7 @@ export class Game {
 					wave: this.wave,
 					score: this.score,
 					level: this.skillManager.level,
-					archetype: this.skillManager.archetype,
+					archetype: this.skillManager.chosenArchetype,
 				});
 				monetizationManager.registerOpportunity("game_over", {
 					wave: this.wave,

@@ -622,8 +622,8 @@ function setupInputHandlers() {
                 const slotIndex = slotMap[e.code];
                 const slots = game.skillManager.getKeybindSlots();
                 const slot = slots[slotIndex];
-                if (slot) {
-                    game.skillManager.tryCast(slot.id, game);
+                if (slot?.skillId) {
+                    game.skillManager.tryCast(slot.skillId);
                 }
             }
         }
@@ -948,11 +948,11 @@ function updateHUD() {
             const slotEl = nameEl?.closest('.skill-slot');
             const slot = slots[i];
             if (!nameEl || !cdEl) continue;
-            if (slot) {
-                nameEl.textContent = slot.name.substring(0, 8);
-                const cd = game.skillManager.cooldowns[slot.id];
+            if (slot?.skillId && slot.skill) {
+                nameEl.textContent = slot.skill.name.substring(0, 8);
+                const cd = game.skillManager.cooldowns[slot.skillId];
                 if (cd && cd > 0) {
-                    const maxCd = game.skillManager._getEffectiveCooldown(slot.id);
+                    const maxCd = game.skillManager.getCooldownInfo(slot.skillId).total;
                     cdEl.style.height = ((cd / maxCd) * 100).toFixed(0) + '%';
                     slotEl?.classList.add('on-cooldown');
                 } else {
@@ -1469,7 +1469,8 @@ function _renderAttrAllocation(sm) {
             <span class="attr-value">${computed[key]}</span>
             <button class="attr-btn" data-attr="${key}">+</button>
         `;
-        const btn = row.querySelector('.attr-btn');
+        const btn = /** @type {HTMLButtonElement | null} */ (row.querySelector('.attr-btn'));
+        if (!btn) continue;
         btn.disabled = sm.unspentAttributePoints <= 0;
         btn.onclick = () => {
             if (sm.allocateAttribute(key)) {

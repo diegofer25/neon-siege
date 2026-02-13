@@ -49,6 +49,7 @@ export class Enemy {
         this.deathTimer = 0; // Timer for death animation in milliseconds
         
         // Enemy type identification
+        this.isBoss = false; // Whether this enemy is a boss type
         this.isSplitter = false; // Whether this enemy is a splitter type
 
         /** @type {import('./Game.js').Game | null} */

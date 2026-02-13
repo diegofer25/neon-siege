@@ -110,8 +110,9 @@ export class SettingsManager {
     }
 
     _migrateLegacyAudioSettings() {
-        const hasLegacySoundEnabled = typeof this.settings.soundEnabled === 'boolean';
-        const hasLegacyMusicEnabled = typeof this.settings.musicEnabled === 'boolean';
+        const settings = /** @type {any} */ (this.settings);
+        const hasLegacySoundEnabled = typeof settings.soundEnabled === 'boolean';
+        const hasLegacyMusicEnabled = typeof settings.musicEnabled === 'boolean';
         const hasModernSoundVolume = Number.isFinite(this.settings.soundVolume);
         const hasModernMusicVolume = Number.isFinite(this.settings.musicVolume);
 
@@ -122,18 +123,18 @@ export class SettingsManager {
         }
 
         if (hasLegacySoundEnabled && !hasModernSoundVolume) {
-            this.settings.soundVolume = this.settings.soundEnabled ? DEFAULT_SETTINGS.soundVolume : 0;
+            this.settings.soundVolume = settings.soundEnabled ? DEFAULT_SETTINGS.soundVolume : 0;
         }
 
         if (hasLegacyMusicEnabled && !hasModernMusicVolume) {
-            this.settings.musicVolume = this.settings.musicEnabled ? DEFAULT_SETTINGS.musicVolume : 0;
+            this.settings.musicVolume = settings.musicEnabled ? DEFAULT_SETTINGS.musicVolume : 0;
         }
 
         this.settings.soundVolume = clampVolume(this.settings.soundVolume, DEFAULT_SETTINGS.soundVolume);
         this.settings.musicVolume = clampVolume(this.settings.musicVolume, DEFAULT_SETTINGS.musicVolume);
 
-        delete this.settings.soundEnabled;
-        delete this.settings.musicEnabled;
+        delete settings.soundEnabled;
+        delete settings.musicEnabled;
         this._save();
     }
 }

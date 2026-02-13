@@ -188,6 +188,12 @@ export class Player {
 		/** @type {Object|null} Emergency Heal configuration */
 		this.emergencyHeal = null;
 
+        /** @type {number} Additional life steal provided by ascension modifiers */
+        this._ascensionLifeSteal = 0;
+
+        /** @type {Object|null} Aggregated ascension effects cache */
+        this._ascensionEffects = null;
+
     }
 
     /**
