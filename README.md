@@ -98,6 +98,33 @@ Notes:
 - Existing files are skipped by default to keep generation incremental and cost-aware.
 - Sound prompts are manifest-driven in `scripts/sfx-manifest.mjs`.
 
+## 🎵 Generate Music (ElevenLabs Music)
+
+Music tracks are generated offline and saved under `assets/audio/music`.
+
+```bash
+export ELEVENLABS_API_KEY="<your-api-key>"
+
+# Preview planned soundtrack files only (no API calls)
+npm run music:plan
+
+# Generate full soundtrack manifest
+npm run music:generate
+```
+
+Optional flags:
+
+```bash
+npm run music:generate -- --only=music_menu_main,music_run_wave_early
+npm run music:generate -- --concurrency=1 --retries=4
+npm run music:generate -- --force
+```
+
+Notes:
+- Requires ElevenLabs Music API access on your ElevenLabs account.
+- Music prompts are manifest-driven in `scripts/music-manifest.mjs`.
+- Existing files are skipped by default to keep generation incremental and cost-aware.
+
 ## 🎮 How to Play
 
 ### Basic Controls

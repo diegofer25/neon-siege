@@ -11,7 +11,9 @@
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "sfx:generate": "node scripts/generate-sfx.mjs",
-    "sfx:plan": "node scripts/generate-sfx.mjs --dry-run"
+    "sfx:plan": "node scripts/generate-sfx.mjs --dry-run",
+    "music:generate": "node scripts/generate-music.mjs",
+    "music:plan": "node scripts/generate-music.mjs --dry-run"
   },
   "keywords": [
     "game",
