@@ -239,23 +239,20 @@
             </div>
         </div>
 
-        <!-- Level-Up Quick-Pick Panel -->
+        <!-- Level-Up Skill Tree Panel -->
         <div id="levelUpPanel" class="overlay">
-            <div class="levelup-container">
-                <h2 id="levelUpTitle">LEVEL UP!</h2>
-                <div class="levelup-section">
-                    <h3>Attributes <span id="attrPointsLeft" class="points-badge">3</span></h3>
-                    <div id="attrAllocation" class="attr-grid">
-                        <!-- Dynamically populated -->
+            <div class="skill-tree-panel">
+                <div class="skill-tree-header">
+                    <h2 id="levelUpTitle">LEVEL UP!</h2>
+                    <div class="skill-tree-points">
+                        <span class="points-badge attr-badge">⚡ <span id="attrPointsLeft">3</span> AP</span>
+                        <span class="points-badge skill-badge">🔮 <span id="skillPointsLeft">1</span> SP</span>
                     </div>
                 </div>
-                <div class="levelup-section">
-                    <h3>Skill Point <span id="skillPointsLeft" class="points-badge">1</span></h3>
-                    <div id="skillList" class="skill-list">
-                        <!-- Dynamically populated -->
-                    </div>
+                <div class="skill-tree-viewport" id="skillTreeViewport">
+                    <!-- Populated by SkillTreeRenderer -->
                 </div>
-                <button id="levelUpConfirmBtn" class="primary">Confirm</button>
+                <button id="levelUpConfirmBtn" class="primary glow-btn">CONFIRM</button>
             </div>
         </div>
 

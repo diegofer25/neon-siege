@@ -45,6 +45,8 @@ High-level architecture
   - utils/MathUtils.js: math helpers.
   - config/GameConfig.js: central gameplay balance (wave scaling, VFX caps, meta progression).
   - config/SkillConfig.js: archetypes, attributes, tier gates, cooldown and ascension config.
+- UI rendering (js/ui/)
+  - SkillTreeRenderer.js: PoE-style radial skill tree (DOM + SVG hybrid), renders attributes, skill nodes, edges, and tooltips.
 
 Common modifications (where to change things)
 - Add/modify skills/archetypes: define in js/config/SkillConfig.js and apply runtime effects in js/Game.js (`_syncPlayerFromSkills`).

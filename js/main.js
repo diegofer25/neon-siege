@@ -1425,11 +1425,15 @@ export function screenFlash() {
 //=============================================================================
 // SKILL UI RENDERING
 //=============================================================================
-import { ATTRIBUTES, ARCHETYPES } from './config/SkillConfig.js';
+import { ARCHETYPES, PLAYABLE_ARCHETYPES } from './config/SkillConfig.js';
+import { SkillTreeRenderer } from './ui/SkillTreeRenderer.js';
+
+/** @type {SkillTreeRenderer|null} */
+let treeRenderer = null;
 
 /**
  * Show level-up panel (between waves or mid-wave).
- * Populates attribute allocation and available skills.
+ * Renders the full PoE-style skill tree.
  */
 export function showLevelUpPanel() {
     if (!game || !game.skillManager) return;
@@ -1438,11 +1442,28 @@ export function showLevelUpPanel() {
     const titleEl = document.getElementById('levelUpTitle');
     titleEl.textContent = `LEVEL ${sm.level}!`;
 
-    _renderAttrAllocation(sm);
-    _renderSkillList(sm);
-
+    // Update point badges
     document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
     document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
+
+    // Render the skill tree
+    const viewport = document.getElementById('skillTreeViewport');
+    if (!treeRenderer) {
+        treeRenderer = new SkillTreeRenderer(viewport);
+    }
+    treeRenderer.setCallbacks(
+        (skillId) => {
+            sm.learnSkill(skillId);
+            _refreshTree(sm);
+            playSFX('ui_purchase_success');
+        },
+        (attrKey) => {
+            if (sm.allocateAttribute(attrKey)) {
+                _refreshTree(sm);
+            }
+        },
+    );
+    treeRenderer.render(sm);
 
     const confirmBtn = document.getElementById('levelUpConfirmBtn');
     confirmBtn.onclick = () => {
@@ -1457,61 +1478,11 @@ export function showLevelUpPanel() {
     panel.classList.add('show');
 }
 
-function _renderAttrAllocation(sm) {
-    const container = document.getElementById('attrAllocation');
-    container.innerHTML = '';
-    const computed = sm.getComputedAttributes();
-    for (const [key] of Object.entries(ATTRIBUTES)) {
-        const row = document.createElement('div');
-        row.className = 'attr-row';
-        row.innerHTML = `
-            <span class="attr-name">${key}</span>
-            <span class="attr-value">${computed[key]}</span>
-            <button class="attr-btn" data-attr="${key}">+</button>
-        `;
-        const btn = /** @type {HTMLButtonElement | null} */ (row.querySelector('.attr-btn'));
-        if (!btn) continue;
-        btn.disabled = sm.unspentAttributePoints <= 0;
-        btn.onclick = () => {
-            if (sm.allocateAttribute(key)) {
-                _renderAttrAllocation(sm);
-                document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
-            }
-        };
-        container.appendChild(row);
-    }
-}
-
-function _renderSkillList(sm) {
-    const container = document.getElementById('skillList');
-    container.innerHTML = '';
-    const available = sm.getAvailableSkills();
-    if (available.length === 0) {
-        container.innerHTML = '<p style="color: rgba(255,255,255,0.4); font-size: 0.7rem; text-align:center;">No archetype chosen yet</p>';
-        return;
-    }
-    for (const skill of available) {
-        const canLearn = sm.canLearnSkill(skill.id);
-        const div = document.createElement('div');
-        div.className = `skill-option${canLearn ? '' : ' locked'}`;
-        div.innerHTML = `
-            <div class="skill-option-info">
-                <span class="skill-option-name">${skill.name}</span>
-                <span class="skill-option-desc">${skill.description}</span>
-            </div>
-            <span class="skill-option-type">${skill.type}</span>
-            ${!canLearn ? '<span class="skill-lock-hint">Locked</span>' : ''}
-        `;
-        if (canLearn && sm.unspentSkillPoints > 0) {
-            div.onclick = () => {
-                sm.learnSkill(skill.id);
-                _renderSkillList(sm);
-                document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
-                playSFX('ui_purchase_success');
-            };
-        }
-        container.appendChild(div);
-    }
+/** Refresh tree + point badges after spending a point. */
+function _refreshTree(sm) {
+    document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
+    document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
+    if (treeRenderer) treeRenderer.update(sm);
 }
 
 /**
@@ -1522,13 +1493,15 @@ export function showArchetypeSelectPanel() {
     const container = document.getElementById('archetypeOptions');
     container.innerHTML = '';
 
-    for (const [key, archetype] of Object.entries(ARCHETYPES)) {
-        if (archetype.stub) continue; // skip stubs
+    for (const key of PLAYABLE_ARCHETYPES) {
+        const archetype = ARCHETYPES[key];
+        if (!archetype) continue;
         const card = document.createElement('div');
         card.className = 'archetype-card';
+        card.style.setProperty('--arch-color', archetype.color);
         card.innerHTML = `
             <div class="archetype-icon">${archetype.icon || '🎯'}</div>
-            <div class="archetype-name">${archetype.name}</div>
+            <div class="archetype-name">${archetype.label}</div>
             <div class="archetype-desc">${archetype.description || ''}</div>
         `;
         card.onclick = () => {

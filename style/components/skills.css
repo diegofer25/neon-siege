@@ -71,172 +71,383 @@
     white-space: nowrap;
 }
 
-/* ---- Level-Up Quick-Pick Panel ---- */
-.levelup-container {
-    background: rgba(0, 0, 0, 0.92);
-    border: 2px solid #0ff;
-    border-radius: 12px;
-    padding: 24px 32px;
-    max-width: 480px;
-    width: 90vw;
-    box-shadow: 0 0 40px rgba(0, 255, 255, 0.25);
-    text-align: center;
-}
+/* ================================================================
+   SKILL TREE — PoE-style constellation
+   ================================================================ */
 
-.levelup-container h2 {
-    font-family: 'Audiowide', sans-serif;
-    font-size: 1.6rem;
-    color: #0ff;
-    text-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
-    margin: 0 0 16px;
-}
-
-.levelup-section {
-    margin-bottom: 18px;
-    text-align: left;
-}
-
-.levelup-section h3 {
-    font-family: 'Audiowide', sans-serif;
-    font-size: 0.9rem;
-    color: #fff;
-    margin: 0 0 10px;
+/* ---- Tree panel (replaces old levelup-container) ---- */
+.skill-tree-panel {
     display: flex;
+    flex-direction: column;
+    width: 94vw;
+    max-width: 1100px;
+    height: 88vh;
+    max-height: 820px;
+    background:
+        radial-gradient(ellipse at center, rgba(8, 20, 40, 0.97) 0%, rgba(2, 4, 12, 0.99) 100%);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    border-radius: 14px;
+    box-shadow:
+        0 0 60px rgba(0, 255, 255, 0.12),
+        inset 0 0 80px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+/* Header bar */
+.skill-tree-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    padding: 14px 24px 10px;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.12);
+    flex-shrink: 0;
+}
+
+.skill-tree-header h2 {
+    font-family: 'Audiowide', sans-serif;
+    font-size: 1.4rem;
+    color: #0ff;
+    text-shadow: 0 0 14px rgba(0, 255, 255, 0.5);
+    margin: 0;
+}
+
+.skill-tree-points {
+    display: flex;
+    gap: 10px;
 }
 
 .points-badge {
-    display: inline-block;
-    background: #0ff;
-    color: #000;
-    font-size: 0.7rem;
-    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    padding: 4px 10px;
     border-radius: 10px;
     font-weight: bold;
 }
 
-/* Attribute allocation grid */
-.attr-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+.points-badge.attr-badge {
+    background: rgba(0, 255, 255, 0.18);
+    color: #0ff;
+    border: 1px solid rgba(0, 255, 255, 0.35);
 }
 
-.attr-row {
+.points-badge.skill-badge {
+    background: rgba(200, 100, 255, 0.18);
+    color: #c864ff;
+    border: 1px solid rgba(200, 100, 255, 0.35);
+}
+
+/* Viewport (clips / scales the world) */
+.skill-tree-viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+/* World container (fixed size, scaled with CSS transform) */
+.tree-world {
+    position: absolute;
+}
+
+/* SVG edge layer */
+.tree-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Tier-ring decorations */
+.tier-ring {
+    fill: none;
+    stroke: rgba(0, 255, 255, 0.05);
+    stroke-width: 1;
+    stroke-dasharray: 6 10;
+}
+
+/* ---- Edges ---- */
+.tree-edge {
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition: stroke 0.3s, opacity 0.3s;
+}
+
+.tree-edge--attr {
+    stroke: rgba(0, 255, 255, 0.18);
+    stroke-width: 2;
+}
+
+.tree-edge--dim {
+    stroke: rgba(255, 255, 255, 0.06) !important;
+    stroke-width: 1.2;
+}
+
+.tree-edge--available {
+    opacity: 0.35;
+    stroke-width: 2;
+}
+
+.tree-edge--active {
+    opacity: 1;
+    stroke-width: 2.6;
+    filter: url(#edgeGlow);
+}
+
+/* ---- Nodes (shared base) ---- */
+.tree-node {
+    position: absolute;
+    border-radius: 50%;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    background: rgba(0, 255, 255, 0.06);
-    border: 1px solid rgba(0, 255, 255, 0.2);
-    border-radius: 6px;
-    padding: 6px 10px;
+    justify-content: center;
+    user-select: none;
+    transition:
+        border-color 0.25s,
+        box-shadow 0.25s,
+        opacity 0.25s,
+        transform 0.18s;
+    z-index: 2;
 }
 
-.attr-name {
+/* Hub (centre jewel) */
+.tree-node--hub {
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.15) 0%, transparent 70%);
+    border: 2px solid rgba(0, 255, 255, 0.25);
+    color: #0ff;
+    font-size: 18px;
+    pointer-events: none;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+}
+
+/* Attribute nodes */
+.tree-node--attr {
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.12) 0%, rgba(0, 20, 40, 0.8) 100%);
+    border: 2px solid rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+    cursor: default;
+}
+
+.tree-node--attr .tree-node__icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.tree-node--attr .tree-node__value {
     font-family: 'Press Start 2P', monospace;
     font-size: 8px;
     color: #0ff;
-    min-width: 36px;
+    margin-top: 1px;
 }
 
-.attr-value {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    color: #fff;
-    min-width: 24px;
-    text-align: center;
+.tree-node--attr.tree-node--available {
+    border-color: #0ff;
+    box-shadow: 0 0 16px rgba(0, 255, 255, 0.35);
+    animation: nodePulse 1.8s ease-in-out infinite;
+    cursor: pointer;
 }
 
-.attr-btn {
-    width: 28px;
-    height: 28px;
+.tree-node__add {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
     border: 1px solid #0ff;
-    border-radius: 4px;
-    background: rgba(0, 255, 255, 0.1);
-    color: #0ff;
-    font-size: 16px;
+    background: rgba(0, 255, 255, 0.25);
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s;
+    z-index: 3;
+    transition: background 0.15s, transform 0.15s;
+    padding: 0;
+    line-height: 1;
 }
 
-.attr-btn:hover:not(:disabled) {
-    background: rgba(0, 255, 255, 0.3);
+.tree-node__add:hover {
+    background: rgba(0, 255, 255, 0.6);
+    transform: scale(1.15);
 }
 
-.attr-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
+/* Skill nodes */
+.tree-node--skill {
+    background: radial-gradient(circle, rgba(40, 40, 60, 0.85) 0%, rgba(10, 10, 20, 0.9) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    cursor: default;
 }
 
-/* Skill list */
-.skill-list {
+.tree-node--skill .tree-node__icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.tree-node__rank {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 1px;
+}
+
+/* Ultimate shape — larger, hexagonal feel */
+.tree-node--ultimate {
+    border-radius: 12px;
+    transform: rotate(0deg);
+}
+
+/* ---- Node states ---- */
+.tree-node--locked {
+    opacity: 0.35;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.tree-node--dimmed {
+    opacity: 0.15;
+    pointer-events: none;
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+.tree-node--available {
+    border-color: var(--arch-color, #0ff);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--arch-color, #0ff) 40%, transparent);
+    animation: nodePulse 1.8s ease-in-out infinite;
+}
+
+.tree-node--clickable {
+    cursor: pointer;
+}
+
+.tree-node--clickable:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--arch-color, #0ff) 60%, transparent);
+    z-index: 5;
+}
+
+.tree-node--learned {
+    border-color: var(--arch-color, #0ff);
+    box-shadow:
+        0 0 12px color-mix(in srgb, var(--arch-color, #0ff) 50%, transparent),
+        inset 0 0 8px color-mix(in srgb, var(--arch-color, #0ff) 15%, transparent);
+    background: radial-gradient(circle,
+        color-mix(in srgb, var(--arch-color, #0ff) 14%, transparent) 0%,
+        rgba(10, 10, 20, 0.9) 100%);
+    opacity: 1;
+}
+
+.tree-node--learned .tree-node__rank {
+    color: var(--arch-color, #0ff);
+}
+
+.tree-node--maxed {
+    border-color: #ffd700;
+    box-shadow:
+        0 0 16px rgba(255, 215, 0, 0.45),
+        inset 0 0 10px rgba(255, 215, 0, 0.12);
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.12) 0%, rgba(10, 10, 20, 0.9) 100%);
+    opacity: 1;
+}
+
+.tree-node--maxed .tree-node__rank {
+    color: #ffd700;
+}
+
+/* ---- Archetype sector labels ---- */
+.tree-arch-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-family: 'Audiowide', sans-serif;
+    font-size: 0.72rem;
+    text-shadow: 0 0 12px currentColor;
+    opacity: 0.7;
+    pointer-events: none;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    max-height: 200px;
-    overflow-y: auto;
+    align-items: center;
+    gap: 2px;
+    z-index: 1;
 }
 
-.skill-option {
+.tree-arch-label span:first-child {
+    font-size: 1.4rem;
+}
+
+.tree-arch-label--chosen {
+    opacity: 1;
+    font-size: 0.82rem;
+}
+
+.tree-arch-label--stub {
+    opacity: 0.2;
+    font-size: 0.6rem;
+}
+
+/* ---- Tooltip ---- */
+.tree-tooltip {
+    position: absolute;
+    width: 210px;
+    background: rgba(4, 8, 18, 0.95);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    z-index: 50;
+    pointer-events: none;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+}
+
+.tree-tooltip__header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    background: rgba(0, 255, 255, 0.06);
-    border: 1px solid rgba(0, 255, 255, 0.2);
-    border-radius: 6px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    gap: 6px;
+    margin-bottom: 4px;
 }
 
-.skill-option:hover:not(.locked) {
-    border-color: #0ff;
-    background: rgba(0, 255, 255, 0.12);
-}
-
-.skill-option.locked {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.skill-option.selected {
-    border-color: #0ff;
-    background: rgba(0, 255, 255, 0.2);
-    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
-}
-
-.skill-option-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.skill-option-name {
+.tree-tooltip__name {
     font-family: 'Audiowide', sans-serif;
-    font-size: 0.75rem;
-    color: #fff;
+    font-size: 0.8rem;
 }
 
-.skill-option-desc {
-    font-size: 0.6rem;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.skill-option-type {
+.tree-tooltip__extra {
     font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
+    font-size: 0.45rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 6px;
+}
+
+.tree-tooltip__desc {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.tree-tooltip__status {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
     color: #0ff;
-    opacity: 0.7;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.skill-lock-hint {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    color: #f0f;
+/* Confirm button with glow */
+.glow-btn {
+    margin: 0 auto 14px;
+    display: block;
+    min-width: 160px;
+}
+
+/* ---- Pulse animation ---- */
+@keyframes nodePulse {
+    0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--arch-color, #0ff) 30%, transparent); }
+    50%      { box-shadow: 0 0 22px color-mix(in srgb, var(--arch-color, #0ff) 55%, transparent); }
 }
 
 /* ---- Archetype Selection Panel ---- */

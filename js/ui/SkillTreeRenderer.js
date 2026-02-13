@@ -1,0 +1,551 @@
+/**
+ * @fileoverview PoE-style radial skill tree renderer (DOM + SVG hybrid)
+ *
+ * Layout: radial constellation centred on 5 attribute nodes, with 5 archetype
+ * sectors radiating outward (skills arranged by tier).
+ *
+ * SVG handles glowing connection lines and decorative rings.
+ * DOM handles interactive skill / attribute nodes and tooltips.
+ *
+ * Coordinate system: internal 1400 × 960 world, CSS-scaled to fit the viewport.
+ */
+
+import {
+	ATTRIBUTES,
+	ARCHETYPES,
+	PLAYABLE_ARCHETYPES,
+} from '../config/SkillConfig.js';
+
+// ─── LAYOUT CONSTANTS ──────────────────────────────────────────────────────────
+
+const WORLD_W = 1400;
+const WORLD_H = 960;
+const CX = WORLD_W / 2;
+const CY = WORLD_H / 2 + 10;
+
+const ATTR_RADIUS = 68;
+const TIER_RADII = [178, 282, 368, 436];
+const SECTOR_SPREAD_DEG = 22;
+
+const NODE_SIZE = 46;
+const ATTR_NODE_SIZE = 52;
+const ULT_NODE_SIZE = 56;
+const HUB_SIZE = 36;
+
+/** Archetype sector angles (0° = 12-o'clock, CW) and linked attribute */
+const ARCHETYPE_LAYOUT = {
+	GUNNER:       { angle: 0,   attrKey: 'STR'  },
+	TECHNOMANCER: { angle: 72,  attrKey: 'DEX'  },
+	SENTINEL:     { angle: 144, attrKey: 'VIT'  },
+	ENGINEER:     { angle: 216, attrKey: 'INT'  },
+	TACTICIAN:    { angle: 288, attrKey: 'LUCK' },
+};
+
+const ATTR_ANGLES = {
+	STR:  0,
+	DEX:  72,
+	VIT:  144,
+	INT:  216,
+	LUCK: 288,
+};
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// ─── GEOMETRY HELPERS ──────────────────────────────────────────────────────────
+
+/** Degrees → radians */
+function rad(deg) { return (deg * Math.PI) / 180; }
+
+/** Polar (angle° from 12-o'clock, radius) → screen [x, y] */
+function polar(angleDeg, radius) {
+	return [
+		CX + radius * Math.sin(rad(angleDeg)),
+		CY - radius * Math.cos(rad(angleDeg)),
+	];
+}
+
+// ─── RENDERER CLASS ────────────────────────────────────────────────────────────
+
+export class SkillTreeRenderer {
+	/**
+	 * @param {HTMLElement} viewport – element that clips & scales the tree world
+	 */
+	constructor(viewport) {
+		/** @type {HTMLElement} */
+		this.viewport = viewport;
+
+		/** @type {((skillId: string) => void) | null} */
+		this._onSkillLearn = null;
+
+		/** @type {((attrKey: string) => void) | null} */
+		this._onAttrAllocate = null;
+
+		/** @private */
+		this._tooltipEl = null;
+		/** @private */
+		this._worldEl = null;
+		/** @private */
+		this._svgEl = null;
+		/** @private */
+		this._layout = null;
+	}
+
+	// ── public API ──────────────────────────────────────────────────────────────
+
+	/**
+	 * Register callbacks fired when the player interacts with the tree.
+	 * @param {(skillId: string) => void} onSkillLearn
+	 * @param {(attrKey: string) => void} onAttrAllocate
+	 */
+	setCallbacks(onSkillLearn, onAttrAllocate) {
+		this._onSkillLearn = onSkillLearn;
+		this._onAttrAllocate = onAttrAllocate;
+	}
+
+	/**
+	 * Full (re-)render of the tree.
+	 * @param {import('../managers/SkillManager.js').SkillManager} sm
+	 */
+	render(sm) {
+		this.viewport.innerHTML = '';
+
+		// World container (fixed internal size, scaled via CSS)
+		this._worldEl = document.createElement('div');
+		this._worldEl.className = 'tree-world';
+		this._worldEl.style.width = WORLD_W + 'px';
+		this._worldEl.style.height = WORLD_H + 'px';
+
+		// SVG layer for edges / rings
+		this._svgEl = document.createElementNS(SVG_NS, 'svg');
+		this._svgEl.setAttribute('class', 'tree-svg');
+		this._svgEl.setAttribute('viewBox', `0 0 ${WORLD_W} ${WORLD_H}`);
+		this._svgEl.setAttribute('width', String(WORLD_W));
+		this._svgEl.setAttribute('height', String(WORLD_H));
+		this._addSVGDefs();
+		this._worldEl.appendChild(this._svgEl);
+
+		// Compute positions
+		this._layout = this._computeLayout();
+
+		// Draw
+		this._renderEdges(sm);
+		this._renderHub();
+		this._renderAttributeNodes(sm);
+		this._renderSkillNodes(sm);
+
+		// Tooltip element
+		this._tooltipEl = document.createElement('div');
+		this._tooltipEl.className = 'tree-tooltip';
+		this._tooltipEl.style.display = 'none';
+		this._worldEl.appendChild(this._tooltipEl);
+
+		this.viewport.appendChild(this._worldEl);
+
+		// Scale world to fit viewport
+		this._scaleToFit();
+	}
+
+	/** Convenience – re-renders to reflect updated SkillManager state. */
+	update(sm) { this.render(sm); }
+
+	/** Tear down DOM. */
+	destroy() {
+		this.viewport.innerHTML = '';
+		this._layout = null;
+		this._tooltipEl = null;
+		this._worldEl = null;
+		this._svgEl = null;
+	}
+
+	// ── layout computation ──────────────────────────────────────────────────────
+
+	/** @returns {{ attributes: Object, archetypes: Object, edges: Array }} */
+	_computeLayout() {
+		const layout = { attributes: {}, archetypes: {}, edges: [] };
+
+		// Attribute positions
+		for (const [key, angleDeg] of Object.entries(ATTR_ANGLES)) {
+			const [x, y] = polar(angleDeg, ATTR_RADIUS);
+			layout.attributes[key] = { x, y, key };
+		}
+
+		// Skill positions per archetype
+		for (const [archKey, archCfg] of Object.entries(ARCHETYPE_LAYOUT)) {
+			const archetype = ARCHETYPES[archKey];
+			if (!archetype) continue;
+
+			const nodes = [];
+			const byTier = [[], [], [], []];
+			for (const skill of archetype.skills) {
+				const ti = skill.tier - 1;
+				if (ti >= 0 && ti < 4) byTier[ti].push(skill);
+			}
+
+			for (let t = 0; t < 4; t++) {
+				const skills = byTier[t];
+				const count = skills.length;
+				if (!count) continue;
+				const r = TIER_RADII[t];
+				for (let i = 0; i < count; i++) {
+					let off = 0;
+					if (count > 1) {
+						const spread = SECTOR_SPREAD_DEG * 2;
+						off = -SECTOR_SPREAD_DEG + (spread / (count - 1)) * i;
+					}
+					const angle = archCfg.angle + off;
+					const [x, y] = polar(angle, r);
+					nodes.push({
+						skillId: skills[i].id,
+						skill: skills[i],
+						tier: skills[i].tier,
+						type: skills[i].type,
+						x, y, angle, radius: r,
+					});
+				}
+			}
+
+			layout.archetypes[archKey] = {
+				angle: archCfg.angle,
+				color: archetype.color,
+				label: archetype.label,
+				icon: archetype.icon,
+				nodes,
+			};
+		}
+
+		this._computeEdges(layout);
+		return layout;
+	}
+
+	/** Build edge list: centre→attrs, attrs→tier1, tierN→tierN+1 */
+	_computeEdges(layout) {
+		const edges = [];
+
+		// Centre hub → attribute nodes
+		for (const [key, attr] of Object.entries(layout.attributes)) {
+			edges.push({ x1: CX, y1: CY, x2: attr.x, y2: attr.y, type: 'center-attr', attrKey: key, archKey: null, sourceSkillId: null, targetSkillId: null });
+		}
+
+		// Per-archetype edges
+		for (const [archKey, archData] of Object.entries(layout.archetypes)) {
+			const attrKey = ARCHETYPE_LAYOUT[archKey].attrKey;
+			const attrNode = layout.attributes[attrKey];
+
+			// Attribute → tier-1 bridge
+			const tier1 = archData.nodes.filter(n => n.tier === 1);
+			for (const t1 of tier1) {
+				edges.push({ x1: attrNode.x, y1: attrNode.y, x2: t1.x, y2: t1.y, type: 'attr-skill', archKey, sourceSkillId: null, targetSkillId: t1.skillId });
+			}
+
+			// Tier N → tier N+1 (closest-neighbour in previous tier)
+			for (let t = 1; t < 4; t++) {
+				const curr = archData.nodes.filter(n => n.tier === t + 1);
+				const prev = archData.nodes.filter(n => n.tier === t);
+				for (const c of curr) {
+					let best = prev[0];
+					let bestD = Infinity;
+					for (const p of prev) {
+						const d = (c.x - p.x) ** 2 + (c.y - p.y) ** 2;
+						if (d < bestD) { bestD = d; best = p; }
+					}
+					if (best) {
+						edges.push({ x1: best.x, y1: best.y, x2: c.x, y2: c.y, type: 'skill-skill', archKey, sourceSkillId: best.skillId, targetSkillId: c.skillId });
+					}
+				}
+			}
+		}
+
+		layout.edges = edges;
+	}
+
+	// ── SVG rendering ───────────────────────────────────────────────────────────
+
+	_addSVGDefs() {
+		const defs = document.createElementNS(SVG_NS, 'defs');
+
+		// Glow filter (normal)
+		defs.innerHTML = `
+			<filter id="edgeGlow" x="-50%" y="-50%" width="200%" height="200%">
+				<feGaussianBlur stdDeviation="4" result="g"/>
+				<feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+			</filter>
+			<filter id="edgeGlowStrong" x="-50%" y="-50%" width="200%" height="200%">
+				<feGaussianBlur stdDeviation="7" result="g"/>
+				<feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+			</filter>
+			<filter id="nodeGlow" x="-80%" y="-80%" width="260%" height="260%">
+				<feGaussianBlur stdDeviation="6" result="g"/>
+				<feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+			</filter>
+		`;
+
+		this._svgEl.appendChild(defs);
+	}
+
+	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
+	_renderEdges(sm) {
+		const g = document.createElementNS(SVG_NS, 'g');
+		g.setAttribute('class', 'tree-edges-group');
+
+		// Decorative tier rings
+		for (const r of TIER_RADII) {
+			const c = document.createElementNS(SVG_NS, 'circle');
+			c.setAttribute('cx', String(CX));
+			c.setAttribute('cy', String(CY));
+			c.setAttribute('r', String(r));
+			c.setAttribute('class', 'tier-ring');
+			g.appendChild(c);
+		}
+
+		// Edge lines
+		for (const edge of this._layout.edges) {
+			const line = document.createElementNS(SVG_NS, 'line');
+			line.setAttribute('x1', String(edge.x1));
+			line.setAttribute('y1', String(edge.y1));
+			line.setAttribute('x2', String(edge.x2));
+			line.setAttribute('y2', String(edge.y2));
+
+			const archColor = edge.archKey ? (ARCHETYPES[edge.archKey]?.color || '#0ff') : '#0ff';
+			let cls = 'tree-edge';
+
+			if (edge.type === 'center-attr') {
+				cls += ' tree-edge--attr';
+			} else {
+				const srcOk = !edge.sourceSkillId || (sm.skillRanks[edge.sourceSkillId] > 0);
+				const tgtOk = edge.targetSkillId && sm.skillRanks[edge.targetSkillId] > 0;
+				const isChosen = sm.chosenArchetype === edge.archKey;
+				const isPlayable = PLAYABLE_ARCHETYPES.includes(edge.archKey);
+
+				if (tgtOk && srcOk) {
+					cls += ' tree-edge--active';
+					line.style.stroke = archColor;
+				} else if (isChosen || (!sm.chosenArchetype && isPlayable)) {
+					cls += ' tree-edge--available';
+					line.style.stroke = archColor;
+				} else {
+					cls += ' tree-edge--dim';
+				}
+			}
+
+			line.setAttribute('class', cls);
+			g.appendChild(line);
+		}
+
+		this._svgEl.appendChild(g);
+	}
+
+	// ── DOM node rendering ──────────────────────────────────────────────────────
+
+	_renderHub() {
+		const hub = document.createElement('div');
+		hub.className = 'tree-node tree-node--hub';
+		hub.style.left = (CX - HUB_SIZE / 2) + 'px';
+		hub.style.top = (CY - HUB_SIZE / 2) + 'px';
+		hub.style.width = HUB_SIZE + 'px';
+		hub.style.height = HUB_SIZE + 'px';
+		hub.innerHTML = '<span class="tree-node__icon">⬡</span>';
+		this._worldEl.appendChild(hub);
+	}
+
+	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
+	_renderAttributeNodes(sm) {
+		for (const [key, pos] of Object.entries(this._layout.attributes)) {
+			const attr = ATTRIBUTES[key];
+			const pts = sm.attributes[key] || 0;
+			const node = document.createElement('div');
+			node.className = 'tree-node tree-node--attr';
+			node.style.left = (pos.x - ATTR_NODE_SIZE / 2) + 'px';
+			node.style.top = (pos.y - ATTR_NODE_SIZE / 2) + 'px';
+			node.style.width = ATTR_NODE_SIZE + 'px';
+			node.style.height = ATTR_NODE_SIZE + 'px';
+
+			node.innerHTML = `
+				<span class="tree-node__icon">${attr.icon}</span>
+				<span class="tree-node__value">${pts}</span>
+			`;
+
+			if (sm.unspentAttributePoints > 0 && pts < attr.maxPoints) {
+				node.classList.add('tree-node--available');
+				const btn = document.createElement('button');
+				btn.className = 'tree-node__add';
+				btn.textContent = '+';
+				btn.onclick = (e) => {
+					e.stopPropagation();
+					if (this._onAttrAllocate) this._onAttrAllocate(key);
+				};
+				node.appendChild(btn);
+			}
+
+			node.addEventListener('mouseenter', () => {
+				this._showTooltip(node, {
+					name: attr.label,
+					icon: attr.icon,
+					description: attr.description,
+					extra: `Points: ${pts} / ${attr.maxPoints}`,
+					color: '#0ff',
+				});
+			});
+			node.addEventListener('mouseleave', () => this._hideTooltip());
+
+			this._worldEl.appendChild(node);
+		}
+	}
+
+	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
+	_renderSkillNodes(sm) {
+		for (const [archKey, archData] of Object.entries(this._layout.archetypes)) {
+			const isChosen = sm.chosenArchetype === archKey;
+			const isPlayable = PLAYABLE_ARCHETYPES.includes(archKey);
+			const isAvailable = isChosen || (!sm.chosenArchetype && isPlayable);
+			const isStub = !isPlayable;
+
+			// Sector label at the outermost ring
+			this._renderArchLabel(archData, isChosen, isStub);
+
+			// Skill nodes
+			for (const nd of archData.nodes) {
+				this._renderOneSkillNode(nd, sm, archData, isAvailable);
+			}
+		}
+	}
+
+	/**
+	 * @param {Object} archData
+	 * @param {boolean} isChosen
+	 * @param {boolean} isStub
+	 */
+	_renderArchLabel(archData, isChosen, isStub) {
+		const [lx, ly] = polar(archData.angle, TIER_RADII[3] + 50);
+		const el = document.createElement('div');
+		el.className = 'tree-arch-label'
+			+ (isChosen ? ' tree-arch-label--chosen' : '')
+			+ (isStub ? ' tree-arch-label--stub' : '');
+		el.style.left = lx + 'px';
+		el.style.top = ly + 'px';
+		el.style.color = archData.color;
+		el.innerHTML = `<span>${archData.icon}</span><span>${archData.label}</span>`;
+		this._worldEl.appendChild(el);
+	}
+
+	/**
+	 * @param {Object} nd – node layout data
+	 * @param {import('../managers/SkillManager.js').SkillManager} sm
+	 * @param {Object} archData
+	 * @param {boolean} isAvailable – archetype is interactable
+	 */
+	_renderOneSkillNode(nd, sm, archData, isAvailable) {
+		const skill = nd.skill;
+		const rank = sm.skillRanks[skill.id] || 0;
+		const check = sm.canLearnSkill(skill.id);
+		const canLearn = check.allowed;
+		const isLearned = rank > 0;
+		const isMaxed = rank >= skill.maxRank;
+		const isUlt = skill.type === 'ultimate';
+
+		const size = isUlt ? ULT_NODE_SIZE : NODE_SIZE;
+		const el = document.createElement('div');
+
+		// State class
+		let state = 'tree-node--locked';
+		if (!isAvailable && !isLearned) state = 'tree-node--dimmed';
+		else if (isMaxed) state = 'tree-node--maxed';
+		else if (isLearned) state = 'tree-node--learned';
+		else if (canLearn && sm.unspentSkillPoints > 0) state = 'tree-node--available';
+
+		el.className = `tree-node tree-node--skill tree-node--${skill.type} ${state}`;
+		el.style.left = (nd.x - size / 2) + 'px';
+		el.style.top = (nd.y - size / 2) + 'px';
+		el.style.width = size + 'px';
+		el.style.height = size + 'px';
+		el.style.setProperty('--arch-color', archData.color);
+		el.dataset.skillId = skill.id;
+
+		// Rank badge
+		let rankHtml = '';
+		if (skill.maxRank > 1) {
+			rankHtml = `<span class="tree-node__rank">${rank}/${skill.maxRank}</span>`;
+		} else if (isLearned) {
+			rankHtml = '<span class="tree-node__rank">✓</span>';
+		}
+
+		el.innerHTML = `<span class="tree-node__icon">${skill.icon}</span>${rankHtml}`;
+
+		// Click to learn / rank up
+		if (canLearn && sm.unspentSkillPoints > 0 && isAvailable) {
+			el.classList.add('tree-node--clickable');
+			el.onclick = () => { if (this._onSkillLearn) this._onSkillLearn(skill.id); };
+		}
+
+		// Tooltip
+		el.addEventListener('mouseenter', () => {
+			const typeLabel = skill.type[0].toUpperCase() + skill.type.slice(1);
+			let status = '';
+			if (isMaxed) status = '✨ MAX RANK';
+			else if (isLearned) status = `Rank ${rank}/${skill.maxRank}`;
+			else if (!canLearn) status = `🔒 ${check.reason}`;
+			else status = 'Click to learn (1 SP)';
+
+			this._showTooltip(el, {
+				name: skill.name,
+				icon: skill.icon,
+				description: skill.description,
+				extra: `${typeLabel} · Tier ${skill.tier}`,
+				status,
+				color: archData.color,
+			});
+		});
+		el.addEventListener('mouseleave', () => this._hideTooltip());
+
+		this._worldEl.appendChild(el);
+	}
+
+	// ── tooltip ─────────────────────────────────────────────────────────────────
+
+	/** @param {HTMLElement} target */
+	_showTooltip(target, data) {
+		if (!this._tooltipEl) return;
+
+		const nL = parseFloat(target.style.left);
+		const nT = parseFloat(target.style.top);
+		const nW = parseFloat(target.style.width);
+
+		// Try to position to the right of the node
+		let left = nL + nW + 14;
+		if (left + 220 > WORLD_W) left = nL - 234; // flip left if overflowing
+		let top = nT;
+		if (top + 160 > WORLD_H) top = WORLD_H - 170;
+		if (top < 10) top = 10;
+
+		this._tooltipEl.style.left = left + 'px';
+		this._tooltipEl.style.top = top + 'px';
+
+		const col = data.color || '#0ff';
+		this._tooltipEl.innerHTML = `
+			<div class="tree-tooltip__header" style="color:${col}">
+				<span>${data.icon || ''}</span>
+				<span class="tree-tooltip__name">${data.name}</span>
+			</div>
+			<div class="tree-tooltip__extra">${data.extra || ''}</div>
+			<div class="tree-tooltip__desc">${data.description}</div>
+			${data.status ? `<div class="tree-tooltip__status">${data.status}</div>` : ''}
+		`;
+		this._tooltipEl.style.display = 'block';
+	}
+
+	_hideTooltip() {
+		if (this._tooltipEl) this._tooltipEl.style.display = 'none';
+	}
+
+	// ── scaling ─────────────────────────────────────────────────────────────────
+
+	_scaleToFit() {
+		if (!this._worldEl) return;
+		const vpW = this.viewport.clientWidth || 800;
+		const vpH = this.viewport.clientHeight || 600;
+		const s = Math.min(vpW / WORLD_W, vpH / WORLD_H);
+		this._worldEl.style.transform = `scale(${s})`;
+		this._worldEl.style.transformOrigin = 'top left';
+		this._worldEl.style.left = ((vpW - WORLD_W * s) / 2) + 'px';
+		this._worldEl.style.top = ((vpH - WORLD_H * s) / 2) + 'px';
+	}
+}
