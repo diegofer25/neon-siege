@@ -197,7 +197,25 @@ export const GameConfig = {
         MINION_SPAWN_COOLDOWN: 5000,
         
         /** @type {number} Base projectile speed for boss attacks */
-        PROJECTILE_SPEED: 200
+        PROJECTILE_SPEED: 200,
+
+        /**
+         * Shield Boss tuning values
+         */
+        SHIELD_BOSS: {
+            /** @type {number} Shield health as a ratio of boss max health */
+            SHIELD_HEALTH_RATIO: 0.35,
+            /** @type {number} Shield regeneration per second as a ratio of max shield */
+            SHIELD_REGEN_RATE: 0.01,
+            /** @type {number} Delay before shield regeneration starts after taking damage */
+            SHIELD_REGEN_COOLDOWN: 4500,
+            /** @type {number} Duration of vulnerable phase after shield breaks */
+            VULNERABILITY_DURATION: 6000,
+            /** @type {number} Number of times shield can reactivate after being broken */
+            MAX_SHIELD_REACTIVATIONS: 0,
+            /** @type {number} Cooldown between shield burst attacks */
+            SHIELD_BURST_COOLDOWN: 9500
+        }
     },
 
     /**

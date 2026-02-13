@@ -26,6 +26,14 @@ export class Boss extends Enemy {
         this.chargeTimeRemaining = 0;
     }
 
+    getDifficultyPreset() {
+        return this.game?.waveManager?.difficultyPreset || GameConfig.DIFFICULTY_PRESETS.normal;
+    }
+
+    getDifficultyDamageMultiplier() {
+        return this.getDifficultyPreset().enemyDamageMultiplier || 1;
+    }
+
     update(delta, player) {
         // Override basic enemy movement
         const dx = player.x - this.x;
@@ -103,13 +111,14 @@ export class Boss extends Enemy {
     projectileBurst() {
         playSFX('boss_attack_projectile_burst');
         const projectileCount = 16;
+        const damage = 10 * this.getDifficultyDamageMultiplier();
         for (let i = 0; i < projectileCount; i++) {
             const angle = (Math.PI * 2 / projectileCount) * i;
             const projectile = new Projectile(
                 this.x,
                 this.y,
                 angle,
-                10 // damage
+                damage
             );
             projectile.isEnemyProjectile = true;
             this.game.projectiles.push(projectile);
@@ -138,11 +147,17 @@ export class Boss extends Enemy {
     spawnMinions() {
         playSFX('boss_summon_minions');
         const minionCount = 2;
+        const difficultyPreset = this.getDifficultyPreset();
         for (let i = 0; i < minionCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             const spawnX = this.x + Math.cos(angle) * 100;
             const spawnY = this.y + Math.sin(angle) * 100;
             const minion = Enemy.createFastEnemy(spawnX, spawnY, 1);
+            minion.health *= difficultyPreset.enemyHealthMultiplier;
+            minion.maxHealth *= difficultyPreset.enemyHealthMultiplier;
+            minion.speed *= difficultyPreset.enemySpeedMultiplier;
+            minion.damage *= difficultyPreset.enemyDamageMultiplier;
+            minion.setGameReference(this.game);
             this.game.enemies.push(minion);
         }
     }
@@ -194,8 +209,12 @@ export class Boss extends Enemy {
 
     static createBoss(game) {
         const wave = game.wave;
-        const health = GameConfig.BOSS.BASE_HEALTH * (1 + (wave / 10) * 0.5);
-        const damage = GameConfig.BOSS.BASE_DAMAGE * (1 + (wave / 10) * 0.2);
+        const difficultyPreset = game.waveManager?.difficultyPreset || GameConfig.DIFFICULTY_PRESETS.normal;
+        const healthMultiplier = difficultyPreset.enemyHealthMultiplier || 1;
+        const speedMultiplier = difficultyPreset.enemySpeedMultiplier || 1;
+        const damageMultiplier = difficultyPreset.enemyDamageMultiplier || 1;
+        const health = GameConfig.BOSS.BASE_HEALTH * (1 + (wave / 10) * 0.5) * healthMultiplier;
+        const damage = GameConfig.BOSS.BASE_DAMAGE * (1 + (wave / 10) * 0.2) * damageMultiplier;
 
         const canvasWidth = game.canvas.logicalWidth || game.canvas.width;
         const canvasHeight = game.canvas.logicalHeight || game.canvas.height;
@@ -210,11 +229,11 @@ export class Boss extends Enemy {
         const y = centerY + Math.sin(angle) * spawnRadius;
 
         // Alternate between boss types based on wave number
-        if (wave % 20 === 0) {
-            return new ShieldBoss(x, y, health, damage, game);
-        } else {
-            return new Boss(x, y, health, damage, game);
-        }
+        const boss = wave % 20 === 0
+            ? new ShieldBoss(x, y, health, damage, game)
+            : new Boss(x, y, health, damage, game);
+        boss.speed *= speedMultiplier;
+        return boss;
     }
 }
 
@@ -224,6 +243,7 @@ export class Boss extends Enemy {
 export class ShieldBoss extends Boss {
     constructor(x, y, health, damage, game) {
         super(x, y, health, damage, game);
+        const shieldConfig = GameConfig.BOSS.SHIELD_BOSS;
         
         // Shield Boss specific properties
         this.color = '#00ffff'; // Cyan color for shield boss
@@ -231,23 +251,25 @@ export class ShieldBoss extends Boss {
         this.bossType = 'Shield';
         
         // Shield mechanics
-        this.maxShield = health * 0.5; // Shield is 50% of max health
+        this.maxShield = health * shieldConfig.SHIELD_HEALTH_RATIO;
         this.shield = this.maxShield;
-        this.shieldRegenRate = this.maxShield * 0.02; // 2% per second
-        this.shieldRegenCooldown = 3000; // 3 seconds after taking damage
+        this.shieldRegenRate = this.maxShield * shieldConfig.SHIELD_REGEN_RATE;
+        this.shieldRegenCooldown = shieldConfig.SHIELD_REGEN_COOLDOWN;
         this.lastDamageTime = 0;
         
         // Shield phases
         this.shieldActive = true;
         this.vulnerabilityPhase = false;
         this.vulnerabilityTimer = 0;
-        this.vulnerabilityDuration = 5000; // 5 seconds vulnerable after shield breaks
+        this.vulnerabilityDuration = shieldConfig.VULNERABILITY_DURATION;
+        this.maxShieldReactivations = shieldConfig.MAX_SHIELD_REACTIVATIONS;
+        this.shieldReactivations = 0;
         
         // Unique attack patterns
         this.laserChargeTimer = 0;
         this.laserChargeDuration = 2000; // 2 second charge time
         this.isChargingLaser = false;
-        this.shieldBurstCooldown = 8000; // 8 seconds
+        this.shieldBurstCooldown = shieldConfig.SHIELD_BURST_COOLDOWN;
         this.shieldBurstTimer = 0;
 
         this._scheduledTimeouts = new Set();
@@ -306,10 +328,16 @@ export class ShieldBoss extends Boss {
         
         // Reactivate shield after vulnerability phase
         if (this.vulnerabilityPhase && this.vulnerabilityTimer >= this.vulnerabilityDuration) {
-            this.shieldActive = true;
             this.vulnerabilityPhase = false;
-            this.shield = this.maxShield;
-            playSFX('boss_shield_up');
+            if (this.shieldReactivations < this.maxShieldReactivations) {
+                this.shieldReactivations++;
+                this.shieldActive = true;
+                this.shield = this.maxShield;
+                playSFX('boss_shield_up');
+            } else {
+                this.shieldActive = false;
+                this.shield = 0;
+            }
         }
     }
     
@@ -410,6 +438,7 @@ export class ShieldBoss extends Boss {
     spiralShot() {
         const projectileCount = 8;
         const spiralOffset = (Date.now() / 100) % (Math.PI * 2);
+        const damage = 15 * this.getDifficultyDamageMultiplier();
         
         for (let i = 0; i < projectileCount; i++) {
             const angle = (Math.PI * 2 / projectileCount) * i + spiralOffset;
@@ -417,7 +446,7 @@ export class ShieldBoss extends Boss {
                 this.x,
                 this.y,
                 angle,
-                15 // Higher damage
+                damage
             );
             projectile.isEnemyProjectile = true;
             projectile.speed = GameConfig.BOSS.PROJECTILE_SPEED * 0.8; // Slower but more damage
@@ -429,6 +458,7 @@ export class ShieldBoss extends Boss {
         const projectileCount = 5;
         const baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
         const spread = 0.4; // Spread in radians
+        const damage = 12 * this.getDifficultyDamageMultiplier();
         
         for (let i = 0; i < projectileCount; i++) {
             const angle = baseAngle + (spread * (i - 2) / 2);
@@ -436,7 +466,7 @@ export class ShieldBoss extends Boss {
                 this.x,
                 this.y,
                 angle,
-                12
+                damage
             );
             projectile.isEnemyProjectile = true;
             projectile.speed = GameConfig.BOSS.PROJECTILE_SPEED * 1.5; // Faster projectiles
@@ -449,6 +479,7 @@ export class ShieldBoss extends Boss {
         // Create expanding ring of projectiles
         const rings = 3;
         const projectilesPerRing = 12;
+        const damage = 8 * this.getDifficultyDamageMultiplier();
         
         for (let ring = 0; ring < rings; ring++) {
             this._schedule(() => {
@@ -459,7 +490,7 @@ export class ShieldBoss extends Boss {
                         this.x,
                         this.y,
                         angle,
-                        8
+                        damage
                     );
                     projectile.isEnemyProjectile = true;
                     projectile.speed = GameConfig.BOSS.PROJECTILE_SPEED * (0.6 + ring * 0.2);
@@ -482,6 +513,7 @@ export class ShieldBoss extends Boss {
         // Fire a powerful laser beam
         const laserLength = 800;
         const angle = Math.atan2(this.laserTargetY - this.y, this.laserTargetX - this.x);
+        const damage = 20 * this.getDifficultyDamageMultiplier();
         
         // Create multiple projectiles along the laser path
         const projectileCount = 15;
@@ -492,7 +524,7 @@ export class ShieldBoss extends Boss {
             
             this._schedule(() => {
                 if (this.health <= 0 || this.game.gameState !== 'playing') return;
-                const projectile = new Projectile(x, y, angle, 20);
+                const projectile = new Projectile(x, y, angle, damage);
                 projectile.isEnemyProjectile = true;
                 projectile.speed = 0; // Stationary laser segments
                 projectile.maxLifetime = 500; // Short duration
