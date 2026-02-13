@@ -223,6 +223,18 @@ function syncMusicTrack({ restart = false } = {}) {
     }
 }
 
+function setupAudioUnlockHooks() {
+    const unlockAudio = () => {
+        if (audio.musicVolume <= 0) {
+            return;
+        }
+        syncMusicTrack();
+    };
+
+    document.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+}
+
 /**
  * Input handling state and configuration
  * @type {Object}
@@ -434,6 +446,7 @@ function init() {
     // Initialize audio system
     loadAudio();
     syncMusicTrack();
+    setupAudioUnlockHooks();
 
     // Check for performance stats URL parameter fallback
     const urlParams = new URLSearchParams(window.location.search);

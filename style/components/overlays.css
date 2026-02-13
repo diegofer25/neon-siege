@@ -410,6 +410,28 @@
   margin-top: var(--spacing-md);
 }
 
+.shop-skip-confirm-panel {
+  max-width: 560px;
+  width: calc(100% - var(--spacing-xxl));
+  border: 2px solid var(--color-secondary-neon);
+  border-radius: var(--radius-lg);
+  background: var(--bg-overlay);
+  padding: var(--spacing-xl);
+  box-shadow: 0 0 var(--spacing-xl) rgba(255, 45, 236, 0.2);
+}
+
+.shop-skip-confirm-panel p {
+  margin-bottom: var(--spacing-sm);
+}
+
+.shop-skip-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+}
+
 .wave-countdown {
   position: absolute;
   inset: 0;

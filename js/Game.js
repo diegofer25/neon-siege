@@ -250,6 +250,52 @@ export class Game {
 		this.shop = new Shop();
 		this.shopUndoSnapshots = [];
 		this.maxShopUndoSnapshots = 20;
+		this.shopNetPurchasesThisVisit = 0;
+		this.shopSkipConfirmOverlay = document.getElementById('shopSkipConfirmOverlay');
+		this.shopSkipConfirmCancelBtn = document.getElementById('shopSkipConfirmCancelBtn');
+		this.shopSkipConfirmContinueBtn = document.getElementById('shopSkipConfirmContinueBtn');
+		this._shopSkipConfirmHandlersBound = false;
+		this._bindShopSkipConfirmHandlers();
+	}
+
+	_bindShopSkipConfirmHandlers() {
+		if (this._shopSkipConfirmHandlersBound) {
+			return;
+		}
+
+		if (!this.shopSkipConfirmOverlay || !this.shopSkipConfirmCancelBtn || !this.shopSkipConfirmContinueBtn) {
+			return;
+		}
+
+		this.shopSkipConfirmCancelBtn.addEventListener('click', () => {
+			playSFX('ui_click');
+			this.hideShopSkipConfirmDialog();
+		});
+
+		this.shopSkipConfirmContinueBtn.addEventListener('click', () => {
+			playSFX('ui_click');
+			this.hideShopSkipConfirmDialog();
+			this._continueToNextWave();
+		});
+
+		this._shopSkipConfirmHandlersBound = true;
+	}
+
+	showShopSkipConfirmDialog() {
+		if (!this.shopSkipConfirmOverlay) {
+			this._continueToNextWave();
+			return;
+		}
+
+		this.shopSkipConfirmOverlay.classList.add('show');
+	}
+
+	hideShopSkipConfirmDialog() {
+		if (!this.shopSkipConfirmOverlay) {
+			return;
+		}
+
+		this.shopSkipConfirmOverlay.classList.remove('show');
 	}
 
 	/**
@@ -514,6 +560,8 @@ export class Game {
 	showShop() {
 		playSFX("ui_shop_open");
 		this.clearShopUndoHistory();
+		this.shopNetPurchasesThisVisit = 0;
+		this.hideShopSkipConfirmDialog();
 		this.shop.showShop(
 			this.player,
 			this.player.coins,
@@ -540,6 +588,7 @@ export class Game {
 			powerUp.apply(this.player);
 			this.player.evaluateSynergies();
 			this._pushShopUndoSnapshot(beforePurchaseSnapshot);
+			this.shopNetPurchasesThisVisit += 1;
 			playSFX("ui_purchase_success");
 			telemetry.track("shop_purchase", {
 				wave: this.wave,
@@ -562,7 +611,18 @@ export class Game {
 	 * Continue to the next wave after shopping phase.
 	 */
 	continueToNextWave() {
+		if (this.shopNetPurchasesThisVisit <= 0) {
+			this.showShopSkipConfirmDialog();
+			return;
+		}
+
+		this._continueToNextWave();
+	}
+
+	_continueToNextWave() {
+		this.hideShopSkipConfirmDialog();
 		this.clearShopUndoHistory();
+		this.shopNetPurchasesThisVisit = 0;
 		this.shop.closeShop();
 		playSFX("ui_shop_close");
 		this.wave++;
@@ -647,6 +707,7 @@ export class Game {
 
 		const restored = this._restorePlayerFromSnapshot(snapshot);
 		if (restored) {
+			this.shopNetPurchasesThisVisit = Math.max(0, this.shopNetPurchasesThisVisit - 1);
 			playSFX("ui_purchase_success");
 			telemetry.track("shop_purchase_undone", {
 				wave: this.wave,
