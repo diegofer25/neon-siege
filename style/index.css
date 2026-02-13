@@ -17,8 +17,8 @@
 @import 'components/health.css';
 @import 'components/stats.css';
 @import 'components/overlays.css';
-@import 'components/shop.css';
 @import 'components/cards.css';
+@import 'components/skills.css';
 
 /* Effects */
 @import 'effects/floating-text.css';

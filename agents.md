@@ -29,22 +29,25 @@ High-level architecture
   - index.html: hosts the canvas and UI; links styles and scripts.
   - style/: CSS split into base, layout, components, effects, responsive; index.css aggregates.
 - Main orchestration
-  - js/Game.js: central controller; owns the loop, coordinates systems, updates entities, manages state (run/pause, waves, shop).
+  - js/Game.js: central controller; owns the loop, coordinates systems, updates entities, manages state (run/pause, waves, level-up/archetype/ascension).
   - js/managers/PerformanceManager.js: optional runtime stats; enable with ?stats=true.
+  - js/managers/SkillManager.js: run-level XP/leveling, attribute points, and skill tree progression.
 - Core systems (js/systems/)
   - CollisionSystem.js: circular collisions and hit resolution among projectiles/player/enemies/effects.
   - WaveManager.js: enemy wave lifecycle (spawning, scaling, special waves/bosses).
   - EffectsManager.js: screen shake, flashes, particle hooks.
   - EntityManager.js: entity lifecycle (spawn, update, pooling/recycle, culling).
+  - AscensionSystem.js: ascension modifier picks and aggregated run modifiers.
 - Entities and gameplay primitives (js/)
-  - Player.js, Enemy.js, Projectile.js, Particle.js, PowerUp.js, Shop.js
+  - Player.js, Enemy.js, Projectile.js, Particle.js
 - Utilities & config
   - utils/ObjectPool.js: pooling for particles/projectiles.
   - utils/MathUtils.js: math helpers.
-  - config/GameConfig.js: central gameplay balance (wave scaling, prices, VFX caps).
+  - config/GameConfig.js: central gameplay balance (wave scaling, VFX caps, meta progression).
+  - config/SkillConfig.js: archetypes, attributes, tier gates, cooldown and ascension config.
 
 Common modifications (where to change things)
-- Add/modify power-ups: define in js/PowerUp.js; add price in js/config/GameConfig.js; categorize in Shop/PowerUp catalog.
+- Add/modify skills/archetypes: define in js/config/SkillConfig.js and apply runtime effects in js/Game.js (`_syncPlayerFromSkills`).
 - Tune difficulty: adjust WAVE.* and SCALING_FACTORS in js/config/GameConfig.js.
 - Add enemy types/behaviors: extend js/Enemy.js; integrate spawn/scaling in js/systems/WaveManager.js.
 - VFX and performance caps: tweak limits in js/config/GameConfig.js and logic in js/systems/EffectsManager.js.

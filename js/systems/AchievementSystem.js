@@ -16,13 +16,13 @@ const ACHIEVEMENTS = [
     { id: 'wave_50',         name: 'Legend',             desc: 'Reach wave 50',                     icon: '🏆', check: 'wave', target: 50 },
     { id: 'wave_100',        name: 'Immortal',          desc: 'Reach wave 100',                    icon: '👑', check: 'wave', target: 100 },
 
-    // Economy-based
-    { id: 'rich',            name: "Dragon's Hoard",    desc: 'Have 200+ coins at once',           icon: '💰', check: 'coins', target: 200 },
-    { id: 'big_spender',     name: 'Big Spender',       desc: 'Spend 500 coins in one run',        icon: '🛒', check: 'coinsSpent', target: 500 },
+    // Progression-based
+    { id: 'skilled',         name: 'Quick Learner',     desc: 'Reach level 5 in one run',          icon: '📚', check: 'level', target: 5 },
+    { id: 'mastered',        name: 'Master',            desc: 'Reach level 15 in one run',         icon: '🎓', check: 'level', target: 15 },
 
     // Build-based
-    { id: 'full_offense',    name: 'Glass Cannon',      desc: 'Have 5+ offense power-ups',         icon: '🔫', check: 'offensePowerUps', target: 5 },
-    { id: 'synergy_master',  name: 'Synergy Master',    desc: 'Activate all 3 synergies',          icon: '⚡', check: 'synergies', target: 3 },
+    { id: 'full_offense',    name: 'Glass Cannon',      desc: 'Have 5+ skills learned',            icon: '🔫', check: 'skillCount', target: 5 },
+    { id: 'ascended',        name: 'Ascended',          desc: 'Pick 3 ascension modifiers',        icon: '⚡', check: 'ascensionCount', target: 3 },
 
     // Boss-based
     { id: 'boss_slayer',     name: 'Boss Slayer',       desc: 'Defeat your first boss',            icon: '🐉', check: 'bossKills', target: 1 },
@@ -48,7 +48,6 @@ export class AchievementSystem {
         this.killsThisRun = 0;
         this.bossKills = 0;
         this.shieldBossKills = 0;
-        this.coinsSpent = 0;
     }
 
     getUnlockedAchievements() {
@@ -77,8 +76,7 @@ export class AchievementSystem {
         this._checkAll();
     }
 
-    onPurchase(price) {
-        this.coinsSpent += price;
+    onSkillLearned() {
         this._checkAll();
     }
 
@@ -86,7 +84,6 @@ export class AchievementSystem {
         this.killsThisRun = 0;
         this.bossKills = 0;
         this.shieldBossKills = 0;
-        this.coinsSpent = 0;
     }
 
     update(delta) {
@@ -127,17 +124,12 @@ export class AchievementSystem {
                 return game.comboSystem?.maxStreakThisRun || 0;
             case 'wave':
                 return game.wave;
-            case 'coins':
-                return game.player?.coins || 0;
-            case 'coinsSpent':
-                return this.coinsSpent;
-            case 'offensePowerUps': {
-                const stacks = game.player?.powerUpStacks || {};
-                const offenseKeys = ['Damage Boost', 'Fire Rate', 'Double Damage', 'Rapid Fire', 'Piercing Shots', 'Triple Shot', 'Speed Boost'];
-                return offenseKeys.reduce((sum, k) => sum + (stacks[k] || 0), 0);
-            }
-            case 'synergies':
-                return game.player?.activeSynergies?.size || 0;
+            case 'level':
+                return game.skillManager?.level || 0;
+            case 'skillCount':
+                return game.skillManager?.learnedSkills?.size || 0;
+            case 'ascensionCount':
+                return game.ascensionSystem?.selectedModifiers?.length || 0;
             case 'bossKills':
                 return this.bossKills;
             case 'shieldBossKills':

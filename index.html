@@ -27,9 +27,28 @@
                 </div>
                 <span id="defenseText">0/0</span>
             </div>
-            <div id="coinDisplay" class="coin-display">
-                <span class="coin-icon">🪙</span>
-                <span id="coinAmount" class="coin-amount">0</span>
+            <!-- Skill Slots (QWER) -->
+            <div id="skillSlots" class="skill-slots">
+                <div class="skill-slot" data-slot="0" data-key="Q">
+                    <span class="skill-key">Q</span>
+                    <div class="skill-cd-fill" id="skillCd0"></div>
+                    <span class="skill-slot-name" id="skillName0">—</span>
+                </div>
+                <div class="skill-slot" data-slot="1" data-key="W">
+                    <span class="skill-key">W</span>
+                    <div class="skill-cd-fill" id="skillCd1"></div>
+                    <span class="skill-slot-name" id="skillName1">—</span>
+                </div>
+                <div class="skill-slot" data-slot="2" data-key="E">
+                    <span class="skill-key">E</span>
+                    <div class="skill-cd-fill" id="skillCd2"></div>
+                    <span class="skill-slot-name" id="skillName2">—</span>
+                </div>
+                <div class="skill-slot ultimate" data-slot="3" data-key="R">
+                    <span class="skill-key">R</span>
+                    <div class="skill-cd-fill" id="skillCd3"></div>
+                    <span class="skill-slot-name" id="skillName3">🔒</span>
+                </div>
             </div>
             <div id="waveCounter" class="hud-element">
                 <span id="wave">Wave: 1</span>
@@ -110,7 +129,7 @@
             <h1>NEON DEFENDER</h1>
             <p>Survive infinite waves of enemies</p>
             <p>Auto-targeting turret defense game</p>
-            <p>Earn coins to buy power-ups between waves!</p>
+            <p>Level up and unlock skills between waves!</p>
             <div class="start-difficulty-row" aria-label="Difficulty">
                 <span>Difficulty</span>
                 <div class="start-difficulty-options" id="startDifficulty" role="radiogroup" aria-label="Select difficulty">
@@ -171,7 +190,7 @@
                         </span>
                     </label>
                 </div>
-                <p id="keybindHintsText" class="settings-help">Keyboard: P pause/resume • Settings also pause the run.</p>
+                <p id="keybindHintsText" class="settings-help">Keyboard: P pause/resume • Q/W/E/R cast skills • Settings also pause the run.</p>
                 <div class="settings-actions">
                     <button id="saveGameBtn">Save Game</button>
                     <button id="loadGameBtn">Load Save</button>
@@ -220,41 +239,44 @@
             </div>
         </div>
 
-        <!-- Power-Up Modal -->
-        <div id="powerUpModal" class="overlay">
-            <div class="shop-container">
-                <h2>Power-Up Shop</h2>
-                <div class="shop-tabs">
-                    <button class="tab-button active" data-tab="offense">⚔️ OFFENSE</button>
-                    <button class="tab-button" data-tab="defense">🛡️ DEFENSE</button>
-                    <button class="tab-button" data-tab="utility">⚡ UTILITY</button>
-                </div>
-                <div class="shop-content">
-                    <div class="shop-main">
-                        <div id="powerUpCards" class="shop-cards-container">
-                            <!-- Cards will be dynamically generated -->
-                        </div>
-                        <aside id="powerUpDetails" class="shop-details-panel" aria-live="polite">
-                            <!-- Details will be dynamically generated -->
-                        </aside>
+        <!-- Level-Up Quick-Pick Panel -->
+        <div id="levelUpPanel" class="overlay">
+            <div class="levelup-container">
+                <h2 id="levelUpTitle">LEVEL UP!</h2>
+                <div class="levelup-section">
+                    <h3>Attributes <span id="attrPointsLeft" class="points-badge">3</span></h3>
+                    <div id="attrAllocation" class="attr-grid">
+                        <!-- Dynamically populated -->
                     </div>
                 </div>
-                <div class="shop-footer">
-                    <button class="shop-reward-btn">Ad Boost (+50%)</button>
-                    <button id="shopUndoBtn" class="shop-undo-btn">Undo Last Purchase</button>
-                    <button class="shop-close-btn">Continue to Next Wave</button>
+                <div class="levelup-section">
+                    <h3>Skill Point <span id="skillPointsLeft" class="points-badge">1</span></h3>
+                    <div id="skillList" class="skill-list">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                <button id="levelUpConfirmBtn" class="primary">Confirm</button>
+            </div>
+        </div>
+
+        <!-- Archetype Selection (first boss) -->
+        <div id="archetypeSelectPanel" class="overlay">
+            <div class="archetype-container">
+                <h2>CHOOSE YOUR PATH</h2>
+                <p class="archetype-subtitle">Select an archetype to unlock its skill tree</p>
+                <div id="archetypeOptions" class="archetype-grid">
+                    <!-- Dynamically populated -->
                 </div>
             </div>
         </div>
 
-        <div id="shopSkipConfirmOverlay" class="overlay">
-            <div class="shop-skip-confirm-panel">
-                <h2>Skip Shop Purchases?</h2>
-                <p>You haven't bought any power-ups this wave.</p>
-                <p>Are you sure you want to continue to the next wave?</p>
-                <div class="shop-skip-confirm-actions">
-                    <button id="shopSkipConfirmCancelBtn">Go Back</button>
-                    <button id="shopSkipConfirmContinueBtn" class="primary">Continue Anyway</button>
+        <!-- Ascension Pick (every 10 waves) -->
+        <div id="ascensionPanel" class="overlay">
+            <div class="ascension-container">
+                <h2>ASCENSION</h2>
+                <p class="ascension-subtitle">Choose a run-warping modifier</p>
+                <div id="ascensionOptions" class="ascension-grid">
+                    <!-- Dynamically populated -->
                 </div>
             </div>
         </div>

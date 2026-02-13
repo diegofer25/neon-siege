@@ -1,7 +1,7 @@
 import { telemetry } from './TelemetryManager.js';
 
-const SAVE_STORAGE_KEY = 'neon_td_save_v1';
-const SAVE_SCHEMA_VERSION = 1;
+const SAVE_STORAGE_KEY = 'neon_td_save_v2';
+const SAVE_SCHEMA_VERSION = 2;
 
 export class SaveStateManager {
     hasSave() {

@@ -1,10 +1,10 @@
 import { Player } from "./Player.js";
 import { Particle } from "./Particle.js";
 import { Projectile } from "./Projectile.js";
-import { Shop } from "./Shop.js";
 import { GameConfig } from "./config/GameConfig.js";
 import { ObjectPool } from "./utils/ObjectPool.js";
 import { PerformanceManager } from "./managers/PerformanceManager.js";
+import { SkillManager } from "./managers/SkillManager.js";
 import { CollisionSystem } from "./systems/CollisionSystem.js";
 import { WaveManager } from "./systems/WaveManager.js";
 import { EffectsManager } from "./systems/EffectsManager.js";
@@ -13,8 +13,10 @@ import { ComboSystem } from "./systems/ComboSystem.js";
 import { LootSystem } from "./systems/LootSystem.js";
 import { AchievementSystem } from "./systems/AchievementSystem.js";
 import { ChallengeSystem } from "./systems/ChallengeSystem.js";
+import { AscensionSystem } from "./systems/AscensionSystem.js";
 import { getMilestoneForWave, isMiniMilestone } from "./config/MilestoneConfig.js";
-import { playSFX, createFloatingText, screenFlash } from "./main.js";
+import { LEVEL_CONFIG } from "./config/SkillConfig.js";
+import { playSFX, createFloatingText, screenFlash, showLevelUpPanel, showArchetypeSelectPanel, showAscensionPanel, closeAllSkillOverlays } from "./main.js";
 import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
 import { monetizationManager } from "./managers/MonetizationManager.js";
@@ -41,7 +43,10 @@ export class Game {
 		MENU: "menu",
 		PLAYING: "playing",
 		PAUSED: "paused",
-		POWERUP: "powerup",
+		POWERUP: "powerup",        // kept for compatibility; now means "between-wave skill screen"
+		LEVELUP: "levelup",        // mid-wave brief pause for skill pick
+		ASCENSION: "ascension",    // Ascension pick event (every 10 waves)
+		ARCHETYPE: "archetype",    // Archetype commitment after first boss
 		GAMEOVER: "gameover",
 	};
 
@@ -62,7 +67,6 @@ export class Game {
 		this._initializeManagers();
 		this._initializeSystems();
 		this._initializeGameState();
-		this._initializeShop();
 
 		this.init();
 	}
@@ -106,6 +110,7 @@ export class Game {
 	_initializeManagers() {
 		this.performanceManager = new PerformanceManager();
 		this.progressionManager = new ProgressionManager();
+		this.skillManager = new SkillManager(this.progressionManager);
 		this.performanceProfileKey = GameConfig.DERIVED.selectPerformanceProfile();
 		this.modifierState = {
 			enemySpeedMultiplier: 1,
@@ -132,6 +137,7 @@ export class Game {
 		this.lootSystem = new LootSystem(this);
 		this.achievementSystem = new AchievementSystem(this);
 		this.challengeSystem = new ChallengeSystem(this);
+		this.ascensionSystem = new AscensionSystem(this);
 	}
 
 	/**
@@ -190,9 +196,7 @@ export class Game {
 	_initializeGameState() {
 		this.wave = 0;
 		this.score = 0;
-		this.xp = 0;
-		this.level = 1;
-		this.xpToNextLevel = 50;
+		// XP/level now owned by skillManager; keep accessors for compatibility
 		this._waveStartTime = 0;
 		this._waveCountdownTimeouts = [];
 	}
@@ -255,61 +259,7 @@ export class Game {
 		runStep();
 	}
 
-	/**
-	 * Initialize the shop system for power-ups.
-	 * @private
-	 */
-	_initializeShop() {
-		this.shop = new Shop();
-		this.shopUndoSnapshots = [];
-		this.maxShopUndoSnapshots = 20;
-		this.shopNetPurchasesThisVisit = 0;
-		this.shopSkipConfirmOverlay = document.getElementById('shopSkipConfirmOverlay');
-		this.shopSkipConfirmCancelBtn = document.getElementById('shopSkipConfirmCancelBtn');
-		this.shopSkipConfirmContinueBtn = document.getElementById('shopSkipConfirmContinueBtn');
-		this._shopSkipConfirmHandlersBound = false;
-		this._bindShopSkipConfirmHandlers();
-	}
-
-	_bindShopSkipConfirmHandlers() {
-		if (this._shopSkipConfirmHandlersBound) {
-			return;
-		}
-
-		if (!this.shopSkipConfirmOverlay || !this.shopSkipConfirmCancelBtn || !this.shopSkipConfirmContinueBtn) {
-			return;
-		}
-
-		this.shopSkipConfirmCancelBtn.addEventListener('click', () => {
-			playSFX('ui_click');
-			this.hideShopSkipConfirmDialog();
-		});
-
-		this.shopSkipConfirmContinueBtn.addEventListener('click', () => {
-			playSFX('ui_click');
-			this.hideShopSkipConfirmDialog();
-			this._continueToNextWave();
-		});
-
-		this._shopSkipConfirmHandlersBound = true;
-	}
-
-	showShopSkipConfirmDialog() {
-		if (!this.shopSkipConfirmOverlay) {
-			this._continueToNextWave();
-			return;
-		}
-
-		this.shopSkipConfirmOverlay.classList.add('show');
-	}
-
-	hideShopSkipConfirmDialog() {
-		if (!this.shopSkipConfirmOverlay) {
-			return;
-		}
-
-		this.shopSkipConfirmOverlay.classList.remove('show');
-	}
+	// Shop system removed — progression is now skill-based via SkillManager
 
 	/**
 	 * Initialize the game world and create the player.
@@ -367,9 +317,6 @@ export class Game {
 		this.gameState = "playing";
 		this.wave = 1;
 		this.score = 0;
-		this.xp = 0;
-		this.level = 1;
-		this.xpToNextLevel = 50;
 		this.enemies = [];
 		this.projectiles = [];
 		this.particles = [];
@@ -377,6 +324,8 @@ export class Game {
 		this._lastRunResult = null;
 
 		this.player.reset();
+		this.skillManager.reset();
+		this.ascensionSystem.reset();
 		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
 		this.waveManager.setDifficulty(this.runDifficulty);
@@ -384,6 +333,10 @@ export class Game {
 		this.lootSystem.resetForRun();
 		this.achievementSystem.resetForRun();
 		this.challengeSystem.selectChallenges();
+
+		// Sync player with initial skill/attribute state
+		this._syncPlayerFromSkills();
+
 		this._runWaveCountdown(() => {
 			this._waveStartTime = performance.now();
 			this.challengeSystem.onWaveStart();
@@ -504,6 +457,9 @@ export class Game {
 			this._configurePoolsForProfile(targetProfile);
 		}
 
+		// Update skill cooldowns
+		this.skillManager.updateCooldowns(delta);
+
 		// Update all game systems
 		this.effectsManager.update(delta);
 		this.waveManager.update(delta);
@@ -521,7 +477,8 @@ export class Game {
 			this.trace("gameover", {
 				wave: this.wave,
 				score: this.score,
-				coins: this.player.coins,
+				level: this.skillManager.level,
+				archetype: this.skillManager.archetype,
 			});
 			if (!this._gameOverTracked) {
 				this._gameOverTracked = true;
@@ -534,7 +491,8 @@ export class Game {
 				telemetry.track("game_over", {
 					wave: this.wave,
 					score: this.score,
-					coins: this.player.coins
+					level: this.skillManager.level,
+					archetype: this.skillManager.archetype,
 				});
 				monetizationManager.registerOpportunity("game_over", {
 					wave: this.wave,
@@ -545,7 +503,7 @@ export class Game {
 	}
 
 	/**
-	 * Handle wave completion logic and transition to shop.
+	 * Handle wave completion logic — skill-based progression (no shop).
 	 */
 	completeWave() {
 		this.trace("wave.complete", {
@@ -555,19 +513,8 @@ export class Game {
 			enemiesSpawned: this.waveManager.enemiesSpawned,
 			enemiesToSpawn: this.waveManager.enemiesToSpawn,
 		});
-		this.gameState = "powerup";
-		playSFX("wave_complete");
 
-		// Calculate and award coins
-		const totalCoins = this.waveManager.calculateWaveReward();
-		const coinsBefore = this.player.coins;
-		this.player.addCoins(totalCoins);
-		this.trace("coins.award.waveComplete", {
-			wave: this.wave,
-			amount: totalCoins,
-			coinsBefore,
-			coinsAfter: this.player.coins,
-		});
+		playSFX("wave_complete");
 		this.progressionManager.recordWaveCompletion(this.wave, this.waveManager.isBossWave);
 
 		// Wave completion score bonus
@@ -577,8 +524,10 @@ export class Game {
 		const perfectBonus = (this.player.hp === this.player.maxHp) ? 300 : 0;
 		this.score += waveClearBonus + speedBonus + perfectBonus;
 
-		// XP for wave clear
-		this.addXP(20 + this.wave * 5);
+		// XP for wave clear (via SkillManager)
+		const xpAmount = LEVEL_CONFIG.XP_PER_WAVE_CLEAR_BASE + this.wave * LEVEL_CONFIG.XP_PER_WAVE_CLEAR_SCALING;
+		const ascEffects = this.ascensionSystem.getAggregatedEffects();
+		this.addXP(Math.floor(xpAmount * (ascEffects.xpMultiplier || 1)));
 
 		// Milestone celebrations
 		const milestone = getMilestoneForWave(this.wave);
@@ -587,9 +536,9 @@ export class Game {
 			screenFlash();
 			this.effectsManager.addScreenShake(12, 500);
 			createFloatingText(milestone.label, width / 2, height / 2 - 40, 'milestone-major');
-			this.player.addCoins(milestone.bonusCoins);
 			this.progressionManager._incrementCurrency('LEGACY_TOKENS', milestone.bonusTokens);
 			this.progressionManager._saveState();
+			this.addXP(milestone.bonusXP);
 			playSFX('boss_defeat');
 		} else if (isMiniMilestone(this.wave)) {
 			const { width, height } = this.getLogicalCanvasSize();
@@ -603,100 +552,61 @@ export class Game {
 
 		telemetry.track("wave_complete", {
 			wave: this.wave,
-			coinsRewarded: totalCoins,
+			score: this.score,
+			level: this.skillManager.level,
 			remainingHp: this.player.hp,
 			isBossWave: this.waveManager.isBossWave
 		});
 
 		monetizationManager.registerOpportunity("between_waves", {
 			wave: this.wave,
-			coinsRewarded: totalCoins,
 			isBossWave: this.waveManager.isBossWave
 		});
 
-		this.showShop();
+		// Decide what UI to show between waves
+		this._showBetweenWaveUI();
 	}
 
 	/**
-	 * Display the shop interface for power-up purchases.
+	 * Determine the right between-wave screen to show.
+	 * Priority: Archetype commitment (first boss) > Ascension > Skill allocation.
+	 * @private
 	 */
-	showShop() {
-		playSFX("ui_shop_open");
-		this.clearShopUndoHistory();
-		this.shopNetPurchasesThisVisit = 0;
-		this.hideShopSkipConfirmDialog();
-		this.shop.showShop(
-			this.player,
-			this.player.coins,
-			(powerUp, price) => this.purchasePowerUp(powerUp, price),
-			() => this.continueToNextWave(),
-			async () => {
-				const result = await this.showRewardedCoinBoost();
-				if (result?.rewardGranted) {
-					this.clearShopUndoHistory();
-				}
-				return result;
-			},
-			() => this.undoLastShopPurchase(),
-			() => this.canUndoShopPurchase()
-		);
-	}
-
-	/**
-	 * Process a power-up purchase from the shop.
-	 */
-	purchasePowerUp(powerUp, price) {
-		const beforePurchaseSnapshot = this._createPlayerSnapshot();
-		if (this.player.spendCoins(price)) {
-			powerUp.apply(this.player);
-			this.player.evaluateSynergies();
-			this._pushShopUndoSnapshot(beforePurchaseSnapshot);
-			this.shopNetPurchasesThisVisit += 1;
-			this.achievementSystem.onPurchase(price);
-			this.challengeSystem.onShopPurchase(this.shopNetPurchasesThisVisit);
-			playSFX("ui_purchase_success");
-			telemetry.track("shop_purchase", {
-				wave: this.wave,
-				powerUp: powerUp.name,
-				price,
-				coinsAfterPurchase: this.player.coins
-			});
-		} else {
-			playSFX("ui_purchase_fail");
-			telemetry.track("shop_purchase_failed", {
-				wave: this.wave,
-				powerUp: powerUp.name,
-				price,
-				coinsAvailable: this.player.coins
-			});
-		}
-	}
-
-	/**
-	 * Continue to the next wave after shopping phase.
-	 */
-	continueToNextWave() {
-		if (this.shopNetPurchasesThisVisit <= 0) {
-			this.showShopSkipConfirmDialog();
+	_showBetweenWaveUI() {
+		// First boss: prompt archetype commitment + ultimate unlock
+		if (this.wave === 10 && !this.skillManager.chosenArchetype) {
+			this.gameState = Game.STATES.ARCHETYPE;
+			showArchetypeSelectPanel();
 			return;
 		}
 
-		this._continueToNextWave();
+		// Ascension event every 10 waves
+		if (this.ascensionSystem.isAscensionWave(this.wave)) {
+			this.gameState = Game.STATES.ASCENSION;
+			showAscensionPanel();
+			return;
+		}
+
+		// Default: skill allocation screen (between-wave)
+		this.gameState = Game.STATES.POWERUP;
+		showLevelUpPanel();
 	}
 
-	_continueToNextWave() {
-		this.hideShopSkipConfirmDialog();
-		this.clearShopUndoHistory();
-		this.shopNetPurchasesThisVisit = 0;
-		this.shop.closeShop();
-		playSFX("ui_shop_close");
+	/**
+	 * Continue to the next wave after between-wave skill allocation.
+	 */
+	continueToNextWave() {
+		closeAllSkillOverlays();
+		// Sync player stats from skill tree before next wave
+		this._syncPlayerFromSkills();
+
 		this.wave++;
 		this.gameState = "playing";
 
 		telemetry.track("wave_start", {
 			wave: this.wave,
 			playerHp: this.player.hp,
-			coins: this.player.coins
+			level: this.skillManager.level,
 		});
 
 		this._runWaveCountdown(() => {
@@ -706,124 +616,188 @@ export class Game {
 		});
 	}
 
-	async showRewardedCoinBoost() {
-		const bonus = Math.max(1, Math.ceil(this.waveManager.calculateWaveReward() * 0.5));
-		return monetizationManager.tryShowRewarded(
-			"between_waves_coin_boost",
-			{ wave: this.wave, proposedBonus: bonus },
-			() => {
-				const coinsBefore = this.player.coins;
-				this.player.addCoins(bonus);
-				this.trace("coins.award.rewarded", {
-					wave: this.wave,
-					amount: bonus,
-					coinsBefore,
-					coinsAfter: this.player.coins,
-				});
-				telemetry.track("rewarded_bonus_applied", {
-					placement: "between_waves_coin_boost",
-					wave: this.wave,
-					bonus
-				});
-			}
-		);
-	}
+	/**
+	 * Sync player stats from SkillManager attributes + passive effects.
+	 * Called after each skill/attribute allocation.
+	 * @private
+	 */
+	_syncPlayerFromSkills() {
+		const attrs = this.skillManager.getComputedAttributes();
+		const passives = this.skillManager.getPassiveEffects();
+		const ascension = this.ascensionSystem.getAggregatedEffects();
 
-	_createPlayerSnapshot() {
-		return structuredClone(this.player);
-	}
+		// Base stats from attributes
+		const baseHp = GameConfig.PLAYER.BASE_HP;
+		const newMaxHp = Math.floor((baseHp + attrs.maxHpBonus) * (ascension.maxHpMultiplier || 1));
+		// Preserve HP ratio when max changes
+		const hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
+		this.player.maxHp = newMaxHp;
+		this.player.hp = Math.min(newMaxHp, Math.ceil(newMaxHp * hpRatio));
 
-	_restorePlayerFromSnapshot(snapshot) {
-		if (!snapshot || !this.player) {
-			return false;
+		// Shield from attributes
+		this.player.maxShieldHp = attrs.shieldCapacity;
+		if (attrs.shieldCapacity > 0) {
+			this.player.hasShield = true;
+			this.player.shieldHp = Math.min(this.player.shieldHp, this.player.maxShieldHp);
 		}
 
-		for (const key of Object.keys(this.player)) {
-			delete this.player[key];
+		// Regen from attributes + ascension
+		this.player.hpRegen = attrs.hpRegen + (ascension.hpRegenBonus || 0);
+		this.player.shieldRegen = attrs.shieldCapacity > 0 ? attrs.shieldCapacity * 0.05 : 0;
+
+		// Combat modifiers from attributes + passives + ascension
+		this.player.damageMod = attrs.damageMultiplier * (1 + passives.damageBonus) * (ascension.damageMultiplier || 1);
+		this.player.fireRateMod = attrs.fireRateMultiplier * (1 + passives.fireRateBonus);
+		this.player.rotationSpeedMod = attrs.turnSpeedMultiplier * (1 + passives.turnSpeedBonus);
+
+		// Passive skill effects
+		this.player.piercingLevel = passives.pierceCount;
+		this.player.hasTripleShot = passives.hasTripleShot;
+		this.player.explosiveShots = passives.hasExplosiveRounds;
+		if (passives.hasExplosiveRounds) {
+			this.player.explosionRadius = passives.explosionRadius * attrs.aoeRadiusMultiplier;
+			this.player.explosionDamage = GameConfig.PLAYER.BASE_DAMAGE * this.player.damageMod * passives.explosionDamageRatio;
+		}
+		this.player.hasHomingShots = passives.homingStrength > 0;
+
+		// Crit from LUCK attribute + skill passives
+		const totalCrit = Math.min(0.60, attrs.critChance + passives.critChanceBonus);
+		if (totalCrit > 0) {
+			this.player.luckyShots = {
+				chance: totalCrit,
+				active: true,
+				critDamageMultiplier: passives.critDamageMultiplier,
+			};
+		} else {
+			this.player.luckyShots = null;
 		}
 
-		Object.assign(this.player, structuredClone(snapshot));
-		if (typeof this.player.evaluateSynergies === "function") {
-			this.player.evaluateSynergies();
+		// Burn aura from Technomancer
+		if (passives.burnDamagePercent > 0) {
+			this.player.immolationAura = {
+				damagePercent: passives.burnDamagePercent,
+				range: passives.burnRange * attrs.aoeRadiusMultiplier,
+				active: true,
+			};
+		} else {
+			this.player.immolationAura = null;
 		}
 
-		return true;
+		// Overcharge burst from Gunner
+		if (passives.overcharge) {
+			this.player.overchargeBurst = {
+				interval: passives.overcharge.shotInterval,
+				multiplier: passives.overcharge.damageMultiplier,
+				shotCount: 0,
+				active: true,
+			};
+		} else {
+			this.player.overchargeBurst = null;
+		}
+
+		// Life steal from ascension
+		this.player.hasLifeSteal = ascension.lifeStealPercent > 0;
+		this.player._ascensionLifeSteal = ascension.lifeStealPercent;
+
+		// Store ascension effects on player for runtime access
+		this.player._ascensionEffects = ascension;
 	}
 
-	_pushShopUndoSnapshot(snapshot) {
-		if (!snapshot) {
+	/**
+	 * Handle archetype selection (called from UI after first boss).
+	 * @param {string} archetypeKey
+	 */
+	selectArchetype(archetypeKey) {
+		if (this.skillManager.commitArchetype(archetypeKey)) {
+			const { width, height } = this.getLogicalCanvasSize();
+			const label = archetypeKey.charAt(0) + archetypeKey.slice(1).toLowerCase();
+			createFloatingText(`${label} ARCHETYPE CHOSEN!`, width / 2, height / 2 - 40, 'milestone-major');
+			createFloatingText('ULTIMATE UNLOCKED!', width / 2, height / 2, 'level-up');
+			this.effectsManager.addScreenShake(10, 400);
+			screenFlash();
+			playSFX('boss_defeat');
+			telemetry.track('archetype_chosen', { archetype: archetypeKey, wave: this.wave });
+
+			// Show skill allocation screen after archetype pick
+			this.gameState = Game.STATES.POWERUP;
+			showLevelUpPanel();
+		}
+	}
+
+	/**
+	 * Handle ascension modifier selection (called from UI).
+	 * @param {string} modifierId
+	 */
+	selectAscension(modifierId) {
+		if (this.ascensionSystem.selectModifier(modifierId)) {
+			this._syncPlayerFromSkills();
+			telemetry.track('ascension_picked', { modifierId, wave: this.wave });
+
+			// Continue to skill allocation
+			this.gameState = Game.STATES.POWERUP;
+			showLevelUpPanel();
+		}
+	}
+
+	/**
+	 * Handle mid-wave level-up: brief pause, show quick pick, resume.
+	 * @private
+	 */
+	_triggerMidWaveLevelUp() {
+		if (this.gameState !== Game.STATES.PLAYING) return;
+		if (this.skillManager.pendingLevelUps <= 0) return;
+
+		this.gameState = Game.STATES.LEVELUP;
+		showLevelUpPanel();
+	}
+
+	/**
+	 * Complete a mid-wave level-up pick and resume play.
+	 */
+	completeMidWaveLevelUp() {
+		this.skillManager.pendingLevelUps = Math.max(0, this.skillManager.pendingLevelUps - 1);
+		this._syncPlayerFromSkills();
+
+		// If more level-ups pending, stay in LEVELUP state
+		if (this.skillManager.pendingLevelUps > 0) {
+			showLevelUpPanel();
 			return;
 		}
 
-		this.shopUndoSnapshots.push(snapshot);
-		if (this.shopUndoSnapshots.length > this.maxShopUndoSnapshots) {
-			this.shopUndoSnapshots.shift();
-		}
-	}
-
-	canUndoShopPurchase() {
-		return this.shopUndoSnapshots.length > 0;
-	}
-
-	undoLastShopPurchase() {
-		const snapshot = this.shopUndoSnapshots.pop();
-		if (!snapshot) {
-			playSFX("ui_purchase_fail");
-			return false;
-		}
-
-		const restored = this._restorePlayerFromSnapshot(snapshot);
-		if (restored) {
-			this.shopNetPurchasesThisVisit = Math.max(0, this.shopNetPurchasesThisVisit - 1);
-			playSFX("ui_purchase_success");
-			telemetry.track("shop_purchase_undone", {
-				wave: this.wave,
-				coinsAfterUndo: this.player.coins,
-			});
-			return true;
-		}
-
-		playSFX("ui_purchase_fail");
-		return false;
-	}
-
-	clearShopUndoHistory() {
-		this.shopUndoSnapshots.length = 0;
+		closeAllSkillOverlays();
+		this.gameState = Game.STATES.PLAYING;
 	}
 
 	addXP(amount) {
-		this.xp += amount;
-		while (this.xp >= this.xpToNextLevel) {
-			this.xp -= this.xpToNextLevel;
-			this.level++;
-			this.xpToNextLevel = Math.floor(50 * Math.pow(1.3, this.level - 1));
+		const levelsGained = this.skillManager.addXP(amount);
+		for (let i = 0; i < levelsGained; i++) {
 			this._onLevelUp();
 		}
 	}
 
 	_onLevelUp() {
 		const { width, height } = this.getLogicalCanvasSize();
-		createFloatingText(`LEVEL ${this.level}!`, width / 2, height / 2, 'level-up');
+		createFloatingText(`LEVEL ${this.skillManager.level}!`, width / 2, height / 2, 'level-up');
 		this.effectsManager.addScreenShake(5, 200);
 		playSFX('ui_purchase_success');
 
-		if (this.level % 5 === 0) {
-			// Every 5th level: permanent +5% damage
-			this.player.damageMod *= 1.05;
-		} else if (this.level % 2 === 0) {
-			// Even levels: bonus coins
-			this.player.addCoins(5 * this.level);
-		} else {
-			// Odd levels: 3s fire rate boost handled by loot system temp buff pattern
-			const originalRate = this.player.fireRateMod;
-			this.player.fireRateMod *= 1.5;
-			setTimeout(() => {
-				if (this.player.fireRateMod > originalRate) {
-					this.player.fireRateMod = originalRate;
-				}
-			}, 3000);
+		telemetry.track('level_up', {
+			level: this.skillManager.level,
+			wave: this.wave,
+			unspentSkillPoints: this.skillManager.unspentSkillPoints,
+			unspentAttributePoints: this.skillManager.unspentAttributePoints,
+		});
+
+		// Trigger mid-wave level-up UI if currently playing
+		if (this.gameState === Game.STATES.PLAYING) {
+			this._triggerMidWaveLevelUp();
 		}
 	}
+
+	/** Convenience getters for backward compatibility */
+	get level() { return this.skillManager?.level ?? 1; }
+	get xp() { return this.skillManager?.xp ?? 0; }
+	get xpToNextLevel() { return this.skillManager?.xpToNextLevel ?? 50; }
 
 	getActiveParticleLimit() {
 		const profile = GameConfig.PERFORMANCE_PROFILES[this.performanceProfileKey] || GameConfig.PERFORMANCE_PROFILES.HIGH;
@@ -1001,23 +975,21 @@ export class Game {
 	}
 
 	canSaveCurrentRun() {
-		return this.gameState === Game.STATES.PLAYING || this.gameState === Game.STATES.PAUSED || this.gameState === Game.STATES.POWERUP;
+		return this.gameState === Game.STATES.PLAYING || this.gameState === Game.STATES.PAUSED;
 	}
 
 	getSaveSnapshot() {
-		const checkpointWave = this.gameState === Game.STATES.POWERUP
-			? this.wave + 1
-			: this.wave;
-
 		return {
 			gameState: this.gameState,
 			difficulty: this.runDifficulty,
 			wave: this.wave,
-			checkpointWave: Math.max(1, checkpointWave),
+			checkpointWave: Math.max(1, this.wave),
 			score: this.score,
 			modifierKey: this.waveModifierKey || null,
 			player: this._getPlayerSaveState(),
 			waveState: this.waveManager.getSaveSnapshot(),
+			skillManager: this.skillManager.getSaveState(),
+			ascensionSystem: this.ascensionSystem.getSaveState(),
 		};
 	}
 
@@ -1035,7 +1007,20 @@ export class Game {
 		this.projectilePool.clear();
 
 		this.player.reset();
-		this._applyPlayerSaveState(snapshot.player || {});
+
+		// Restore skill & ascension state first, then sync player stats
+		if (snapshot.skillManager) {
+			this.skillManager.restoreFromSave(snapshot.skillManager);
+		}
+		if (snapshot.ascensionSystem) {
+			this.ascensionSystem.restoreFromSave(snapshot.ascensionSystem);
+		}
+		this._syncPlayerFromSkills();
+
+		// Overlay HP/shield from snapshot (player may have taken damage before save)
+		if (snapshot.player) {
+			this._applyPlayerSaveState(snapshot.player);
+		}
 
 		this.wave = checkpointWave;
 		this.score = snapshot.score || 0;
@@ -1059,107 +1044,25 @@ export class Game {
 		return true;
 	}
 
+	/**
+	 * Minimal player combat state for mid-run saves.
+	 * Skill/ascension state is saved separately.
+	 */
 	_getPlayerSaveState() {
 		const player = this.player;
 		return {
 			hp: player.hp,
-			maxHp: player.maxHp,
-			coins: player.coins,
-			damageMod: player.damageMod,
-			fireRateMod: player.fireRateMod,
-			projectileSpeedMod: player.projectileSpeedMod,
-			rotationSpeedMod: player.rotationSpeedMod,
-			fireCooldown: player.fireCooldown,
-			hasShield: player.hasShield,
 			shieldHp: player.shieldHp,
-			maxShieldHp: player.maxShieldHp,
-			hasSlowField: player.hasSlowField,
-			slowFieldStrength: player.slowFieldStrength,
-			slowFieldRadius: player.slowFieldRadius,
-			hpRegen: player.hpRegen,
-			shieldRegen: player.shieldRegen,
-			piercingLevel: player.piercingLevel,
-			hasTripleShot: player.hasTripleShot,
-			hasLifeSteal: player.hasLifeSteal,
-			explosiveShots: player.explosiveShots,
-			explosionRadius: player.explosionRadius,
-			explosionDamage: player.explosionDamage,
-			coinMagnetMultiplier: player.coinMagnetMultiplier,
-			luckyShots: player.luckyShots ? { ...player.luckyShots } : null,
-			immolationAura: player.immolationAura ? { ...player.immolationAura } : null,
-			hasShieldBreaker: player.hasShieldBreaker,
-			shieldBreakerDamage: player.shieldBreakerDamage,
-			shieldRegenDelay: player.shieldRegenDelay,
-			shieldBreakerStacks: player.shieldBreakerStacks,
-			hasAdaptiveTargeting: player.hasAdaptiveTargeting,
-			targetingRange: player.targetingRange,
-			hasHomingShots: player.hasHomingShots,
-			hasBarrierPhase: player.hasBarrierPhase,
-			barrierPhaseCooldown: player.barrierPhaseCooldown,
-			barrierPhaseMaxCooldown: player.barrierPhaseMaxCooldown,
-			barrierPhaseDuration: player.barrierPhaseDuration,
-			barrierPhaseActive: player.barrierPhaseActive,
-			barrierPhaseThreshold: player.barrierPhaseThreshold,
-			overchargeBurst: player.overchargeBurst ? { ...player.overchargeBurst } : null,
-			emergencyHeal: player.emergencyHeal ? { ...player.emergencyHeal } : null,
-			persistentCritBonus: player.persistentCritBonus,
-			slowFieldBonus: player.slowFieldBonus,
-			immolationAuraBonus: player.immolationAuraBonus,
-			powerUpStacks: { ...player.powerUpStacks },
-			activeSynergies: Array.from(player.activeSynergies || []),
 		};
 	}
 
+	/**
+	 * Restores perishable combat state (HP, shield) on top of skill-derived stats.
+	 */
 	_applyPlayerSaveState(playerState) {
 		const player = this.player;
-		Object.assign(player, {
-			hp: playerState.hp ?? player.hp,
-			maxHp: playerState.maxHp ?? player.maxHp,
-			coins: playerState.coins ?? player.coins,
-			damageMod: playerState.damageMod ?? player.damageMod,
-			fireRateMod: playerState.fireRateMod ?? player.fireRateMod,
-			projectileSpeedMod: playerState.projectileSpeedMod ?? player.projectileSpeedMod,
-			rotationSpeedMod: playerState.rotationSpeedMod ?? player.rotationSpeedMod,
-			fireCooldown: playerState.fireCooldown ?? player.fireCooldown,
-			hasShield: playerState.hasShield ?? player.hasShield,
-			shieldHp: playerState.shieldHp ?? player.shieldHp,
-			maxShieldHp: playerState.maxShieldHp ?? player.maxShieldHp,
-			hasSlowField: playerState.hasSlowField ?? player.hasSlowField,
-			slowFieldStrength: playerState.slowFieldStrength ?? player.slowFieldStrength,
-			slowFieldRadius: playerState.slowFieldRadius ?? player.slowFieldRadius,
-			hpRegen: playerState.hpRegen ?? player.hpRegen,
-			shieldRegen: playerState.shieldRegen ?? player.shieldRegen,
-			piercingLevel: playerState.piercingLevel ?? player.piercingLevel,
-			hasTripleShot: playerState.hasTripleShot ?? player.hasTripleShot,
-			hasLifeSteal: playerState.hasLifeSteal ?? player.hasLifeSteal,
-			explosiveShots: playerState.explosiveShots ?? player.explosiveShots,
-			explosionRadius: playerState.explosionRadius ?? player.explosionRadius,
-			explosionDamage: playerState.explosionDamage ?? player.explosionDamage,
-			coinMagnetMultiplier: playerState.coinMagnetMultiplier ?? player.coinMagnetMultiplier,
-			hasShieldBreaker: playerState.hasShieldBreaker ?? player.hasShieldBreaker,
-			shieldBreakerDamage: playerState.shieldBreakerDamage ?? player.shieldBreakerDamage,
-			shieldRegenDelay: playerState.shieldRegenDelay ?? player.shieldRegenDelay,
-			shieldBreakerStacks: playerState.shieldBreakerStacks ?? player.shieldBreakerStacks,
-			hasAdaptiveTargeting: playerState.hasAdaptiveTargeting ?? player.hasAdaptiveTargeting,
-			targetingRange: playerState.targetingRange ?? player.targetingRange,
-			hasHomingShots: playerState.hasHomingShots ?? player.hasHomingShots,
-			hasBarrierPhase: playerState.hasBarrierPhase ?? player.hasBarrierPhase,
-			barrierPhaseCooldown: playerState.barrierPhaseCooldown ?? player.barrierPhaseCooldown,
-			barrierPhaseMaxCooldown: playerState.barrierPhaseMaxCooldown ?? player.barrierPhaseMaxCooldown,
-			barrierPhaseDuration: playerState.barrierPhaseDuration ?? player.barrierPhaseDuration,
-			barrierPhaseActive: playerState.barrierPhaseActive ?? player.barrierPhaseActive,
-			barrierPhaseThreshold: playerState.barrierPhaseThreshold ?? player.barrierPhaseThreshold,
-			persistentCritBonus: playerState.persistentCritBonus ?? player.persistentCritBonus,
-			slowFieldBonus: playerState.slowFieldBonus ?? player.slowFieldBonus,
-			immolationAuraBonus: playerState.immolationAuraBonus ?? player.immolationAuraBonus,
-		});
-
-		player.luckyShots = playerState.luckyShots ? { ...playerState.luckyShots } : null;
-		player.immolationAura = playerState.immolationAura ? { ...playerState.immolationAura } : null;
-		player.overchargeBurst = playerState.overchargeBurst ? { ...playerState.overchargeBurst } : null;
-		player.emergencyHeal = playerState.emergencyHeal ? { ...playerState.emergencyHeal } : null;
-		player.powerUpStacks = { ...(playerState.powerUpStacks || player.powerUpStacks) };
-		player.activeSynergies = new Set(playerState.activeSynergies || []);
+		if (playerState.hp != null) player.hp = playerState.hp;
+		if (playerState.shieldHp != null) player.shieldHp = playerState.shieldHp;
 		player.setExternalModifiers({
 			regenMultiplier: this.modifierState.playerRegenMultiplier,
 			turnSpeedMultiplier: this.modifierState.playerTurnSpeedMultiplier,

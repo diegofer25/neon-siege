@@ -150,7 +150,10 @@ export class ChallengeSystem {
 
         createFloatingText(`${challenge.icon} Challenge Complete!`, textX, textY, 'challenge-complete');
 
-        this.game.player.addCoins(challenge.reward.coins);
+        // Award XP + score instead of coins
+        const xpReward = (challenge.reward.coins || 0) * 5; // Convert old coin amount to XP
+        if (xpReward > 0) this.game.addXP(xpReward);
+        this.game.score += (challenge.reward.coins || 0) * 10;
         if (challenge.reward.tokens > 0) {
             this.game.progressionManager._incrementCurrency('LEGACY_TOKENS', challenge.reward.tokens);
             this.game.progressionManager._saveState();

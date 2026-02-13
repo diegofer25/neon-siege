@@ -527,38 +527,17 @@ export const GameConfig = {
             LUCKY_START: {
                 cost: 30,
                 description: 'Begin each run with +10% critical chance.'
+            },
+            SKILL_TIER_3: {
+                cost: 15,
+                description: 'Unlock tier-3 skills in any archetype.'
+            },
+            SKILL_TIER_4: {
+                cost: 30,
+                description: 'Unlock tier-4 (ultimate) skills in any archetype.'
             }
         }
     },
-
-    /**
-     * Synergy definitions that grant bonus effects when power-up combinations are met
-     */
-    POWERUP_SYNERGIES: [
-        {
-            key: 'LUCKY_OVERCHARGE',
-            requires: ['Lucky Shots', 'Double Damage'],
-            effect: {
-                critChanceBonus: 0.05,
-                damageMultiplier: 1.05
-            }
-        },
-        {
-            key: 'RAPID_BARRAGE',
-            requires: ['Fire Rate', 'Rapid Fire'],
-            effect: {
-                fireRateMultiplier: 1.03
-            }
-        },
-        {
-            key: 'IMMOLATION_VORTEX',
-            requires: ['Immolation Aura', 'Slow Field'],
-            effect: {
-                auraDamageBonus: 0.005,
-                slowBonus: 0.05
-            }
-        }
-    ],
 
     /**
      * Special wave modifiers controlling global conditions per wave

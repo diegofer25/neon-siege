@@ -199,18 +199,15 @@ export class WaveManager {
     }
 
     /**
-     * Calculate coin rewards for completing the current wave.
-     * @returns {number} Total coins awarded
+     * Calculate XP reward for completing the current wave.
+     * @returns {number} Total XP awarded
      */
-    calculateWaveReward() {
-        const baseReward = GameConfig.ECONOMY.WAVE_COMPLETION_BASE_COINS;
-        const waveBonus = Math.floor(this.currentWave * GameConfig.ECONOMY.WAVE_COMPLETION_WAVE_BONUS);
-        
+    calculateWaveXP() {
+        const base = 10 + this.currentWave * 2;
         // Time bonus for quick completion (first 30 seconds)
         const completionTime = Date.now() - this.waveStartTime;
-        const timeBonus = completionTime < 30000 ? 3 : 0;
-        
-        return baseReward + waveBonus + timeBonus;
+        const timeBonus = completionTime < 30000 ? 5 : 0;
+        return base + timeBonus;
     }
 
     getSaveSnapshot() {

@@ -1,9 +1,9 @@
 export const MILESTONES = [
-    { wave: 10,  label: 'FIRST BOSS DOWN!',  bonusCoins: 25,  bonusTokens: 3 },
-    { wave: 25,  label: 'QUARTER CENTURY!',   bonusCoins: 50,  bonusTokens: 5 },
-    { wave: 50,  label: 'HALF CENTURY!',      bonusCoins: 100, bonusTokens: 10 },
-    { wave: 75,  label: 'LEGEND STATUS!',     bonusCoins: 150, bonusTokens: 15 },
-    { wave: 100, label: 'CENTURION!!',        bonusCoins: 250, bonusTokens: 25 },
+    { wave: 10,  label: 'FIRST BOSS DOWN!',  bonusXP: 50,  bonusTokens: 3 },
+    { wave: 25,  label: 'QUARTER CENTURY!',   bonusXP: 100, bonusTokens: 5 },
+    { wave: 50,  label: 'HALF CENTURY!',      bonusXP: 200, bonusTokens: 10 },
+    { wave: 75,  label: 'LEGEND STATUS!',     bonusXP: 350, bonusTokens: 15 },
+    { wave: 100, label: 'CENTURION!!',        bonusXP: 500, bonusTokens: 25 },
 ];
 
 export function getMilestoneForWave(wave) {

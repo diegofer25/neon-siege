@@ -25,7 +25,7 @@ Example:
 - Rewarded ad opportunities and rewarded display attempts are blocked until ads consent is granted.
 - Start is blocked until a consent choice is made.
 
-## Event Schema (v1)
+## Event Schema (v2)
 
 All events include:
 
@@ -47,20 +47,22 @@ All events include:
 - `run_start`
   - `wave`, `playerHp`, `playerMaxHp`
 - `wave_start`
-  - `wave`, `playerHp`, `coins`
+  - `wave`, `playerHp`, `level`
 - `wave_complete`
-  - `wave`, `coinsRewarded`, `remainingHp`, `isBossWave`
+  - `wave`, `xpGained`, `remainingHp`, `isBossWave`
 - `game_over`
-  - `wave`, `score`, `coins`
+  - `wave`, `score`, `level`
 - `run_restart`
   - `fromWave`, `score`
 
-### Economy
+### Progression
 
-- `shop_purchase`
-  - `wave`, `powerUp`, `price`, `coinsAfterPurchase`
-- `shop_purchase_failed`
-  - `wave`, `powerUp`, `price`, `coinsAvailable`
+- `level_up`
+  - `level`, `wave`
+- `archetype_chosen`
+  - `archetype`, `wave`
+- `ascension_picked`
+  - `modifierId`, `wave`
 
 ### Rewarded Ads (Hook Layer)
 
@@ -80,8 +82,6 @@ All events include:
   - `placement`
 - `rewarded_reward_granted`
   - `placement`
-- `rewarded_bonus_applied`
-  - `placement`, `wave`, `bonus`
 
 ## Integration Notes
 
@@ -104,7 +104,7 @@ Implement the adapter contract in `js/managers/adapters/RewardedAdAdapter.js`:
 
 The game currently exposes one production placement:
 
-- Between waves in shop footer (`Watch Ad: +50% Wave Coins`)
+- Post-death restore flow (`Continue Run` via rewarded ad)
 
 ## Next Step (SDK Wiring)
 

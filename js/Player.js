@@ -1,7 +1,6 @@
-import { PowerUp } from './PowerUp.js';
 import { Projectile } from './Projectile.js';
 import { GameConfig } from './config/GameConfig.js';
-import { createFloatingText, playSFX } from './main.js';
+import { playSFX } from './main.js';
 import { MathUtils } from './utils/MathUtils.js';
 
 /**
@@ -12,7 +11,7 @@ import { MathUtils } from './utils/MathUtils.js';
  * - Combat system (auto-targeting, firing, damage calculations)
  * - Power-up system (stackable and non-stackable abilities)
  * - Visual effects (muzzle flash, glow effects, slow field)
- * - Economy system (coin collection and spending)
+ * - Stat-driven progression (stats set externally by SkillManager)
  * 
  * @class Player
  */
@@ -28,8 +27,7 @@ export class Player {
     constructor(x, y) {
         this._initializePosition(x, y);
         this._initializeStats();
-        this._initializePowerUps();
-        this._initializeStackTracking();
+        this._initializeCombatFlags();
     }
     
     /**
@@ -76,9 +74,6 @@ export class Player {
         this.fireCooldown = 0;
         /** @type {number} Base time between shots (milliseconds) */
         this.baseFireRate = GameConfig.PLAYER.BASE_FIRE_RATE;
-        /** @type {number} Player's currency amount */
-        this.coins = 0;
-        
         // Combat modifiers (multipliers)
         /** @type {number} Damage multiplier (1.0 = normal damage) */
         this.damageMod = 1;
@@ -104,11 +99,12 @@ export class Player {
     }
     
     /**
-     * Initialize all power-up flags and related properties
+     * Initialize all combat flags and ability properties.
+     * Values are set externally by Game._syncPlayerFromSkills().
      * 
      * @private
      */
-    _initializePowerUps() {
+    _initializeCombatFlags() {
         // Boolean power-up flags
 		/** @type {number} The number of enemies projectiles can pierce. 0 = no piercing. */
 		this.piercingLevel = 0;
@@ -136,10 +132,7 @@ export class Player {
 		this.explosionRadius = 50;
 		/** @type {number} Explosion damage for explosive shots */
 		this.explosionDamage = 20;
-		/** @type {number} Coin reward multiplier (1.0 = normal rewards) */
-		this.coinMagnetMultiplier = 1.0;
-		
-		// Lucky Shots power-up configuration
+		// Lucky Shots configuration
 		/** @type {Object|null} Lucky shots configuration object */
 		this.luckyShots = null;
 		
@@ -195,28 +188,6 @@ export class Player {
 		/** @type {Object|null} Emergency Heal configuration */
 		this.emergencyHeal = null;
 
-        /** @type {Set<string>} Active synergy keys */
-        this.activeSynergies = new Set();
-    }
-    
-    /**
-     * Initialize tracking object for stackable power-ups
-     * 
-     * @private
-     */
-    _initializeStackTracking() {
-        /** @type {Object.<string, number>} Power-up stack counts by name */
-        this.powerUpStacks = {};
-        PowerUp.POWER_UP_STACK_NAMES.forEach(name => {
-            this.powerUpStacks[name] = 0;
-        });
-
-        this.externalModifiers = {
-            regenMultiplier: 1,
-            turnSpeedMultiplier: 1,
-            critBonus: 0
-        };
-        this.activeSynergies.clear();
     }
 
     /**
@@ -291,9 +262,6 @@ export class Player {
         this.maxSlowFieldStacks = GameConfig.PLAYER.MAX_SLOW_FIELD_STACKS;
         this.slowFieldBonus = 0;
         
-        // Reset coin multiplier
-        this.coinMagnetMultiplier = 1.0;
-        
         // Reset Lucky Shots
         this.luckyShots = null;
         
@@ -320,15 +288,6 @@ export class Player {
         
         this.overchargeBurst = null;
         this.emergencyHeal = null;
-        
-        // Reset coins
-        this.coins = 0;
-        
-        // Reset power-up stacks
-        this.powerUpStacks = {};
-        PowerUp.POWER_UP_STACK_NAMES.forEach(name => {
-            this.powerUpStacks[name] = 0;
-        });
     }
     
     /**
@@ -665,9 +624,8 @@ export class Player {
     _fireTripleShot(game, damage, centerAngle) {
         const spreadAngle = Math.PI / 12; // 15 degrees spread
 
-        // Calculate damage for side projectiles
-        const tripleShotStacks = this.powerUpStacks["Triple Shot"] || 1;
-        const damageModifier = Math.min(0.2 + (tripleShotStacks - 1) * 0.1, 1.0);
+        // Side projectile damage (75% of main)
+        const damageModifier = 0.75;
 
         // Main projectile (center)
         this._fireSingleShot(game, damage, centerAngle);
@@ -988,84 +946,17 @@ export class Player {
     }
 
     /**
-     * Apply a diminishing multiplicative boost to a stat and track stacks.
+     * Apply a diminishing multiplicative boost to a stat.
+     * Still used by SkillManager passive effects when stat stacking.
      * @param {string} statKey - Player property to multiply
-     * @param {number} baseIncrease - Base percentage increase (0.25 for +25%)
-     * @param {string} stackKey - Power-up stack key to increment
+     * @param {number} increase - Percentage increase (0.25 for +25%)
      */
-    applyMultiplicativeBoost(statKey, baseIncrease, stackKey) {
-        const stacks = this.powerUpStacks[stackKey] || 0;
-        const diminishing = Math.pow(GameConfig.BALANCE.DIMINISHING_RETURN_BASE, stacks);
-        const multiplier = 1 + (baseIncrease * diminishing);
-        this[statKey] *= multiplier;
-        this.powerUpStacks[stackKey] = stacks + 1;
-    }
-
-    /**
-     * Apply an additive boost respecting diminishing returns
-     * @param {string} property - Player property to add to
-     * @param {number} baseAmount - Amount per stack
-     * @param {string} stackKey - Stack key for tracking
-     */
-    applyAdditiveBoost(property, baseAmount, stackKey) {
-        const stacks = this.powerUpStacks[stackKey] || 0;
-        const diminishing = Math.pow(GameConfig.BALANCE.DIMINISHING_RETURN_BASE, stacks);
-        this[property] += baseAmount * diminishing;
-        this.powerUpStacks[stackKey] = stacks + 1;
-    }
-
-    /**
-     * Evaluate configured power-up synergies and apply bonuses once
-     */
-    evaluateSynergies() {
-        GameConfig.POWERUP_SYNERGIES.forEach((synergy) => {
-            if (this.activeSynergies.has(synergy.key)) return;
-            const meetsRequirements = synergy.requires.every((req) => this._hasPowerUpRequirement(req));
-            if (meetsRequirements) {
-                this._applySynergyEffect(synergy.effect);
-                this.activeSynergies.add(synergy.key);
-            }
-        });
-    }
-
-    _hasPowerUpRequirement(name) {
-        if ((this.powerUpStacks[name] || 0) > 0) return true;
-        switch (name) {
-            case 'Lucky Shots':
-                return !!(this.luckyShots && this.luckyShots.active);
-            case 'Immolation Aura':
-                return !!(this.immolationAura && this.immolationAura.active);
-            case 'Slow Field':
-                return this.hasSlowField && this.slowFieldStrength > 0;
-            case 'Shield Breaker':
-                return this.hasShieldBreaker;
-            default:
-                return false;
-        }
-    }
-
-    _applySynergyEffect(effect) {
-        if (!effect) return;
-        if (effect.damageMultiplier) {
-            this.damageMod *= effect.damageMultiplier;
-        }
-        if (effect.fireRateMultiplier) {
-            this.fireRateMod *= effect.fireRateMultiplier;
-        }
-        if (effect.critChanceBonus) {
-            this.addPersistentCritBonus(effect.critChanceBonus);
-        }
-        if (effect.auraDamageBonus && this.immolationAura) {
-            this.immolationAuraBonus += effect.auraDamageBonus;
-        }
-        if (effect.slowBonus && this.hasSlowField) {
-            this.slowFieldBonus += effect.slowBonus;
-        }
+    applyMultiplicativeBoost(statKey, increase) {
+        this[statKey] *= (1 + increase);
     }
     
     /**
      * Handle life steal effect when an enemy is killed
-     * Heals player for 10% of enemy's maximum health if life steal is active
      * 
      * @param {Object} enemy - The killed enemy object
      * @param {number} enemy.maxHealth - Enemy's maximum health value
@@ -1076,94 +967,23 @@ export class Player {
             this.heal(healAmount);
         }
     }
-    
-    /**
-     * Get list of non-stackable power-ups currently owned by player
-     * Used by shop system to prevent duplicate purchases
-     * 
-     * @returns {string[]} Array of power-up names that cannot be purchased again
-     * 
-     * @example
-     * const owned = player.getNonStackablePowerUps();
-     * // Returns: ["Life Steal", "Explosive Shots"] if player has those
-     */
-    getNonStackablePowerUps() {
-        const owned = [];
-        
-        if (this.hasLifeSteal) owned.push("Life Steal");
-        if (this.explosiveShots) owned.push("Explosive Shots");
-        if (this.hasAdaptiveTargeting) owned.push("Adaptive Targeting");
-        if (this.hasBarrierPhase) owned.push("Barrier Phase");
-        
-        // Add slow field if it's at maximum stacks
-        if (this.isSlowFieldMaxed()) owned.push("Slow Field");
-        
-        return owned;
-    }
-    
-    /**
-     * Check if slow field power-up is at maximum stack count
-     * 
-     * @returns {boolean} True if slow field cannot be upgraded further
-     */
-    isSlowFieldMaxed() {
-        return this.slowFieldStrength >= this.maxSlowFieldStacks;
-    }
 
     /**
-     * Add coins to the player's total with visual feedback
-     * Creates floating text showing coin gain
+     * Get list of owned ability flags (for UI display)
      * 
-     * @param {number} amount - Number of coins to add (must be positive)
-     * @throws {Error} If amount is negative or not a number
-     * 
-     * @example
-     * player.addCoins(10); // Adds 10 coins, shows "+10 coins" text
+     * @returns {string[]} Array of ability names currently active
      */
-    addCoins(amount) {
-        if (typeof amount !== 'number' || amount < 0) {
-            throw new Error('Coin amount must be a positive number');
-        }
-        
-        this.coins += amount;
-        
-        // Create floating text effect if UI system is available
-        const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('gameCanvas'));
-        const rect = canvas.getBoundingClientRect();
-        const canvasWidth = canvas.logicalWidth || canvas.width;
-        const canvasHeight = canvas.logicalHeight || canvas.height;
-        createFloatingText(
-            `+${amount.toFixed(1)} coins`,
-            this.x * (rect.width / canvasWidth) + rect.left,
-            (this.y - 40) * (rect.height / canvasHeight) + rect.top,
-            'coins'
-        );
-    }
-
-    /**
-     * Attempt to spend coins from player's total
-     * 
-     * @param {number} amount - Number of coins to spend
-     * @returns {boolean} True if transaction successful, false if insufficient funds
-     * @throws {Error} If amount is negative or not a number
-     * 
-     * @example
-     * if (player.spendCoins(50)) {
-     *   console.log("Purchase successful!");
-     * } else {
-     *   console.log("Not enough coins!");
-     * }
-     */
-    spendCoins(amount) {
-        if (typeof amount !== 'number' || amount < 0) {
-            throw new Error('Spend amount must be a positive number');
-        }
-        
-        if (this.coins >= amount) {
-            this.coins -= amount;
-            return true;
-        }
-        return false;
+    getActiveAbilities() {
+        const abilities = [];
+        if (this.hasLifeSteal) abilities.push('Life Steal');
+        if (this.explosiveShots) abilities.push('Explosive Shots');
+        if (this.hasTripleShot) abilities.push('Triple Shot');
+        if (this.piercingLevel > 0) abilities.push('Piercing');
+        if (this.hasShield) abilities.push('Shield');
+        if (this.hasSlowField) abilities.push('Slow Field');
+        if (this.hasHomingShots) abilities.push('Homing');
+        if (this.immolationAura?.active) abilities.push('Burn Aura');
+        return abilities;
     }
 
     /**
@@ -1287,7 +1107,6 @@ export class Player {
             
             // Create pulsing fire effect
             const pulseIntensity = 0.5 + 0.5 * Math.sin(Date.now() / 300);
-            const stackCount = this.powerUpStacks["Immolation Aura"] || 1;
             
             // Gradient from center to edge for fire effect
             const gradient = ctx.createRadialGradient(
@@ -1305,9 +1124,9 @@ export class Player {
             
             // Draw outer ring with fire colors
             ctx.strokeStyle = `rgba(255, 69, 0, ${pulseIntensity * 0.8})`;
-            ctx.lineWidth = 2 + stackCount; // Thicker with more stacks
+            ctx.lineWidth = 2;
             ctx.shadowColor = '#ff4500';
-            ctx.shadowBlur = 10 + stackCount * 2;
+            ctx.shadowBlur = 12;
             
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.immolationAura.range, 0, Math.PI * 2);

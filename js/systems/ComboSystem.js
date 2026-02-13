@@ -1,11 +1,11 @@
 import { playSFX, createFloatingText } from '../main.js';
 
 const COMBO_TIERS = [
-    { kills: 5,  label: 'COMBO x5',       multiplier: 1.25, bonusCoins: 1,  color: '#fff' },
-    { kills: 10, label: 'STREAK x10!',    multiplier: 1.5,  bonusCoins: 3,  color: '#0ff' },
-    { kills: 20, label: 'RAMPAGE x20!',   multiplier: 2.0,  bonusCoins: 5,  color: '#ff0' },
-    { kills: 35, label: 'UNSTOPPABLE!',   multiplier: 2.5,  bonusCoins: 10, color: '#f0f' },
-    { kills: 50, label: 'GOD MODE!!',     multiplier: 3.0,  bonusCoins: 20, color: '#ff2dec' },
+    { kills: 5,  label: 'COMBO x5',       multiplier: 1.25, bonusScore: 50,   color: '#fff' },
+    { kills: 10, label: 'STREAK x10!',    multiplier: 1.5,  bonusScore: 150,  color: '#0ff' },
+    { kills: 20, label: 'RAMPAGE x20!',   multiplier: 2.0,  bonusScore: 300,  color: '#ff0' },
+    { kills: 35, label: 'UNSTOPPABLE!',   multiplier: 2.5,  bonusScore: 600,  color: '#f0f' },
+    { kills: 50, label: 'GOD MODE!!',     multiplier: 3.0,  bonusScore: 1200, color: '#ff2dec' },
 ];
 
 const COMBO_TIMEOUT_MS = 2000;
@@ -19,7 +19,7 @@ export class ComboSystem {
         this.comboTier = 0;
         this.maxStreakThisWave = 0;
         this.maxStreakThisRun = 0;
-        this.totalBonusCoins = 0;
+        this.totalBonusScore = 0;
     }
 
     onEnemyKilled() {
@@ -89,7 +89,7 @@ export class ComboSystem {
 
     resetForRun() {
         this.maxStreakThisRun = 0;
-        this.totalBonusCoins = 0;
+        this.totalBonusScore = 0;
         this.resetForWave();
     }
 
@@ -106,8 +106,11 @@ export class ComboSystem {
         const { x, y } = this._getPlayerTextScreenPosition(64);
         createFloatingText(tier.label, x, y, 'combo-tier');
 
-        this.game.player.addCoins(tier.bonusCoins);
-        this.totalBonusCoins += tier.bonusCoins;
+        // Award bonus score instead of coins
+        this.game.score += tier.bonusScore;
+        this.totalBonusScore += tier.bonusScore;
+        const { x: sx, y: sy } = this._getPlayerTextScreenPosition(38);
+        createFloatingText(`+${tier.bonusScore} score`, sx, sy, 'score');
 
         this.game.effectsManager.addScreenShake(4 + this.comboTier * 2, 200);
         playSFX(this._getTierSfxKey());

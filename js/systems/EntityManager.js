@@ -52,21 +52,6 @@ export class EntityManager {
             this.game.player.onEnemyKill(enemy);
         }
 
-        // Calculate and award coin reward
-        const coinReward = this._calculateCoinReward();
-        const coinsBefore = this.game.player.coins;
-        this.game.player.addCoins(coinReward);
-
-        // Coin burst visual effect
-        this.game.effectsManager.createCoinBurst(enemy.x, enemy.y, coinReward);
-
-        this.game.trace('coins.award.enemyKill', {
-            enemyId: enemy.id,
-            amount: coinReward,
-            coinsBefore,
-            coinsAfter: this.game.player.coins
-        });
-
         // Remove enemy and update counters
         this.game.enemies.splice(index, 1);
         this.game.waveManager.onEnemyKilled();
@@ -199,17 +184,4 @@ export class EntityManager {
         }
     }
 
-    /**
-     * Calculate coin reward for enemy kills.
-     * @private
-     * @returns {number} Coin reward amount
-     */
-    _calculateCoinReward() {
-        const baseReward = 1;
-        const waveBonus = this.game.wave * 0.2;
-        const baseAmount = Math.ceil((baseReward + waveBonus) / 2); // Reduced by half for balance
-        
-        // Apply coin magnet multiplier
-        return Math.ceil(baseAmount * this.game.player.coinMagnetMultiplier);
-    }
 }

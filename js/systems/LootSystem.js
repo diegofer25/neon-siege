@@ -1,9 +1,9 @@
 import { playSFX, createFloatingText } from '../main.js';
 
 const DROP_TABLE = [
-    // Common (65%)
-    { type: 'coins', rarity: 'common', weight: 40, amount: () => 3 + Math.floor(Math.random() * 6), label: 'Coin Burst' },
-    { type: 'coins', rarity: 'common', weight: 25, amount: () => 5 + Math.floor(Math.random() * 11), label: 'Coin Shower' },
+    // Common (65%) — score bursts replace coin drops
+    { type: 'score', rarity: 'common', weight: 40, amount: () => 25 + Math.floor(Math.random() * 50), label: 'Score Burst' },
+    { type: 'score', rarity: 'common', weight: 25, amount: () => 50 + Math.floor(Math.random() * 100), label: 'Score Shower' },
 
     // Uncommon (25%)
     { type: 'tempBuff', rarity: 'uncommon', weight: 10, buff: 'doubleFireRate', duration: 8000, label: 'Rapid Fire Surge!' },
@@ -11,21 +11,14 @@ const DROP_TABLE = [
     { type: 'heal', rarity: 'uncommon', weight: 7, amount: 0.25, label: 'Health Orb' },
 
     // Rare (8%)
-    { type: 'coins', rarity: 'rare', weight: 4, amount: () => 20 + Math.floor(Math.random() * 21), label: 'JACKPOT!' },
+    { type: 'score', rarity: 'rare', weight: 4, amount: () => 200 + Math.floor(Math.random() * 200), label: 'JACKPOT!' },
     { type: 'tempBuff', rarity: 'rare', weight: 3, buff: 'shield', duration: 10000, label: 'Temp Shield!' },
     { type: 'nuke', rarity: 'rare', weight: 1, damage: 0.5, label: 'NEON NOVA!' },
 
     // Legendary (2%)
-    { type: 'coins', rarity: 'legendary', weight: 1, amount: () => 50 + Math.floor(Math.random() * 51), label: 'MEGA JACKPOT!!' },
+    { type: 'score', rarity: 'legendary', weight: 1, amount: () => 500 + Math.floor(Math.random() * 500), label: 'MEGA JACKPOT!!' },
     { type: 'tempBuff', rarity: 'legendary', weight: 1, buff: 'godMode', duration: 5000, label: 'GOD MODE!!' },
 ];
-
-const RARITY_COLORS = {
-    common: '#fff',
-    uncommon: '#0ff',
-    rare: '#ff0',
-    legendary: '#ff2dec',
-};
 
 const BASE_DROP_CHANCE = 0.08;
 const MAX_DROP_CHANCE = 0.15;
@@ -54,10 +47,9 @@ export class LootSystem {
         playSFX('reward_claim_success');
 
         switch (drop.type) {
-            case 'coins': {
+            case 'score': {
                 const amount = typeof drop.amount === 'function' ? drop.amount() : drop.amount;
-                this.game.player.addCoins(amount);
-                this.game.effectsManager.createCoinBurst(x, y, amount);
+                this.game.score += amount;
                 break;
             }
             case 'heal': {

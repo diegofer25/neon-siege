@@ -614,6 +614,19 @@ function setupInputHandlers() {
         if (e.code === 'Escape' && document.getElementById('settingsModal').classList.contains('show')) {
             closeSettingsModal();
         }
+
+        // QWER skill casting (only when playing)
+        if (game && game.gameState === 'playing') {
+            const slotMap = { KeyQ: 0, KeyW: 1, KeyE: 2, KeyR: 3 };
+            if (e.code in slotMap) {
+                const slotIndex = slotMap[e.code];
+                const slots = game.skillManager.getKeybindSlots();
+                const slot = slots[slotIndex];
+                if (slot) {
+                    game.skillManager.tryCast(slot.id, game);
+                }
+            }
+        }
         
         // Prevent spacebar page scrolling
         if (e.code === 'Space') {
@@ -854,12 +867,10 @@ function updateHUD() {
     
     // Show/hide defense bar based on shield status
     const defenseBarElement = document.getElementById('defenseBar');
-    const coinDisplayElement = document.getElementById('coinDisplay');
     
     if (game.player.hasShield) {
         // Player has shield - show defense bar
         defenseBarElement.style.display = 'block';
-        coinDisplayElement.classList.add('with-shield');
         
         // Update defense bar visualization
         const currentDefense = game.player.shieldHp;
@@ -870,11 +881,7 @@ function updateHUD() {
     } else {
         // Player doesn't have shield - hide defense bar
         defenseBarElement.style.display = 'none';
-        coinDisplayElement.classList.remove('with-shield');
     }
-    
-    // Update currency display (use one decimal for consistency with fractional rewards)
-    document.getElementById('coinAmount').textContent = game.player.coins.toFixed(1);
     
     // Update wave progress with enemy count using wave manager data
     const waveProgress = game.getWaveProgress();
@@ -898,11 +905,11 @@ function updateHUD() {
         }
     }
 
-    // Update XP bar
+    // Update XP bar (delegated to SkillManager)
     const xpFill = document.getElementById('xpFill');
     const xpLevel = document.getElementById('xpLevel');
-    if (xpFill) xpFill.style.width = ((game.xp / game.xpToNextLevel) * 100).toFixed(1) + '%';
-    if (xpLevel) xpLevel.textContent = `Lv.${game.level}`;
+    if (xpFill && game.skillManager) xpFill.style.width = ((game.skillManager.xp / game.skillManager.xpToNextLevel) * 100).toFixed(1) + '%';
+    if (xpLevel && game.skillManager) xpLevel.textContent = `Lv.${game.skillManager.level}`;
 
     // Update combo counter
     const comboCounter = document.getElementById('comboCounter');
@@ -932,6 +939,33 @@ function updateHUD() {
         }).join('');
     }
 
+    // Update QWER skill slot bar
+    if (game.skillManager) {
+        const slots = game.skillManager.getKeybindSlots();
+        for (let i = 0; i < 4; i++) {
+            const nameEl = document.getElementById(`skillName${i}`);
+            const cdEl = document.getElementById(`skillCd${i}`);
+            const slotEl = nameEl?.closest('.skill-slot');
+            const slot = slots[i];
+            if (!nameEl || !cdEl) continue;
+            if (slot) {
+                nameEl.textContent = slot.name.substring(0, 8);
+                const cd = game.skillManager.cooldowns[slot.id];
+                if (cd && cd > 0) {
+                    const maxCd = game.skillManager._getEffectiveCooldown(slot.id);
+                    cdEl.style.height = ((cd / maxCd) * 100).toFixed(0) + '%';
+                    slotEl?.classList.add('on-cooldown');
+                } else {
+                    cdEl.style.height = '0%';
+                    slotEl?.classList.remove('on-cooldown');
+                }
+            } else {
+                nameEl.textContent = i === 3 ? '🔒' : '—';
+                cdEl.style.height = '0%';
+            }
+        }
+    }
+
     // Update performance statistics if enabled
     if (showPerformanceStats && game) {
         updatePerformanceStats();
@@ -957,7 +991,7 @@ function updateStatsDisplay() {
     updateStatValue('regenValue', regenRate);
 
     // Update health per second (HPS) value
-    const hpsValue = game.player.hpRegen * game.player.powerUpStacks['Regeneration'];
+    const hpsValue = game.player.hpRegen;
     updateStatValue('hpsValue', hpsValue.toFixed(1));
 }
 
@@ -1077,7 +1111,7 @@ function showGameOver() {
     telemetry.endSession('game_over', {
         finalWave: game.wave,
         finalScore: game.score,
-        finalCoins: game.player.coins
+        finalLevel: game.level,
     });
 
     syncMusicTrack({ restart: true });
@@ -1386,6 +1420,162 @@ export function screenFlash() {
             flash.parentNode.removeChild(flash);
         }
     }, 200);
+}
+
+//=============================================================================
+// SKILL UI RENDERING
+//=============================================================================
+import { ATTRIBUTES, ARCHETYPES } from './config/SkillConfig.js';
+
+/**
+ * Show level-up panel (between waves or mid-wave).
+ * Populates attribute allocation and available skills.
+ */
+export function showLevelUpPanel() {
+    if (!game || !game.skillManager) return;
+    const sm = game.skillManager;
+    const panel = document.getElementById('levelUpPanel');
+    const titleEl = document.getElementById('levelUpTitle');
+    titleEl.textContent = `LEVEL ${sm.level}!`;
+
+    _renderAttrAllocation(sm);
+    _renderSkillList(sm);
+
+    document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
+    document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
+
+    const confirmBtn = document.getElementById('levelUpConfirmBtn');
+    confirmBtn.onclick = () => {
+        panel.classList.remove('show');
+        if (game.gameState === 'levelup') {
+            game.completeMidWaveLevelUp();
+        } else {
+            game.continueToNextWave();
+        }
+    };
+
+    panel.classList.add('show');
+}
+
+function _renderAttrAllocation(sm) {
+    const container = document.getElementById('attrAllocation');
+    container.innerHTML = '';
+    const computed = sm.getComputedAttributes();
+    for (const [key] of Object.entries(ATTRIBUTES)) {
+        const row = document.createElement('div');
+        row.className = 'attr-row';
+        row.innerHTML = `
+            <span class="attr-name">${key}</span>
+            <span class="attr-value">${computed[key]}</span>
+            <button class="attr-btn" data-attr="${key}">+</button>
+        `;
+        const btn = row.querySelector('.attr-btn');
+        btn.disabled = sm.unspentAttributePoints <= 0;
+        btn.onclick = () => {
+            if (sm.allocateAttribute(key)) {
+                _renderAttrAllocation(sm);
+                document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
+            }
+        };
+        container.appendChild(row);
+    }
+}
+
+function _renderSkillList(sm) {
+    const container = document.getElementById('skillList');
+    container.innerHTML = '';
+    const available = sm.getAvailableSkills();
+    if (available.length === 0) {
+        container.innerHTML = '<p style="color: rgba(255,255,255,0.4); font-size: 0.7rem; text-align:center;">No archetype chosen yet</p>';
+        return;
+    }
+    for (const skill of available) {
+        const canLearn = sm.canLearnSkill(skill.id);
+        const div = document.createElement('div');
+        div.className = `skill-option${canLearn ? '' : ' locked'}`;
+        div.innerHTML = `
+            <div class="skill-option-info">
+                <span class="skill-option-name">${skill.name}</span>
+                <span class="skill-option-desc">${skill.description}</span>
+            </div>
+            <span class="skill-option-type">${skill.type}</span>
+            ${!canLearn ? '<span class="skill-lock-hint">Locked</span>' : ''}
+        `;
+        if (canLearn && sm.unspentSkillPoints > 0) {
+            div.onclick = () => {
+                sm.learnSkill(skill.id);
+                _renderSkillList(sm);
+                document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
+                playSFX('ui_purchase_success');
+            };
+        }
+        container.appendChild(div);
+    }
+}
+
+/**
+ * Show archetype selection panel (first boss wave).
+ */
+export function showArchetypeSelectPanel() {
+    if (!game || !game.skillManager) return;
+    const container = document.getElementById('archetypeOptions');
+    container.innerHTML = '';
+
+    for (const [key, archetype] of Object.entries(ARCHETYPES)) {
+        if (archetype.stub) continue; // skip stubs
+        const card = document.createElement('div');
+        card.className = 'archetype-card';
+        card.innerHTML = `
+            <div class="archetype-icon">${archetype.icon || '🎯'}</div>
+            <div class="archetype-name">${archetype.name}</div>
+            <div class="archetype-desc">${archetype.description || ''}</div>
+        `;
+        card.onclick = () => {
+            game.selectArchetype(key);
+            document.getElementById('archetypeSelectPanel').classList.remove('show');
+            playSFX('ui_purchase_success');
+        };
+        container.appendChild(card);
+    }
+
+    document.getElementById('archetypeSelectPanel').classList.add('show');
+}
+
+/**
+ * Show ascension pick panel (every 10 waves).
+ */
+export function showAscensionPanel() {
+    if (!game || !game.ascensionSystem) return;
+    const options = game.ascensionSystem.generateOptions();
+    const container = document.getElementById('ascensionOptions');
+    container.innerHTML = '';
+
+    for (const mod of options) {
+        const card = document.createElement('div');
+        card.className = 'ascension-card';
+        card.innerHTML = `
+            <div class="ascension-icon">${mod.icon || '✨'}</div>
+            <div class="ascension-name">${mod.name}</div>
+            <div class="ascension-desc">${mod.description}</div>
+        `;
+        card.onclick = () => {
+            game.selectAscension(mod.id);
+            document.getElementById('ascensionPanel').classList.remove('show');
+            playSFX('ui_purchase_success');
+        };
+        container.appendChild(card);
+    }
+
+    document.getElementById('ascensionPanel').classList.add('show');
+}
+
+/**
+ * Close all skill-related overlays
+ */
+export function closeAllSkillOverlays() {
+    document.getElementById('levelUpPanel')?.classList.remove('show');
+    document.getElementById('archetypeSelectPanel')?.classList.remove('show');
+    document.getElementById('ascensionPanel')?.classList.remove('show');
 }
 
 // Initialize application when DOM content is fully loaded

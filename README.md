@@ -8,8 +8,8 @@ A browser-based 2D tower defense game with infinite wave survival, auto-targetin
 - **Intelligent Auto-targeting System**: Advanced player rotation and targeting AI with customizable turn speed
 - **Balanced Difficulty Curve**: Slower initial firing with strategic enemy scaling that increases challenge over time
 - **Infinite Wave Survival**: Progressively challenging enemy waves with ~9% health scaling per wave (plus speed/damage scaling)
-- **Power-up Shop**: 15+ upgrades across offense, defense, and utility categories
-- **Stackable Upgrades**: Build your perfect loadout with combinable power-ups
+- **Skill-Based Progression**: Level up during runs and allocate attribute + skill points
+- **Archetypes + Ascension**: Choose a class path at wave 10 and pick ascension modifiers every 10 waves
 - **Smart Enemy AI**: Enemies with varied movement patterns and behaviors
 - **Run Save/Load**: Save your run to localStorage and load it from start, settings, or game over
 - **Recovery Flow**: After game over, choose to start again, load save, or watch a rewarded ad to restore save
@@ -130,43 +130,34 @@ Notes:
 ### Basic Controls
 - **Automatic Aiming**: Player automatically targets nearest enemy
 - **P Key**: Pause/unpause game
-- **Mouse**: Navigate menus and shop interface
+- **Q/W/E/R**: Cast equipped active skills
+- **Mouse**: Navigate menus and progression panels
 - **⚙️ Settings Button**: Open settings to change audio, difficulty, performance, and save/load controls
 
 ### Gameplay Loop
 1. **Survive Waves**: Your character auto-fires at approaching enemies
-2. **Collect Coins**: Earn currency for each enemy defeated
-3. **Shop Phase**: Between waves, purchase power-ups to strengthen your character
+2. **Gain XP**: Defeat enemies and complete waves to level up
+3. **Build Your Kit**: Spend skill/attribute points, then choose archetype and ascension milestones
 4. **Progress**: Each wave increases enemy count, health, speed, and damage
 5. **Survive**: See how many waves you can endure!
 
-### Power-Up Categories
+### Progression System
 
-#### ⚔️ Offense
-- **Damage Boost**: +25% bullet damage (stackable, exponential pricing)
-- **Fire Rate**: +12.5% attack speed (stackable, exponential pricing)
-- **Turn Speed**: +10% rotation speed for faster target acquisition (stackable, exponential pricing)
-- **Triple Shot**: Fire 3 bullets in a spread
-- **Piercing Shots**: Bullets pierce through enemies
-- **Explosive Shots**: Bullets explode on impact
-- **Speed Boost**: +15% projectile speed (stackable, exponential pricing)
-- **Double Damage**: +50% bullet damage (stackable, exponential pricing)
-- **Rapid Fire**: +25% attack speed (stackable, exponential pricing)
-- **Bigger Explosions**: +25% explosion radius and damage (stackable, exponential pricing)
+#### 🧠 Attributes
+- **STR**: Improves direct and explosive damage
+- **DEX**: Improves fire rate and turn speed
+- **VIT**: Improves health, shields, and regeneration
+- **INT**: Improves cooldown recovery and area effects
+- **LUCK**: Improves crit and reward outcomes
 
-#### 🛡️ Defense
-- **Max Health**: +20% health and full heal (stackable)
-- **Shield**: Absorbs damage before health (stackable)
-- **Regeneration**: +5 health per second (stackable)
-- **Shield Regen**: +10 shield per second (stackable)
-- **Full Heal**: Instantly restore all health
+#### 🧬 Skills and Archetypes
+- 5 archetypes are available, with **Gunner** and **Technomancer** fully implemented.
+- Skill slots include passives, active skills, and one ultimate slot.
+- Tier gates require minimum points invested before higher-tier skills unlock.
 
-#### ⚡ Utility
-- **Life Steal**: Heal 10% of enemy max health on kill
-- **Slow Field**: Enemies move slower near you (stackable)
-- **Coin Magnet**: +50% coin rewards from enemy kills (stackable)
-- **Lucky Shots**: 10% chance for bullets to deal double damage (stackable chance up to 50%)
-- **Immolation Aura**: All nearby enemies take 1% of their max health as burn damage per second (stackable)
+#### ✨ Ascension
+- Every 10 waves, pick 1 of 3 random ascension modifiers.
+- Ascension effects stack for the run and can alter cooldowns, damage, survivability, and utility.
 
 ### 👾 Enemy Types
 
@@ -224,8 +215,8 @@ Player.js (Player character & abilities)
 Enemy.js (Enemy AI & behaviors)
 Projectile.js (Bullets & projectile physics)
 Particle.js (Visual effect particles)
-PowerUp.js (Upgrade system & definitions)
-Shop.js (Power-up purchasing interface)
+managers/SkillManager.js (XP, leveling, attributes, skill loadout)
+systems/AscensionSystem.js (Ascension selection and run modifiers)
 ```
 
 ### Utilities & Configuration
@@ -262,13 +253,15 @@ WAVE: {
 }
 ```
 
-### Power-Up Pricing
+### Skill Progression
 ```javascript
-POWERUP_PRICES: {
-    "Damage Boost": 15,
-    "Triple Shot": 40,
-    "Explosive Shots": 60,
-    // ... see GameConfig.js for full list
+LEVEL_CONFIG: {
+    BASE_XP_TO_LEVEL: 50,
+    XP_EXPONENT: 1.25
+},
+TIER_UNLOCK_COSTS: {
+    tier3: 15,
+    tier4: 30
 }
 ```
 
@@ -298,10 +291,9 @@ neon-td-vanilla/
 │   ├── Enemy.js           # Enemy entities
 │   ├── Projectile.js      # Bullet mechanics
 │   ├── Particle.js        # Visual effects
-│   ├── PowerUp.js         # Upgrade system
-│   ├── Shop.js            # Power-up shop
 │   ├── config/
-│   │   └── GameConfig.js  # Game balance settings
+│   │   ├── GameConfig.js  # Game balance settings
+│   │   └── SkillConfig.js # Skill/archetype definitions
 │   ├── utils/
 │   │   ├── ObjectPool.js  # Memory optimization
 │   │   └── MathUtils.js   # Utility functions
@@ -309,9 +301,11 @@ neon-td-vanilla/
 │   │   ├── CollisionSystem.js    # Collision handling
 │   │   ├── WaveManager.js        # Wave progression
 │   │   ├── EffectsManager.js     # Visual effects
-│   │   └── EntityManager.js     # Entity management
+│   │   ├── EntityManager.js      # Entity management
+│   │   └── AscensionSystem.js    # Ascension picks/modifiers
 │   └── managers/
 │       ├── PerformanceManager.js # Performance monitoring
+│       ├── SkillManager.js       # Run-level progression
 │       ├── ProgressionManager.js # Persistent meta progression
 │       ├── TelemetryManager.js   # Analytics instrumentation
 │       └── MonetizationManager.js # Rewarded ad abstraction layer
@@ -320,30 +314,30 @@ neon-td-vanilla/
 └── README.md
 ```
 
-### Adding New Power-Ups
+### Adding New Skills
 
-1. **Define the power-up** in `PowerUp.js`:
+1. **Define the skill** in `js/config/SkillConfig.js`:
 ```javascript
-new PowerUp(
-    "My Power-Up",
-    "Description of effect",
-    "🎯",
-    (player) => { /* Apply effect */ },
-    true // Stackable
-)
-```
-
-2. **Add pricing** in `GameConfig.js`:
-```javascript
-POWERUP_PRICES: {
-    "My Power-Up": 25
+my_skill_id: {
+    name: 'My Skill',
+    type: 'passive',
+    tier: 2,
+    maxRank: 3,
+    effects: [{ stat: 'damageMult', perRank: 0.1 }]
 }
 ```
 
-3. **Add to shop category** in `Shop.js` or `PowerUp.js`:
+2. **Wire runtime effect mapping** in `js/Game.js` (`_syncPlayerFromSkills`):
 ```javascript
-CATEGORIES: {
-    OFFENSE: [..., "My Power-Up"]
+if (passive.mySkillBonus) {
+    this.player.applyMultiplicativeBoost('damageMod', passive.mySkillBonus);
+}
+```
+
+3. **Expose it in the correct archetype** and tier gate inside `SkillConfig.js`:
+```javascript
+ARCHETYPES.MY_ARCHETYPE.skills.my_skill_id = {
+    /* skill definition */
 }
 ```
 
@@ -367,7 +361,7 @@ See `docs/monetization-telemetry.md` for event definitions and integration notes
 ### Balancing Guidelines
 
 - **Wave Scaling**: Enemy stats should scale exponentially but be capped to prevent infinite growth
-- **Power-Up Pricing**: Use stacking multipliers to encourage build diversity
+- **Skill Balance**: Keep attribute growth and skill scaling aligned to avoid one-stat dominance
 - **Performance**: Keep particle counts under 200 for smooth gameplay on lower-end devices
 - **Difficulty**: Each wave should feel challenging but achievable with proper upgrades
 
