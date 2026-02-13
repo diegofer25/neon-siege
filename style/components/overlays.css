@@ -283,3 +283,48 @@
   gap: var(--spacing-sm);
   margin-top: var(--spacing-md);
 }
+
+.wave-countdown {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: calc(var(--z-overlay) + 5);
+}
+
+.wave-countdown.show {
+  display: flex;
+}
+
+.wave-countdown span {
+  font-family: var(--font-pixel);
+  font-size: 96px;
+  line-height: 1;
+  color: var(--color-secondary-neon);
+  text-shadow:
+    0 0 10px var(--color-secondary-neon),
+    0 0 28px var(--color-secondary-neon);
+  transform: scale(1);
+  animation: countdownPulse 0.32s ease-out;
+}
+
+.wave-countdown span.go {
+  color: var(--color-primary-neon);
+  text-shadow:
+    0 0 10px var(--color-primary-neon),
+    0 0 28px var(--color-primary-neon);
+}
+
+@keyframes countdownPulse {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

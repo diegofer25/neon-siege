@@ -30,6 +30,7 @@ export class WaveManager {
         this.waveStartTime = 0;
         this.waveComplete = false;
         this.waveCompletionTimer = 0;
+        this.waveActive = false;
         this.isBossWave = false;
         this.difficultyPreset = GameConfig.DIFFICULTY_PRESETS.normal;
     }
@@ -45,6 +46,7 @@ export class WaveManager {
     startWave(waveNumber) {
         this.currentWave = waveNumber;
         this.waveComplete = false;
+        this.waveActive = true;
         this.enemiesSpawned = 0;
         this.enemiesKilled = 0;
         this.waveCompletionTimer = 0;
@@ -223,6 +225,7 @@ export class WaveManager {
             waveStartTime: this.waveStartTime,
             waveComplete: this.waveComplete,
             waveCompletionTimer: this.waveCompletionTimer,
+            waveActive: this.waveActive,
             isBossWave: this.isBossWave
         };
     }
@@ -238,6 +241,9 @@ export class WaveManager {
         this.waveStartTime = snapshot.waveStartTime || Date.now();
         this.waveComplete = !!snapshot.waveComplete;
         this.waveCompletionTimer = snapshot.waveCompletionTimer || 0;
+        this.waveActive = typeof snapshot.waveActive === 'boolean'
+            ? snapshot.waveActive
+            : (!this.waveComplete && this.currentWave > 0);
         this.isBossWave = !!snapshot.isBossWave;
     }
 
@@ -264,6 +270,10 @@ export class WaveManager {
      * @param {number} delta - Time elapsed since last frame
      */
     _checkWaveCompletion(delta) {
+        if (!this.waveActive) {
+            return;
+        }
+
         const waveCompleteNow = this.isWaveComplete();
         if (this.game.traceEnabled && waveCompleteNow && !this.waveComplete) {
             this.game.trace('wave.complete.check.passed', {
@@ -281,6 +291,7 @@ export class WaveManager {
             
             if (this.waveCompletionTimer >= 1000) { // 1 second delay
                 this.waveComplete = true;
+                this.waveActive = false;
                 this.game.trace('wave.complete.triggered', {
                     wave: this.currentWave,
                     enemiesToSpawn: this.enemiesToSpawn,

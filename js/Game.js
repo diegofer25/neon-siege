@@ -178,6 +178,65 @@ export class Game {
 	_initializeGameState() {
 		this.wave = 0;
 		this.score = 0;
+		this._waveCountdownTimeouts = [];
+	}
+
+	_clearWaveCountdownTimeouts() {
+		for (const timeoutId of this._waveCountdownTimeouts) {
+			clearTimeout(timeoutId);
+		}
+		this._waveCountdownTimeouts = [];
+	}
+
+	_setCountdownDisplay(label, isGo = false) {
+		const countdown = document.getElementById('waveCountdown');
+		const text = document.getElementById('waveCountdownText');
+		if (!countdown || !text) {
+			return;
+		}
+
+		text.textContent = label;
+		text.classList.toggle('go', isGo);
+		text.style.animation = 'none';
+		void text.offsetWidth;
+		text.style.animation = '';
+	}
+
+	_runWaveCountdown(onGo) {
+		const countdown = document.getElementById('waveCountdown');
+		const text = document.getElementById('waveCountdownText');
+		if (!countdown || !text) {
+			onGo();
+			return;
+		}
+
+		this._clearWaveCountdownTimeouts();
+		const sequence = ['3', '2', '1', 'GO'];
+		let index = 0;
+
+		countdown.classList.add('show');
+
+		const runStep = () => {
+			const current = sequence[index];
+			const isGo = current === 'GO';
+			this._setCountdownDisplay(current, isGo);
+
+			if (isGo) {
+				onGo();
+				const hideId = setTimeout(() => {
+					countdown.classList.remove('show');
+				}, 450);
+				this._waveCountdownTimeouts.push(hideId);
+				return;
+			}
+
+			playSFX('ui_countdown_tick');
+			index += 1;
+			const nextId = setTimeout(runStep, 1000);
+			this._waveCountdownTimeouts.push(nextId);
+		};
+
+		runStep();
 	}
 
 	/**
@@ -253,7 +312,9 @@ export class Game {
 		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
 		this.waveManager.setDifficulty(this.runtimeSettings.difficulty);
-		this.waveManager.startWave(this.wave);
+		this._runWaveCountdown(() => {
+			this.waveManager.startWave(this.wave);
+		});
 
 		telemetry.track("run_start", {
 			wave: this.wave,
@@ -485,9 +546,9 @@ export class Game {
 			coins: this.player.coins
 		});
 
-		setTimeout(() => {
+		this._runWaveCountdown(() => {
 			this.waveManager.startWave(this.wave);
-		}, 1000);
+		});
 	}
 
 	async showRewardedCoinBoost() {

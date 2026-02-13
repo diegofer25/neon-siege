@@ -37,7 +37,8 @@ export class Shop {
 
         this._tabsInitialized = false;
         this._shopScrollSfxInitialized = false;
-        this._shopScrollSfxLastAt = 0;
+        this._shopLastScrollTop = null;
+        this._shopLastScrollSfxAt = 0;
         this._cardHoverSfxLastAt = 0;
     }
 
@@ -260,16 +261,27 @@ export class Shop {
         }
 
         this._shopScrollSfxInitialized = true;
-        cardsContainer.addEventListener('wheel', () => this.playShopScrollSfx(), { passive: true });
-        cardsContainer.addEventListener('touchmove', () => this.playShopScrollSfx(), { passive: true });
+        this._shopLastScrollTop = cardsContainer.scrollTop;
+        cardsContainer.addEventListener('scroll', () => this.playShopScrollSfx(cardsContainer.scrollTop), { passive: true });
     }
 
-    playShopScrollSfx() {
-        const now = performance.now();
-        if (now - this._shopScrollSfxLastAt < 120) {
+    playShopScrollSfx(scrollTop) {
+        if (this._shopLastScrollTop === null) {
+            this._shopLastScrollTop = scrollTop;
             return;
         }
-        this._shopScrollSfxLastAt = now;
+
+        if (Math.abs(scrollTop - this._shopLastScrollTop) < 1) {
+            return;
+        }
+
+        this._shopLastScrollTop = scrollTop;
+        const now = performance.now();
+        if (now - this._shopLastScrollSfxAt < 70) {
+            return;
+        }
+
+        this._shopLastScrollSfxAt = now;
         playSFX('ui_menu_scroll');
     }
 

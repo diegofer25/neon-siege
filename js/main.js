@@ -104,10 +104,24 @@ const SFX_ALIASES = {
     click: 'ui_click'
 };
 let lastMenuScrollSfxAt = 0;
+let lastSettingsPanelScrollTop = null;
 
-function playMenuScrollSfx() {
+function playMenuScrollSfx(scrollTop) {
+    if (lastSettingsPanelScrollTop === null) {
+        lastSettingsPanelScrollTop = scrollTop;
+        return;
+    }
+
+    if (Math.abs(scrollTop - lastSettingsPanelScrollTop) < 1) {
+        return;
+    }
+
+    lastSettingsPanelScrollTop = scrollTop;
     const now = performance.now();
-    if (now - lastMenuScrollSfxAt < 120) return;
+    if (now - lastMenuScrollSfxAt < 70) {
+        return;
+    }
+
     lastMenuScrollSfxAt = now;
     playSFX('ui_menu_scroll');
 }
@@ -116,8 +130,10 @@ function setupMenuScrollSoundHooks() {
     const settingsPanel = document.querySelector('.settings-panel');
     if (!settingsPanel) return;
 
-    settingsPanel.addEventListener('wheel', playMenuScrollSfx, { passive: true });
-    settingsPanel.addEventListener('touchmove', playMenuScrollSfx, { passive: true });
+    lastSettingsPanelScrollTop = settingsPanel.scrollTop;
+    settingsPanel.addEventListener('scroll', () => {
+        playMenuScrollSfx(settingsPanel.scrollTop);
+    }, { passive: true });
 }
 
 /**
