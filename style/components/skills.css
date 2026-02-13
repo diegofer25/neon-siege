@@ -13,6 +13,38 @@
     z-index: 10;
 }
 
+.passive-slots {
+    display: flex;
+    gap: 6px;
+    position: absolute;
+    bottom: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.passive-slot {
+    width: 40px;
+    height: 26px;
+    border: 1px solid rgba(0, 255, 255, 0.35);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.58);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.passive-slot span {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.passive-slot.filled {
+    border-color: rgba(255, 45, 236, 0.55);
+    box-shadow: 0 0 10px rgba(255, 45, 236, 0.3);
+}
+
 .skill-slot {
     position: relative;
     width: 52px;
@@ -79,14 +111,14 @@
 .skill-tree-panel {
     display: flex;
     flex-direction: column;
-    width: 94vw;
-    max-width: 1100px;
-    height: 88vh;
-    max-height: 820px;
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    max-height: none;
     background:
         radial-gradient(ellipse at center, rgba(8, 20, 40, 0.97) 0%, rgba(2, 4, 12, 0.99) 100%);
     border: 2px solid rgba(0, 255, 255, 0.3);
-    border-radius: 14px;
+    border-radius: 0;
     box-shadow:
         0 0 60px rgba(0, 255, 255, 0.12),
         inset 0 0 80px rgba(0, 0, 0, 0.6);
@@ -251,7 +283,7 @@
     cursor: pointer;
 }
 
-.tree-node__add {
+.skill-tree-panel .tree-node__add {
     position: absolute;
     bottom: -4px;
     right: -4px;
@@ -269,11 +301,23 @@
     justify-content: center;
     z-index: 3;
     transition: background 0.15s, transform 0.15s;
+    margin: 0;
     padding: 0;
     line-height: 1;
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: 'Audiowide', sans-serif;
+    font-weight: 700;
 }
 
-.tree-node__add:hover {
+.skill-tree-panel .tree-node__add::before {
+    display: none;
+}
+
+.skill-tree-panel .tree-node__add:hover {
+    animation: none;
+    text-shadow: none;
     background: rgba(0, 255, 255, 0.6);
     transform: scale(1.15);
 }

@@ -152,14 +152,23 @@ export class SkillManager {
 		if (!skill) return { allowed: false, reason: 'Skill not found.' };
 
 		const currentRank = this.skillRanks[skillId] || 0;
+		const nextRank = currentRank + 1;
 		if (currentRank >= skill.maxRank) return { allowed: false, reason: 'Max rank reached.' };
 		if (this.unspentSkillPoints < 1) return { allowed: false, reason: 'No skill points available.' };
 
 		// Tier gate check
 		const treePoints = this.treeInvestment[archetypeKey] || 0;
-		const requiredPoints = TIER_GATES[skill.tier - 1] || 0;
+		const requiredPoints = skill.tier === 2 ? 0 : (TIER_GATES[skill.tier - 1] || 0);
 		if (treePoints < requiredPoints) {
 			return { allowed: false, reason: `Need ${requiredPoints} points in ${ARCHETYPES[archetypeKey].label} tree (have ${treePoints}).` };
+		}
+
+		const prereq = this._getTierPrerequisite(skillId, archetypeKey);
+		if (prereq) {
+			const prereqRank = this.skillRanks[prereq.id] || 0;
+			if (prereqRank < nextRank) {
+				return { allowed: false, reason: `Need ${prereq.name} at rank ${nextRank}.` };
+			}
 		}
 
 		// Tier 3-4 legacy token gate
@@ -548,5 +557,27 @@ export class SkillManager {
 			if (skill) return { skill, archetypeKey };
 		}
 		return { skill: null, archetypeKey: null };
+	}
+
+	/**
+	 * Resolve the branch prerequisite from previous tier for rank gating.
+	 * @param {string} skillId
+	 * @param {string} archetypeKey
+	 * @returns {Object|null}
+	 */
+	_getTierPrerequisite(skillId, archetypeKey) {
+		const archetype = ARCHETYPES[archetypeKey];
+		if (!archetype) return null;
+
+		const skill = archetype.skills.find(s => s.id === skillId);
+		if (!skill || skill.tier <= 1) return null;
+
+		const currentTierSkills = archetype.skills.filter(s => s.tier === skill.tier);
+		const previousTierSkills = archetype.skills.filter(s => s.tier === skill.tier - 1);
+		if (previousTierSkills.length === 0) return null;
+
+		const tierIndex = currentTierSkills.findIndex(s => s.id === skill.id);
+		const prereqIndex = Math.max(0, Math.min(tierIndex, previousTierSkills.length - 1));
+		return previousTierSkills[prereqIndex] || null;
 	}
 }

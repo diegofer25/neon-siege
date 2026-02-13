@@ -964,6 +964,30 @@ function updateHUD() {
                 cdEl.style.height = '0%';
             }
         }
+
+        for (let i = 0; i < SKILL_SLOTS.PASSIVE_MAX; i++) {
+            const nameEl = document.getElementById(`passiveName${i}`);
+            const slotEl = nameEl?.closest('.passive-slot');
+            if (!nameEl || !slotEl) continue;
+
+            const skillId = game.skillManager.equippedPassives[i] || null;
+            if (!skillId) {
+                nameEl.textContent = '—';
+                slotEl.classList.remove('filled');
+                continue;
+            }
+
+            const skill = game.skillManager.getSkillDef(skillId);
+            const rank = game.skillManager.getSkillRank(skillId);
+            if (!skill) {
+                nameEl.textContent = '—';
+                slotEl.classList.remove('filled');
+                continue;
+            }
+
+            nameEl.textContent = `${skill.icon || '✨'} ${rank}`;
+            slotEl.classList.add('filled');
+        }
     }
 
     // Update performance statistics if enabled
@@ -1425,7 +1449,7 @@ export function screenFlash() {
 //=============================================================================
 // SKILL UI RENDERING
 //=============================================================================
-import { ARCHETYPES, PLAYABLE_ARCHETYPES } from './config/SkillConfig.js';
+import { ARCHETYPES, PLAYABLE_ARCHETYPES, SKILL_SLOTS } from './config/SkillConfig.js';
 import { SkillTreeRenderer } from './ui/SkillTreeRenderer.js';
 
 /** @type {SkillTreeRenderer|null} */

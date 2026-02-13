@@ -787,11 +787,6 @@ export class Game {
 			unspentSkillPoints: this.skillManager.unspentSkillPoints,
 			unspentAttributePoints: this.skillManager.unspentAttributePoints,
 		});
-
-		// Trigger mid-wave level-up UI if currently playing
-		if (this.gameState === Game.STATES.PLAYING) {
-			this._triggerMidWaveLevelUp();
-		}
 	}
 
 	/** Convenience getters for backward compatibility */
