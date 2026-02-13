@@ -88,6 +88,18 @@ export class SkillTreeRenderer {
 		this._svgEl = null;
 		/** @private */
 		this._layout = null;
+
+		// ── Pan & Zoom state ──
+		/** @private */ this._zoom = 1;
+		/** @private */ this._panX = 0;
+		/** @private */ this._panY = 0;
+		/** @private */ this._baseScale = 1;
+		/** @private */ this._isDragging = false;
+		/** @private */ this._dragStartX = 0;
+		/** @private */ this._dragStartY = 0;
+		/** @private */ this._dragPanStartX = 0;
+		/** @private */ this._dragPanStartY = 0;
+		/** @private */ this._boundHandlers = null;
 	}
 
 	// ── public API ──────────────────────────────────────────────────────────────
@@ -107,6 +119,7 @@ export class SkillTreeRenderer {
 	 * @param {import('../managers/SkillManager.js').SkillManager} sm
 	 */
 	render(sm) {
+		const isFirstRender = !this._worldEl;
 		this.viewport.innerHTML = '';
 
 		// World container (fixed internal size, scaled via CSS)
@@ -141,15 +154,23 @@ export class SkillTreeRenderer {
 
 		this.viewport.appendChild(this._worldEl);
 
-		// Scale world to fit viewport
-		this._scaleToFit();
+		// Compute base scale; reset pan/zoom only on first open
+		this._baseScale = this._computeBaseScale();
+		if (isFirstRender) {
+			this._zoom = 1;
+			this._panX = 0;
+			this._panY = 0;
+		}
+		this._applyTransform();
+		this._installPanZoom();
 	}
 
 	/** Convenience – re-renders to reflect updated SkillManager state. */
 	update(sm) { this.render(sm); }
 
-	/** Tear down DOM. */
+	/** Tear down DOM and event listeners. */
 	destroy() {
+		this._removePanZoom();
 		this.viewport.innerHTML = '';
 		this._layout = null;
 		this._tooltipEl = null;
@@ -536,16 +557,96 @@ export class SkillTreeRenderer {
 		if (this._tooltipEl) this._tooltipEl.style.display = 'none';
 	}
 
-	// ── scaling ─────────────────────────────────────────────────────────────────
+	// ── pan & zoom ─────────────────────────────────────────────────────────────
 
-	_scaleToFit() {
-		if (!this._worldEl) return;
+	/** Compute the initial scale that fits the world inside the viewport. */
+	_computeBaseScale() {
 		const vpW = this.viewport.clientWidth || 800;
 		const vpH = this.viewport.clientHeight || 600;
-		const s = Math.min(vpW / WORLD_W, vpH / WORLD_H);
-		this._worldEl.style.transform = `scale(${s})`;
+		return Math.min(vpW / WORLD_W, vpH / WORLD_H);
+	}
+
+	/** Apply current zoom + pan transform to the world element. */
+	_applyTransform() {
+		if (!this._worldEl) return;
+		const s = this._baseScale * this._zoom;
+		const vpW = this.viewport.clientWidth || 800;
+		const vpH = this.viewport.clientHeight || 600;
+		// Centre the world, then offset by pan
+		const cx = (vpW - WORLD_W * s) / 2 + this._panX;
+		const cy = (vpH - WORLD_H * s) / 2 + this._panY;
 		this._worldEl.style.transformOrigin = 'top left';
-		this._worldEl.style.left = ((vpW - WORLD_W * s) / 2) + 'px';
-		this._worldEl.style.top = ((vpH - WORLD_H * s) / 2) + 'px';
+		this._worldEl.style.transform = `translate(${cx}px, ${cy}px) scale(${s})`;
+	}
+
+	/** Install wheel-zoom and drag-pan listeners on the viewport. */
+	_installPanZoom() {
+		this._removePanZoom(); // idempotent
+
+		const onWheel = (e) => {
+			e.preventDefault();
+			const zoomSpeed = 0.12;
+			const dir = e.deltaY < 0 ? 1 : -1;
+			const oldZoom = this._zoom;
+			this._zoom = Math.min(4, Math.max(0.35, this._zoom * (1 + dir * zoomSpeed)));
+			const ratio = this._zoom / oldZoom;
+
+			// Zoom towards cursor position
+			const rect = this.viewport.getBoundingClientRect();
+			const mx = e.clientX - rect.left;
+			const my = e.clientY - rect.top;
+			const vpW = this.viewport.clientWidth || 800;
+			const vpH = this.viewport.clientHeight || 600;
+			const cx0 = (vpW / 2) + this._panX;
+			const cy0 = (vpH / 2) + this._panY;
+			this._panX -= (mx - cx0) * (ratio - 1);
+			this._panY -= (my - cy0) * (ratio - 1);
+			this._applyTransform();
+		};
+
+		const onPointerDown = (e) => {
+			// Only pan with left/middle button on the viewport background
+			if (e.button > 1) return;
+			if (/** @type {HTMLElement} */ (e.target).closest('.tree-node, .tree-tooltip')) return;
+			this._isDragging = true;
+			this._dragStartX = e.clientX;
+			this._dragStartY = e.clientY;
+			this._dragPanStartX = this._panX;
+			this._dragPanStartY = this._panY;
+			this.viewport.style.cursor = 'grabbing';
+			e.preventDefault();
+		};
+
+		const onPointerMove = (e) => {
+			if (!this._isDragging) return;
+			this._panX = this._dragPanStartX + (e.clientX - this._dragStartX);
+			this._panY = this._dragPanStartY + (e.clientY - this._dragStartY);
+			this._applyTransform();
+		};
+
+		const onPointerUp = () => {
+			if (!this._isDragging) return;
+			this._isDragging = false;
+			this.viewport.style.cursor = 'grab';
+		};
+
+		this.viewport.addEventListener('wheel', onWheel, { passive: false });
+		this.viewport.addEventListener('pointerdown', onPointerDown);
+		window.addEventListener('pointermove', onPointerMove);
+		window.addEventListener('pointerup', onPointerUp);
+		this.viewport.style.cursor = 'grab';
+
+		this._boundHandlers = { onWheel, onPointerDown, onPointerMove, onPointerUp };
+	}
+
+	/** Remove pan/zoom event listeners. */
+	_removePanZoom() {
+		if (!this._boundHandlers) return;
+		const h = this._boundHandlers;
+		this.viewport.removeEventListener('wheel', h.onWheel);
+		this.viewport.removeEventListener('pointerdown', h.onPointerDown);
+		window.removeEventListener('pointermove', h.onPointerMove);
+		window.removeEventListener('pointerup', h.onPointerUp);
+		this._boundHandlers = null;
 	}
 }
