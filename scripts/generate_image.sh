@@ -14,7 +14,7 @@ set -e
 
 # Configuração do Infisical
 INFISICAL_ENV="dev"
-INFISICAL_PATH="/mandato-em-jogo"
+INFISICAL_PATH="/neon-td"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
