@@ -588,8 +588,8 @@ export function playSFX(soundName) {
 export function toggleMute() {
     const hasAnyAudio = audio.soundVolume > 0 || audio.musicVolume > 0;
     settingsManager.update({
-        soundVolume: hasAnyAudio ? 0 : 50,
-        musicVolume: hasAnyAudio ? 0 : 30
+        soundVolume: hasAnyAudio ? 0 : 30,
+        musicVolume: hasAnyAudio ? 0 : 20
     });
     applySettings(settingsManager.getSettings());
 }
@@ -758,6 +758,7 @@ function updateHUD() {
     if (game.player.hasShield) {
         // Player has shield - show defense bar
         defenseBarElement.style.display = 'block';
+        coinDisplayElement.classList.add('with-shield');
         
         // Update defense bar visualization
         const currentDefense = game.player.shieldHp;
@@ -765,25 +766,10 @@ function updateHUD() {
         const defensePercentage = maxDefense > 0 ? Math.max(0, (currentDefense / maxDefense) * 100) : 0;
         document.getElementById('defenseFill').style.width = defensePercentage.toFixed(1) + '%';
         document.getElementById('defenseText').textContent = `${Math.max(0, Math.floor(currentDefense))}/${Math.floor(maxDefense)}`;
-        
-        // Adjust coin display position to be below defense bar
-        // Mobile responsive positioning is handled by CSS media queries
-        if (window.innerWidth <= 768) {
-            coinDisplayElement.style.top = '65px'; // Tablet/mobile positioning
-        } else {
-            coinDisplayElement.style.top = '85px'; // Desktop positioning
-        }
     } else {
         // Player doesn't have shield - hide defense bar
         defenseBarElement.style.display = 'none';
-        
-        // Adjust coin display position to be below health bar only
-        // Mobile responsive positioning is handled by CSS media queries
-        if (window.innerWidth <= 768) {
-            coinDisplayElement.style.top = '35px'; // Tablet/mobile positioning
-        } else {
-            coinDisplayElement.style.top = '45px'; // Desktop positioning
-        }
+        coinDisplayElement.classList.remove('with-shield');
     }
     
     // Update currency display (use one decimal for consistency with fractional rewards)
@@ -926,8 +912,8 @@ function showGameOver() {
 }
 
 function applySettings(settings) {
-    const soundSliderValue = clampSettingVolume(settings.soundVolume, 50);
-    const musicSliderValue = clampSettingVolume(settings.musicVolume, 30);
+    const soundSliderValue = clampSettingVolume(settings.soundVolume, 30);
+    const musicSliderValue = clampSettingVolume(settings.musicVolume, 20);
     audio.soundVolume = sliderValueToUnit(soundSliderValue, GameConfig.AUDIO.SFX_VOLUME);
     audio.musicVolume = sliderValueToUnit(musicSliderValue, GameConfig.AUDIO.BGM_VOLUME);
 
@@ -961,8 +947,8 @@ function applySettings(settings) {
 }
 
 function updateSettingsModalUI(settings = settingsManager.getSettings()) {
-    const soundSliderValue = clampSettingVolume(settings.soundVolume, 50);
-    const musicSliderValue = clampSettingVolume(settings.musicVolume, 30);
+    const soundSliderValue = clampSettingVolume(settings.soundVolume, 30);
+    const musicSliderValue = clampSettingVolume(settings.musicVolume, 20);
 
     getInputElement('settingSoundVolume').value = soundSliderValue.toString();
     getInputElement('settingMusicVolume').value = musicSliderValue.toString();
@@ -977,7 +963,7 @@ function updateSettingsModalUI(settings = settingsManager.getSettings()) {
 function setupSettingsControls() {
     document.getElementById('settingSoundVolume').addEventListener('input', (event) => {
         const target = /** @type {HTMLInputElement} */ (event.currentTarget);
-        const volume = clampSettingVolume(Number.parseInt(target.value, 10), 50);
+        const volume = clampSettingVolume(Number.parseInt(target.value, 10), 30);
         const next = settingsManager.update({ soundVolume: volume });
         updateVolumeValueLabel('settingSoundVolumeValue', volume);
         applySettings(next);
@@ -985,7 +971,7 @@ function setupSettingsControls() {
 
     document.getElementById('settingMusicVolume').addEventListener('input', (event) => {
         const target = /** @type {HTMLInputElement} */ (event.currentTarget);
-        const volume = clampSettingVolume(Number.parseInt(target.value, 10), 30);
+        const volume = clampSettingVolume(Number.parseInt(target.value, 10), 20);
         const next = settingsManager.update({ musicVolume: volume });
         updateVolumeValueLabel('settingMusicVolumeValue', volume);
         applySettings(next);

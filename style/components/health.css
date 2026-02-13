@@ -4,11 +4,12 @@
 
 /* Health Bar Container */
 .healthbar {
-  width: 200px;
-  height: var(--spacing-xl);
-  background: #222;
+  width: clamp(170px, 22vw, 230px);
+  height: 14px;
+  background: #141414;
   border: 2px solid var(--color-accent-green);
-  box-shadow: 0 0 10px var(--color-accent-green);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -18,25 +19,26 @@
   height: 100%;
   background: var(--gradient-health);
   transition: width var(--transition-normal);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.45);
 }
 
 /* Health Text Display */
 #healthText {
   color: var(--color-accent-green);
   text-shadow: 0 0 5px var(--color-accent-green);
-  font-size: 14px;
-  margin-left: 10px;
-  vertical-align: top;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  line-height: 1;
 }
 
 /* Defense Bar Container */
 .defensebar {
-  width: 200px;
-  height: var(--spacing-xl);
-  background: #222;
+  width: clamp(170px, 22vw, 230px);
+  height: 14px;
+  background: #141414;
   border: 2px solid var(--color-secondary-neon);
-  box-shadow: 0 0 10px var(--color-secondary-neon);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 10px rgba(255, 45, 236, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -46,14 +48,14 @@
   height: 100%;
   background: linear-gradient(90deg, #0080ff, #00ffff);
   transition: width var(--transition-normal);
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.45);
 }
 
 /* Defense Text Display */
 #defenseText {
   color: var(--color-secondary-neon);
   text-shadow: 0 0 5px var(--color-secondary-neon);
-  font-size: 14px;
-  margin-left: 10px;
-  vertical-align: top;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  line-height: 1;
 }

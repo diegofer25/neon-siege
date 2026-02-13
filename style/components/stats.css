@@ -10,26 +10,28 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--spacing-xs);
+  gap: 6px;
 }
 
 /* Individual Stat Item */
 .stat-item {
   display: flex;
   align-items: center;
-  margin-bottom: var(--spacing-xs);
-  background: var(--bg-glass);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(0, 255, 255, 0.3);
-  box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
-  min-width: 120px;
+  margin-bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 255, 255, 0.28);
+  box-shadow:
+    0 0 8px rgba(0, 255, 255, 0.2),
+    inset 0 0 8px rgba(0, 255, 255, 0.08);
+  min-width: 150px;
   justify-content: space-between;
 }
 
 .stat-icon {
-  font-size: 14px;
-  margin-right: var(--spacing-md);
+  font-size: 12px;
+  margin-right: var(--spacing-sm);
   filter: drop-shadow(0 0 3px currentColor);
   flex-shrink: 0;
 }
@@ -38,7 +40,7 @@
   font-family: var(--font-pixel);
   color: var(--color-primary-neon);
   text-shadow: 0 0 3px var(--color-primary-neon);
-  font-size: 9px;
+  font-size: 8px;
   margin-right: var(--spacing-xs);
   flex-shrink: 0;
 }
@@ -47,11 +49,11 @@
   font-family: var(--font-pixel);
   color: #fff;
   text-shadow: 0 0 3px #fff;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: bold;
   transition: var(--transition-normal);
   text-align: right;
-  min-width: 40px;
+  min-width: 44px;
 }
 
 /* Performance Statistics */
@@ -61,12 +63,14 @@
   left: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
-  background: rgba(0, 0, 0, 0.8);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.7);
   padding: var(--spacing-sm);
-  border-radius: 0 var(--radius-sm) 0 0;
-  border: 1px solid rgba(255, 165, 0, 0.3);
-  box-shadow: 0 0 10px rgba(255, 165, 0, 0.2);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 165, 0, 0.32);
+  box-shadow:
+    0 0 10px rgba(255, 165, 0, 0.2),
+    inset 0 0 8px rgba(255, 165, 0, 0.12);
   font-family: var(--font-pixel);
   z-index: 100;
 }
@@ -75,7 +79,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-width: 80px;
+  min-width: 90px;
   gap: var(--spacing-xs);
 }
 

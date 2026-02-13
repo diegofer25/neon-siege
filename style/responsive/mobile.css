@@ -145,31 +145,52 @@
   }
 
   #waveCounter {
-    top: 4px;
+    top: 2px;
     left: 60%;
     transform: translateX(-50%);
+    padding: 6px var(--spacing-sm);
   }
 
   #wave {
-    font-size: 11px;
+    font-size: 9px;
+  }
+
+  #healthBar,
+  #defenseBar {
+    padding: 5px 6px;
+    gap: 6px;
+  }
+
+  #defenseBar {
+    top: 42px;
   }
   
-  .healthbar {
-    width: 150px;
-    height: var(--spacing-lg);
-  }
-  
+  .healthbar,
   .defensebar {
-    width: 150px;
-    height: var(--spacing-lg);
+    width: clamp(120px, 33vw, 180px);
+    height: 12px;
+  }
+
+  #healthText,
+  #defenseText {
+    font-size: 8px;
   }
   
   .coin-display {
-    top: 35px; /* Adjusted for mobile - closer spacing */
+    top: 42px;
+    padding: 5px 7px;
   }
-  
-  #defenseBar {
-    top: 30px; /* Adjusted for mobile - closer spacing */
+
+  .coin-display.with-shield {
+    top: 78px;
+  }
+
+  .coin-icon {
+    font-size: 10px;
+  }
+
+  .coin-amount {
+    font-size: 8px;
   }
   
   .stat-item {
@@ -329,11 +350,57 @@
   }
 
   #waveCounter {
-    left: 64%;
+    top: 2px;
+    left: 62%;
+    padding: 5px 7px;
   }
 
   #wave {
+    font-size: 8px;
+  }
+
+  #settingsBtn {
+    font-size: 13px;
+    padding: 6px 9px;
+  }
+
+  #healthBar,
+  #defenseBar {
+    max-width: calc(100vw - 112px);
+    padding: 4px 5px;
+    gap: 5px;
+  }
+
+  #defenseBar {
+    top: 39px;
+  }
+
+  .healthbar,
+  .defensebar {
+    width: clamp(104px, 35vw, 150px);
+    height: 11px;
+  }
+
+  #healthText,
+  #defenseText {
+    font-size: 7px;
+  }
+
+  .coin-display {
+    top: 40px;
+    padding: 5px 7px;
+  }
+
+  .coin-display.with-shield {
+    top: 74px;
+  }
+
+  .coin-icon {
     font-size: 10px;
+  }
+
+  .coin-amount {
+    font-size: 8px;
   }
   
   .performance-stats {
@@ -361,13 +428,15 @@
     bottom: 4px;
   }
 
-  #wave {
-    font-size: 12px;
-  }
-
   #waveCounter {
+    top: 2px;
     left: 50%;
     transform: translateX(-50%);
+    padding: 6px 8px;
+  }
+
+  #wave {
+    font-size: 10px;
   }
 
   #settingsBtn {
@@ -375,8 +444,38 @@
     padding: 4px 8px;
   }
 
+  #healthBar,
+  #defenseBar {
+    padding: 4px 6px;
+    gap: 5px;
+  }
+
+  #defenseBar {
+    top: 34px;
+  }
+
+  .healthbar,
+  .defensebar {
+    width: clamp(120px, 18vw, 170px);
+    height: 10px;
+  }
+
+  #healthText,
+  #defenseText {
+    font-size: 7px;
+  }
+
   .coin-display {
+    top: 36px;
     padding: 4px 8px;
+  }
+
+  .coin-display.with-shield {
+    top: 68px;
+  }
+
+  .coin-icon {
+    font-size: 10px;
   }
 
   .coin-amount {
