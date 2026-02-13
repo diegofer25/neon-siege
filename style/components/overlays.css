@@ -320,6 +320,23 @@
   padding: 6px 10px;
 }
 
+.settings-audio-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.settings-audio-control input[type='range'] {
+  width: 160px;
+}
+
+.settings-volume-value {
+  min-width: 34px;
+  text-align: right;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+}
+
 .settings-help {
   font-size: 12px;
   opacity: 0.9;

@@ -86,13 +86,14 @@ function shouldSkipTransientMobileResize(nextViewport) {
  * @type {Object}
  * @property {HTMLAudioElement|null} bgm - Background music element
  * @property {Object} sfx - Sound effect audio elements
- * @property {boolean} enabled - Global audio enable/disable flag
+ * @property {number} soundVolume - Sound effects volume (0.0 to 1.0)
+ * @property {number} musicVolume - Music volume (0.0 to 1.0)
  */
 const audio = {
     bgm: null,
     sfx: {},
-    soundEnabled: true,
-    musicEnabled: true
+    soundVolume: GameConfig.AUDIO.SFX_VOLUME,
+    musicVolume: GameConfig.AUDIO.BGM_VOLUME
 };
 
 const SFX_VARIANTS = 1;
@@ -160,6 +161,27 @@ function getInputElement(id) {
 
 function getButtonElement(id) {
     return /** @type {HTMLButtonElement} */ (document.getElementById(id));
+}
+
+function clampSettingVolume(value, fallback = 0) {
+    if (!Number.isFinite(value)) {
+        return fallback;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function sliderValueToUnit(value, fallback = 0) {
+    return clampSettingVolume(value, Math.round(fallback * 100)) / 100;
+}
+
+function updateVolumeValueLabel(labelId, value) {
+    const valueLabel = document.getElementById(labelId);
+    if (!valueLabel) {
+        return;
+    }
+
+    valueLabel.textContent = clampSettingVolume(value, 0).toString();
 }
 
 function getStartDifficultyRoot() {
@@ -521,7 +543,7 @@ function loadAudio() {
     audio.bgm = new Audio('assets/audio/synthwave.mp3');
     audio.bgm.preload = 'auto';
     audio.bgm.loop = true;
-    audio.bgm.volume = 0.3;
+    audio.bgm.volume = audio.musicVolume;
 
     // Initialize sound effect audio variants from manifest-generated files
     audio.sfx = {};
@@ -530,7 +552,7 @@ function loadAudio() {
         for (let variant = 1; variant <= SFX_VARIANTS; variant += 1) {
             const sound = new Audio(`assets/audio/sfx/${key}_v${variant}.mp3`);
             sound.preload = 'auto';
-            sound.volume = 0.5;
+            sound.volume = audio.soundVolume;
             variants.push(sound);
         }
         audio.sfx[key] = variants;
@@ -542,7 +564,7 @@ function loadAudio() {
  * @param {string} soundName - Name of the sound effect to play
  */
 export function playSFX(soundName) {
-    if (!audio.soundEnabled) return;
+    if (audio.soundVolume <= 0) return;
 
     const canonicalName = SFX_ALIASES[soundName] || soundName;
     const pool = audio.sfx[canonicalName];
@@ -552,6 +574,7 @@ export function playSFX(soundName) {
         const source = pool[0];
         // Clone audio node to allow overlapping sounds
         const sound = source.cloneNode();
+        sound.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.SFX_VOLUME * audio.soundVolume));
         sound.play().catch(e => console.log('Audio play failed:', e));
     } catch (e) {
         console.log('Audio error:', e);
@@ -563,10 +586,10 @@ export function playSFX(soundName) {
  * Internally updates the settings manager
  */
 export function toggleMute() {
-    const nextEnabled = !audio.soundEnabled;
+    const hasAnyAudio = audio.soundVolume > 0 || audio.musicVolume > 0;
     settingsManager.update({
-        soundEnabled: nextEnabled,
-        musicEnabled: nextEnabled
+        soundVolume: hasAnyAudio ? 0 : 50,
+        musicVolume: hasAnyAudio ? 0 : 30
     });
     applySettings(settingsManager.getSettings());
 }
@@ -600,7 +623,7 @@ export function startGame() {
     syncStartDifficultyUI(selectedDifficulty);
     
     // Start background music if audio is enabled
-    if (audio.musicEnabled && audio.bgm) {
+    if (audio.musicVolume > 0 && audio.bgm) {
         audio.bgm.play().catch(e => console.log('BGM play failed:', e));
     }
     
@@ -903,12 +926,14 @@ function showGameOver() {
 }
 
 function applySettings(settings) {
-    audio.soundEnabled = settings.soundEnabled;
-    audio.musicEnabled = settings.musicEnabled;
+    const soundSliderValue = clampSettingVolume(settings.soundVolume, 50);
+    const musicSliderValue = clampSettingVolume(settings.musicVolume, 30);
+    audio.soundVolume = sliderValueToUnit(soundSliderValue, GameConfig.AUDIO.SFX_VOLUME);
+    audio.musicVolume = sliderValueToUnit(musicSliderValue, GameConfig.AUDIO.BGM_VOLUME);
 
     if (audio.bgm) {
-        if (audio.musicEnabled) {
-            audio.bgm.volume = GameConfig.AUDIO.BGM_VOLUME;
+        if (audio.musicVolume > 0) {
+            audio.bgm.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.BGM_VOLUME * audio.musicVolume));
             if ((game?.gameState === 'playing' || game?.gameState === 'powerup') && audio.bgm.paused) {
                 audio.bgm.play().catch(() => {});
             }
@@ -936,8 +961,13 @@ function applySettings(settings) {
 }
 
 function updateSettingsModalUI(settings = settingsManager.getSettings()) {
-    getInputElement('settingSoundEnabled').checked = settings.soundEnabled;
-    getInputElement('settingMusicEnabled').checked = settings.musicEnabled;
+    const soundSliderValue = clampSettingVolume(settings.soundVolume, 50);
+    const musicSliderValue = clampSettingVolume(settings.musicVolume, 30);
+
+    getInputElement('settingSoundVolume').value = soundSliderValue.toString();
+    getInputElement('settingMusicVolume').value = musicSliderValue.toString();
+    updateVolumeValueLabel('settingSoundVolumeValue', soundSliderValue);
+    updateVolumeValueLabel('settingMusicVolumeValue', musicSliderValue);
     getInputElement('settingScreenShake').checked = settings.screenShakeEnabled;
     getInputElement('settingPerformanceMode').checked = settings.performanceModeEnabled;
     getInputElement('settingShowStats').checked = settings.showPerformanceStats;
@@ -945,15 +975,19 @@ function updateSettingsModalUI(settings = settingsManager.getSettings()) {
 }
 
 function setupSettingsControls() {
-    document.getElementById('settingSoundEnabled').addEventListener('change', (event) => {
+    document.getElementById('settingSoundVolume').addEventListener('input', (event) => {
         const target = /** @type {HTMLInputElement} */ (event.currentTarget);
-        const next = settingsManager.update({ soundEnabled: target.checked });
+        const volume = clampSettingVolume(Number.parseInt(target.value, 10), 50);
+        const next = settingsManager.update({ soundVolume: volume });
+        updateVolumeValueLabel('settingSoundVolumeValue', volume);
         applySettings(next);
     });
 
-    document.getElementById('settingMusicEnabled').addEventListener('change', (event) => {
+    document.getElementById('settingMusicVolume').addEventListener('input', (event) => {
         const target = /** @type {HTMLInputElement} */ (event.currentTarget);
-        const next = settingsManager.update({ musicEnabled: target.checked });
+        const volume = clampSettingVolume(Number.parseInt(target.value, 10), 30);
+        const next = settingsManager.update({ musicVolume: volume });
+        updateVolumeValueLabel('settingMusicVolumeValue', volume);
         applySettings(next);
     });
 
@@ -1056,7 +1090,7 @@ function loadGameFromSave(source = 'unknown') {
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
 
-    if (audio.musicEnabled && audio.bgm) {
+    if (audio.musicVolume > 0 && audio.bgm) {
         audio.bgm.play().catch(() => {});
     }
 
