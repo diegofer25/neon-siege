@@ -11,6 +11,7 @@ export class Boss extends Enemy {
         this.color = '#ff00ff'; // Bright magenta for the boss
         this.glowColor = '#ff00ff';
         this.isBoss = true;
+        this.bossType = 'Classic';
         this.maxHealth = health;
 
         // Boss-specific properties

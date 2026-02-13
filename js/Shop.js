@@ -2,6 +2,8 @@ import { GameConfig } from './config/GameConfig.js';
 import { PowerUp } from './PowerUp.js';
 import { playSFX } from './main.js';
 
+// cspell:ignore POWERUPS
+
 /**
  * Shop class manages the in-game power-up purchasing system.
  * 
@@ -34,6 +36,10 @@ export class Shop {
         
         /** @type {Function|null} Callback function executed on power-up purchase */
         this.currentOnPurchase = null;
+        /** @type {Function|null} Callback executed to undo latest purchase */
+        this.currentOnUndoPurchase = null;
+        /** @type {Function|null} Callback to determine if undo is currently available */
+        this.currentCanUndoPurchase = null;
 
         this._tabsInitialized = false;
         this._shopScrollSfxInitialized = false;
@@ -171,12 +177,14 @@ export class Shop {
      * @param {Function} onContinue - Callback executed when shop is closed
      * @param {Function|null} onRewardedBoost - Callback executed when rewarded boost button is clicked
      */
-    showShop(player, coins, onPurchase, onContinue, onRewardedBoost = null) {
+    showShop(player, coins, onPurchase, onContinue, onRewardedBoost = null, onUndoPurchase = null, canUndoPurchase = null) {
         const modal = document.getElementById('powerUpModal');
         
         // Store current state for refresh operations
         this.currentPlayer = player;
         this.currentOnPurchase = onPurchase;
+        this.currentOnUndoPurchase = onUndoPurchase;
+        this.currentCanUndoPurchase = canUndoPurchase;
         
         // Update modal title to show current coin count
         modal.querySelector('h2').textContent = `Power-Up Shop (Coins: ${coins.toFixed(1)})`;
@@ -186,6 +194,7 @@ export class Shop {
         this.setupShopScrollSfx();
         this.setupCloseButton(onContinue);
         this.setupRewardedButton(onRewardedBoost);
+        this.setupUndoButton(onUndoPurchase, canUndoPurchase);
         
         // Display the current tab content
         this.showTab(this.currentTab, player, coins, onPurchase);
@@ -210,6 +219,7 @@ export class Shop {
             modal.querySelector('h2').textContent = `Power-Up Shop (Coins: ${this.currentPlayer.coins.toFixed(1)})`;
             // Refresh current tab content
             this.showTab(this.currentTab, this.currentPlayer, this.currentPlayer.coins, this.currentOnPurchase);
+            this.updateUndoButtonState();
         }
     }
 
@@ -218,9 +228,6 @@ export class Shop {
      * Handles tab switching and visual state updates.
      * 
      * @private
-     * @param {import('./Player.js').Player} player - Current player object
-     * @param {number} coins - Player's available coins
-     * @param {Function} onPurchase - Purchase callback function
      */
     setupTabs() {
         const tabButtons = document.querySelectorAll('.tab-button');
@@ -305,7 +312,7 @@ export class Shop {
         const closeButton = document.querySelector('.shop-close-btn');
         
         // Remove any existing event listeners by cloning the element
-        const newCloseButton = closeButton.cloneNode(true);
+        const newCloseButton = /** @type {HTMLButtonElement} */ (closeButton.cloneNode(true));
         closeButton.parentNode.replaceChild(newCloseButton, closeButton);
         
         newCloseButton.addEventListener('click', () => {
@@ -320,7 +327,7 @@ export class Shop {
             return;
         }
 
-        const newRewardButton = rewardButton.cloneNode(true);
+        const newRewardButton = /** @type {HTMLButtonElement} */ (rewardButton.cloneNode(true));
         rewardButton.parentNode.replaceChild(newRewardButton, rewardButton);
 
         if (typeof onRewardedBoost !== 'function') {
@@ -359,6 +366,40 @@ export class Shop {
 
             this.refreshShop();
         });
+    }
+
+    setupUndoButton(onUndoPurchase, canUndoPurchase) {
+        const undoButton = document.querySelector('.shop-undo-btn');
+        if (!undoButton) {
+            return;
+        }
+
+        const newUndoButton = /** @type {HTMLButtonElement} */ (undoButton.cloneNode(true));
+        undoButton.parentNode.replaceChild(newUndoButton, undoButton);
+
+        if (typeof onUndoPurchase !== 'function') {
+            newUndoButton.style.display = 'none';
+            return;
+        }
+
+        newUndoButton.style.display = 'inline-block';
+        newUndoButton.textContent = 'Undo Last Purchase';
+        newUndoButton.disabled = !(typeof canUndoPurchase === 'function' && canUndoPurchase());
+
+        newUndoButton.addEventListener('click', () => {
+            playSFX('ui_click');
+            onUndoPurchase();
+            this.refreshShop();
+        });
+    }
+
+    updateUndoButtonState() {
+        const undoButton = /** @type {HTMLButtonElement | null} */ (document.querySelector('.shop-undo-btn'));
+        if (!undoButton || typeof this.currentCanUndoPurchase !== 'function') {
+            return;
+        }
+
+        undoButton.disabled = !this.currentCanUndoPurchase();
     }
 
     /**

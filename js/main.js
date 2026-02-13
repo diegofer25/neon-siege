@@ -30,6 +30,7 @@ let showPerformanceStats = false;
 let animationFrameId = null;
 let settingsModalWasPlaying = false;
 let adRestoreConsumedThisGameOver = false;
+const RUN_DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
 
 const APP_RUNTIME_KEY = '__NEON_TD_RUNTIME__';
 const appRuntime = window[APP_RUNTIME_KEY] || (window[APP_RUNTIME_KEY] = {
@@ -165,6 +166,10 @@ function getButtonElement(id) {
     return /** @type {HTMLButtonElement} */ (document.getElementById(id));
 }
 
+function normalizeDifficulty(value) {
+    return RUN_DIFFICULTY_VALUES.has(value) ? value : 'normal';
+}
+
 let lastHoverSfxAt = 0;
 
 function setupGlobalHoverSfxHooks() {
@@ -262,6 +267,7 @@ function init() {
         settingsManager.update({ showPerformanceStats: true });
     }
     applySettings(initialSettings);
+    syncStartDifficultyUI();
 
     // Display initial start screen
     document.getElementById('startScreen').classList.add('show');
@@ -518,6 +524,10 @@ export function startGame() {
         entryPoint: 'start_screen',
         statsOverlayEnabled: showPerformanceStats
     });
+
+    const selectedDifficulty = normalizeDifficulty(getSelectElement('startDifficulty').value);
+    game.setRunDifficulty(selectedDifficulty);
+    syncStartDifficultyUI(selectedDifficulty);
     
     // Start background music if audio is enabled
     if (audio.musicEnabled && audio.bgm) {
@@ -551,6 +561,7 @@ function restartGame() {
     });
 
     game.restart();
+    syncStartDifficultyUI(game.getRunDifficulty());
     syncSaveButtons();
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
@@ -843,7 +854,6 @@ function applySettings(settings) {
     document.getElementById('keybindHintsText').style.display = settings.showKeybindHints ? 'block' : 'none';
 
     game?.setRuntimeSettings({
-        difficulty: settings.difficulty,
         screenShakeEnabled: settings.screenShakeEnabled,
         performanceModeEnabled: settings.performanceModeEnabled
     });
@@ -858,7 +868,6 @@ function applySettings(settings) {
 function updateSettingsModalUI(settings = settingsManager.getSettings()) {
     getInputElement('settingSoundEnabled').checked = settings.soundEnabled;
     getInputElement('settingMusicEnabled').checked = settings.musicEnabled;
-    getSelectElement('settingDifficulty').value = settings.difficulty;
     getInputElement('settingScreenShake').checked = settings.screenShakeEnabled;
     getInputElement('settingPerformanceMode').checked = settings.performanceModeEnabled;
     getInputElement('settingShowStats').checked = settings.showPerformanceStats;
@@ -875,12 +884,6 @@ function setupSettingsControls() {
     document.getElementById('settingMusicEnabled').addEventListener('change', (event) => {
         const target = /** @type {HTMLInputElement} */ (event.currentTarget);
         const next = settingsManager.update({ musicEnabled: target.checked });
-        applySettings(next);
-    });
-
-    document.getElementById('settingDifficulty').addEventListener('change', (event) => {
-        const target = /** @type {HTMLSelectElement} */ (event.currentTarget);
-        const next = settingsManager.update({ difficulty: target.value });
         applySettings(next);
     });
 
@@ -987,6 +990,8 @@ function loadGameFromSave(source = 'unknown') {
         audio.bgm.play().catch(() => {});
     }
 
+    syncStartDifficultyUI(game.getRunDifficulty());
+
     settingsModalWasPlaying = false;
     adRestoreConsumedThisGameOver = source === 'game_over_ad' ? true : adRestoreConsumedThisGameOver;
     syncSaveButtons();
@@ -1009,6 +1014,16 @@ function syncSaveButtons() {
 
     const canSaveRun = game?.canSaveCurrentRun() || false;
     getButtonElement('saveGameBtn').disabled = !canSaveRun;
+}
+
+function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {
+    const difficultySelect = getSelectElement('startDifficulty');
+    if (!difficultySelect) {
+        return;
+    }
+
+    const normalized = normalizeDifficulty(difficultySelect.value);
+    difficultySelect.value = normalizeDifficulty(difficulty ?? normalized);
 }
 
 async function restoreAfterAdWatch() {

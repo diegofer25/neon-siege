@@ -73,6 +73,23 @@
   font-size: 18px;
 }
 
+.start-difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: 5px 0 var(--spacing-md);
+  color: #fff;
+  font-size: 16px;
+}
+
+.start-difficulty-row select {
+  background: #111;
+  border: 1px solid var(--color-primary-neon);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+
 /* Overlay Buttons */
 .overlay button {
   background: var(--gradient-button);

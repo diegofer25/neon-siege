@@ -15,10 +15,12 @@ import { telemetry } from "./managers/TelemetryManager.js";
 import { monetizationManager } from "./managers/MonetizationManager.js";
 
 const DEFAULT_RUNTIME_SETTINGS = {
-	difficulty: "normal",
 	screenShakeEnabled: true,
 	performanceModeEnabled: false,
 };
+
+const DEFAULT_RUN_DIFFICULTY = "normal";
+const RUN_DIFFICULTY_VALUES = new Set(["easy", "normal", "hard"]);
 
 /**
  * Main game class - now focused on coordination between systems rather than direct management.
@@ -109,6 +111,7 @@ export class Game {
 		};
 		this._initializeObjectPools();
 		this.runtimeSettings = { ...DEFAULT_RUNTIME_SETTINGS };
+		this.runDifficulty = DEFAULT_RUN_DIFFICULTY;
 	}
 
 	/**
@@ -245,6 +248,8 @@ export class Game {
 	 */
 	_initializeShop() {
 		this.shop = new Shop();
+		this.shopUndoSnapshots = [];
+		this.maxShopUndoSnapshots = 20;
 	}
 
 	/**
@@ -311,7 +316,7 @@ export class Game {
 		this.player.reset();
 		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
-		this.waveManager.setDifficulty(this.runtimeSettings.difficulty);
+		this.waveManager.setDifficulty(this.runDifficulty);
 		this._runWaveCountdown(() => {
 			this.waveManager.startWave(this.wave);
 		});
@@ -331,12 +336,23 @@ export class Game {
 		this.start();
 	}
 
+	setRunDifficulty(difficulty = DEFAULT_RUN_DIFFICULTY) {
+		const normalizedDifficulty = RUN_DIFFICULTY_VALUES.has(difficulty)
+			? difficulty
+			: DEFAULT_RUN_DIFFICULTY;
+		this.runDifficulty = normalizedDifficulty;
+		this.waveManager.setDifficulty(this.runDifficulty);
+	}
+
+	getRunDifficulty() {
+		return this.runDifficulty;
+	}
+
 	setRuntimeSettings(settings = {}) {
 		this.runtimeSettings = {
 			...this.runtimeSettings,
 			...settings,
 		};
-		this.waveManager.setDifficulty(this.runtimeSettings.difficulty);
 	}
 
 	/**
@@ -497,12 +513,21 @@ export class Game {
 	 */
 	showShop() {
 		playSFX("ui_shop_open");
+		this.clearShopUndoHistory();
 		this.shop.showShop(
 			this.player,
 			this.player.coins,
 			(powerUp, price) => this.purchasePowerUp(powerUp, price),
 			() => this.continueToNextWave(),
-			() => this.showRewardedCoinBoost()
+			async () => {
+				const result = await this.showRewardedCoinBoost();
+				if (result?.rewardGranted) {
+					this.clearShopUndoHistory();
+				}
+				return result;
+			},
+			() => this.undoLastShopPurchase(),
+			() => this.canUndoShopPurchase()
 		);
 	}
 
@@ -510,9 +535,11 @@ export class Game {
 	 * Process a power-up purchase from the shop.
 	 */
 	purchasePowerUp(powerUp, price) {
+		const beforePurchaseSnapshot = this._createPlayerSnapshot();
 		if (this.player.spendCoins(price)) {
 			powerUp.apply(this.player);
 			this.player.evaluateSynergies();
+			this._pushShopUndoSnapshot(beforePurchaseSnapshot);
 			playSFX("ui_purchase_success");
 			telemetry.track("shop_purchase", {
 				wave: this.wave,
@@ -535,6 +562,7 @@ export class Game {
 	 * Continue to the next wave after shopping phase.
 	 */
 	continueToNextWave() {
+		this.clearShopUndoHistory();
 		this.shop.closeShop();
 		playSFX("ui_shop_close");
 		this.wave++;
@@ -572,6 +600,67 @@ export class Game {
 				});
 			}
 		);
+	}
+
+	_createPlayerSnapshot() {
+		return structuredClone(this.player);
+	}
+
+	_restorePlayerFromSnapshot(snapshot) {
+		if (!snapshot || !this.player) {
+			return false;
+		}
+
+		for (const key of Object.keys(this.player)) {
+			delete this.player[key];
+		}
+
+		Object.assign(this.player, structuredClone(snapshot));
+		if (typeof this.player.evaluateSynergies === "function") {
+			this.player.evaluateSynergies();
+		}
+
+		return true;
+	}
+
+	_pushShopUndoSnapshot(snapshot) {
+		if (!snapshot) {
+			return;
+		}
+
+		this.shopUndoSnapshots.push(snapshot);
+		if (this.shopUndoSnapshots.length > this.maxShopUndoSnapshots) {
+			this.shopUndoSnapshots.shift();
+		}
+	}
+
+	canUndoShopPurchase() {
+		return this.shopUndoSnapshots.length > 0;
+	}
+
+	undoLastShopPurchase() {
+		const snapshot = this.shopUndoSnapshots.pop();
+		if (!snapshot) {
+			playSFX("ui_purchase_fail");
+			return false;
+		}
+
+		const restored = this._restorePlayerFromSnapshot(snapshot);
+		if (restored) {
+			playSFX("ui_purchase_success");
+			telemetry.track("shop_purchase_undone", {
+				wave: this.wave,
+				coinsAfterUndo: this.player.coins,
+			});
+			return true;
+		}
+
+		playSFX("ui_purchase_fail");
+		return false;
+	}
+
+	clearShopUndoHistory() {
+		this.shopUndoSnapshots.length = 0;
 	}
 
 	getActiveParticleLimit() {
@@ -760,6 +849,7 @@ export class Game {
 
 		return {
 			gameState: this.gameState,
+			difficulty: this.runDifficulty,
 			wave: this.wave,
 			checkpointWave: Math.max(1, checkpointWave),
 			score: this.score,
@@ -789,9 +879,10 @@ export class Game {
 		this.score = snapshot.score || 0;
 		this.gameState = Game.STATES.PLAYING;
 		this._gameOverTracked = false;
+		this.setRunDifficulty(snapshot.difficulty || DEFAULT_RUN_DIFFICULTY);
 
 		this.waveManager.reset();
-		this.waveManager.setDifficulty(this.runtimeSettings.difficulty);
+		this.waveManager.setDifficulty(this.runDifficulty);
 		this.waveManager.startWave(this.wave);
 
 		if (snapshot.modifierKey) {

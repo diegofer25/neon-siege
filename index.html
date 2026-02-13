@@ -87,6 +87,14 @@
             <p>Survive infinite waves of enemies</p>
             <p>Auto-targeting turret defense game</p>
             <p>Earn coins to buy power-ups between waves!</p>
+            <label class="start-difficulty-row" for="startDifficulty">
+                <span>Difficulty</span>
+                <select id="startDifficulty">
+                    <option value="easy">Easy</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </label>
             <button id="startBtn">CLICK TO START</button>
             <button id="loadSaveBtn" style="display: none;">LOAD LAST SAVE</button>
         </div>
@@ -109,14 +117,6 @@
                             <input id="settingMusicEnabled" type="checkbox" checked>
                             <span class="toggle-slider"></span>
                         </span>
-                    </label>
-                    <label class="settings-row">
-                        <span>Difficulty</span>
-                        <select id="settingDifficulty">
-                            <option value="easy">Easy</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="hard">Hard</option>
-                        </select>
                     </label>
                     <label class="settings-row">
                         <span>Screen Shake</span>
@@ -212,6 +212,7 @@
                 </div>
                 <div class="shop-footer">
                     <button class="shop-reward-btn">Ad Boost (+50%)</button>
+                    <button id="shopUndoBtn" class="shop-undo-btn">Undo Last Purchase</button>
                     <button class="shop-close-btn">Continue to Next Wave</button>
                 </div>
             </div>

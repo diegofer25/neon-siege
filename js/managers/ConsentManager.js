@@ -87,9 +87,13 @@ export class ConsentManager {
         });
 
         document.getElementById('consentSaveBtn')?.addEventListener('click', () => {
-            const analytics = !!document.getElementById('consentAnalytics')?.checked;
-            const ads = !!document.getElementById('consentAds')?.checked;
-            const personalizedAds = !!document.getElementById('consentPersonalizedAds')?.checked;
+            const analyticsInput = /** @type {HTMLInputElement | null} */ (document.getElementById('consentAnalytics'));
+            const adsInput = /** @type {HTMLInputElement | null} */ (document.getElementById('consentAds'));
+            const personalizedAdsInput = /** @type {HTMLInputElement | null} */ (document.getElementById('consentPersonalizedAds'));
+
+            const analytics = !!analyticsInput?.checked;
+            const ads = !!adsInput?.checked;
+            const personalizedAds = !!personalizedAdsInput?.checked;
 
             this.saveCustomPreferences({
                 analytics,
@@ -145,9 +149,9 @@ export class ConsentManager {
     }
 
     _syncFormFromState() {
-        const analyticsCheckbox = document.getElementById('consentAnalytics');
-        const adsCheckbox = document.getElementById('consentAds');
-        const personalizedAdsCheckbox = document.getElementById('consentPersonalizedAds');
+        const analyticsCheckbox = /** @type {HTMLInputElement | null} */ (document.getElementById('consentAnalytics'));
+        const adsCheckbox = /** @type {HTMLInputElement | null} */ (document.getElementById('consentAds'));
+        const personalizedAdsCheckbox = /** @type {HTMLInputElement | null} */ (document.getElementById('consentPersonalizedAds'));
 
         if (analyticsCheckbox) {
             analyticsCheckbox.checked = this.state.analytics;

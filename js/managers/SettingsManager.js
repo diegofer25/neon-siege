@@ -5,14 +5,11 @@ const SETTINGS_STORAGE_KEY = 'neon_td_settings_v1';
 const DEFAULT_SETTINGS = {
     soundEnabled: true,
     musicEnabled: true,
-    difficulty: 'normal',
     screenShakeEnabled: true,
     performanceModeEnabled: false,
     showPerformanceStats: false,
     showKeybindHints: true
 };
-
-const DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
 
 export class SettingsManager {
     constructor() {
@@ -37,10 +34,6 @@ export class SettingsManager {
             ...this.settings,
             ...partialSettings
         };
-
-        if (!DIFFICULTY_VALUES.has(next.difficulty)) {
-            next.difficulty = DEFAULT_SETTINGS.difficulty;
-        }
 
         this.settings = next;
         this._save();
