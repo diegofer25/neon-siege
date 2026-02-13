@@ -862,6 +862,16 @@ export class Player {
         
         this.hp -= amount;
         this.hp = Math.max(0, this.hp);
+
+        // Trigger low-health defensive power-ups immediately after damage is applied.
+        const healthRatio = this.maxHp > 0 ? (this.hp / this.maxHp) : 0;
+        if (this.hasBarrierPhase && !this.barrierPhaseActive && this.barrierPhaseCooldown <= 0 && healthRatio <= this.barrierPhaseThreshold) {
+            this.activateBarrierPhase();
+        }
+
+        if (this.emergencyHeal && this.emergencyHeal.active && this.emergencyHeal.cooldown <= 0 && healthRatio <= this.emergencyHeal.healThreshold) {
+            this.activateEmergencyHeal();
+        }
     }
     
     /**

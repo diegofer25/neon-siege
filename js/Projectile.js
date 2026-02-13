@@ -108,14 +108,14 @@ export class Projectile {
      */
     getCurrentDamage() {
         if (!this.piercing) {
-            return this.originalDamage;
+            return this.damage;
         }
 
         // Calculate damage reduction: 25% less damage for each enemy hit
         const damageReduction = this.enemiesHit * 0.25;
         const currentDamageMultiplier = Math.max(0, 1 - damageReduction);
 
-        return this.originalDamage * currentDamageMultiplier;
+        return this.damage * currentDamageMultiplier;
     }
     
     /**

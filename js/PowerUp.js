@@ -264,7 +264,7 @@ export class PowerUp {
 				}
 				const stacks = player.powerUpStacks["Lucky Shots"] || 0;
 				const diminishing = Math.pow(GameConfig.BALANCE.DIMINISHING_RETURN_BASE, stacks);
-				player.luckyShots.chance = Math.min(0.6, player.luckyShots.chance + 0.02 * diminishing);
+				player.luckyShots.chance = Math.min(0.6, player.luckyShots.chance + 0.10 * diminishing);
 				player.powerUpStacks["Lucky Shots"] = stacks + 1;
 			}
 		),
