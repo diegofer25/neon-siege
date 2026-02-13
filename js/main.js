@@ -149,6 +149,54 @@ function getButtonElement(id) {
     return /** @type {HTMLButtonElement} */ (document.getElementById(id));
 }
 
+let lastHoverSfxAt = 0;
+
+function setupGlobalHoverSfxHooks() {
+    const supportsHover = window.matchMedia?.('(hover: hover)')?.matches ?? true;
+    if (!supportsHover) {
+        return;
+    }
+
+    const interactiveSelector = [
+        'button',
+        '.shop-card',
+        '.tab-button',
+        '.shop-reward-btn',
+        '.shop-close-btn',
+        'a[href]',
+        'input[type="checkbox"]',
+        'input[type="range"]',
+        'select',
+        '[role="button"]'
+    ].join(',');
+
+    document.addEventListener('mouseover', (event) => {
+        const target = /** @type {HTMLElement|null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!target) {
+            return;
+        }
+
+        const interactive = target.closest(interactiveSelector);
+        if (!interactive) {
+            return;
+        }
+
+        const relatedTarget = /** @type {HTMLElement|null} */ (event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null);
+        const previousInteractive = relatedTarget ? relatedTarget.closest(interactiveSelector) : null;
+        if (previousInteractive === interactive) {
+            return;
+        }
+
+        const now = performance.now();
+        if (now - lastHoverSfxAt < 70) {
+            return;
+        }
+
+        lastHoverSfxAt = now;
+        playSFX('ui_card_hover');
+    }, true);
+}
+
 //=============================================================================
 // INITIALIZATION AND SETUP
 //=============================================================================
@@ -225,6 +273,7 @@ function init() {
     document.getElementById('restoreFromAdBtn').addEventListener('click', restoreAfterAdWatch);
 
     setupSettingsControls();
+    setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
     syncSaveButtons();
 }

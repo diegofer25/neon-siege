@@ -8,7 +8,7 @@ export const SOUND_EFFECT_MANIFEST = [
     { key: 'ui_shop_close', category: 'ui', durationSeconds: 1.5, promptInfluence: 0.35, text: 'Neon shop close cue, compact reverse-swoosh ending in a muted click, no voice.' },
     { key: 'ui_tab_switch', category: 'ui', durationSeconds: 1.0, promptInfluence: 0.35, text: 'Refined modern UI tab switch, smooth soft tick with light premium digital texture, no voice.' },
     { key: 'ui_menu_scroll', category: 'ui', durationSeconds: 0.9, promptInfluence: 0.35, text: 'Modern menu scroll sound, subtle polished whoosh-click for UI movement, no voice.' },
-    { key: 'ui_card_hover', category: 'ui', durationSeconds: 0.9, promptInfluence: 0.35, text: 'Clean ability-card hover sound, short friendly electronic blip, polished and soft, no voice.' },
+    { key: 'ui_card_hover', category: 'ui', durationSeconds: 0.5, promptInfluence: 0.4, text: 'Ultra-short UI hover blink sound, tiny crisp digital tick, very fast and minimal, clean and unobtrusive, no voice.' },
     { key: 'ui_purchase_success', category: 'ui', durationSeconds: 1.8, promptInfluence: 0.35, text: 'Arcade purchase success sound, optimistic synth chime, rewarding but short, no voice.' },
     { key: 'ui_purchase_fail', category: 'ui', durationSeconds: 1.4, promptInfluence: 0.35, text: 'Arcade purchase failed cue, low digital buzz and short negative blip, no voice.' },
     { key: 'game_over', category: 'system', durationSeconds: 2.8, promptInfluence: 0.3, text: 'Retro neon game over stinger, dramatic descending synth with soft impact, no voice.' },
