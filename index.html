@@ -87,14 +87,14 @@
             <p>Survive infinite waves of enemies</p>
             <p>Auto-targeting turret defense game</p>
             <p>Earn coins to buy power-ups between waves!</p>
-            <label class="start-difficulty-row" for="startDifficulty">
+            <div class="start-difficulty-row" aria-label="Difficulty">
                 <span>Difficulty</span>
-                <select id="startDifficulty">
-                    <option value="easy">Easy</option>
-                    <option value="normal" selected>Normal</option>
-                    <option value="hard">Hard</option>
-                </select>
-            </label>
+                <div class="start-difficulty-options" id="startDifficulty" role="radiogroup" aria-label="Select difficulty">
+                    <button type="button" role="radio" class="start-difficulty-option" data-difficulty="easy" aria-checked="false" tabindex="-1">Easy</button>
+                    <button type="button" role="radio" class="start-difficulty-option active" data-difficulty="normal" aria-checked="true" tabindex="0">Normal</button>
+                    <button type="button" role="radio" class="start-difficulty-option" data-difficulty="hard" aria-checked="false" tabindex="-1">Hard</button>
+                </div>
+            </div>
             <button id="startBtn">CLICK TO START</button>
             <button id="loadSaveBtn" style="display: none;">LOAD LAST SAVE</button>
         </div>

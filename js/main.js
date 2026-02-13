@@ -158,16 +158,85 @@ function getInputElement(id) {
     return /** @type {HTMLInputElement} */ (document.getElementById(id));
 }
 
-function getSelectElement(id) {
-    return /** @type {HTMLSelectElement} */ (document.getElementById(id));
-}
-
 function getButtonElement(id) {
     return /** @type {HTMLButtonElement} */ (document.getElementById(id));
 }
 
+function getStartDifficultyRoot() {
+    return /** @type {HTMLElement | null} */ (document.getElementById('startDifficulty'));
+}
+
 function normalizeDifficulty(value) {
     return RUN_DIFFICULTY_VALUES.has(value) ? value : 'normal';
+}
+
+function getSelectedStartDifficulty() {
+    const root = getStartDifficultyRoot();
+    if (!root) {
+        return 'normal';
+    }
+
+    const activeButton = /** @type {HTMLElement | null} */ (root.querySelector('.start-difficulty-option.active'));
+    return normalizeDifficulty(activeButton?.dataset.difficulty || 'normal');
+}
+
+function setupStartDifficultyControls() {
+    const root = getStartDifficultyRoot();
+    if (!root) {
+        return;
+    }
+
+    root.addEventListener('click', (event) => {
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!target) {
+            return;
+        }
+
+        const optionButton = /** @type {HTMLButtonElement | null} */ (target.closest('.start-difficulty-option'));
+        if (!optionButton) {
+            return;
+        }
+
+        const difficulty = normalizeDifficulty(optionButton.dataset.difficulty || 'normal');
+        syncStartDifficultyUI(difficulty);
+    });
+
+    root.addEventListener('keydown', (event) => {
+        const key = event.key;
+        const isForward = key === 'ArrowRight' || key === 'ArrowDown';
+        const isBackward = key === 'ArrowLeft' || key === 'ArrowUp';
+        const isFirst = key === 'Home';
+        const isLast = key === 'End';
+
+        if (!isForward && !isBackward && !isFirst && !isLast) {
+            return;
+        }
+
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        const currentButton = /** @type {HTMLButtonElement | null} */ (target?.closest('.start-difficulty-option') || null);
+        const optionButtons = Array.from(root.querySelectorAll('.start-difficulty-option'));
+        if (optionButtons.length === 0) {
+            return;
+        }
+
+        const currentIndex = Math.max(0, optionButtons.indexOf(currentButton || optionButtons[0]));
+        let nextIndex = currentIndex;
+        if (isFirst) {
+            nextIndex = 0;
+        } else if (isLast) {
+            nextIndex = optionButtons.length - 1;
+        } else if (isForward) {
+            nextIndex = (currentIndex + 1) % optionButtons.length;
+        } else if (isBackward) {
+            nextIndex = (currentIndex - 1 + optionButtons.length) % optionButtons.length;
+        }
+
+        const nextButton = /** @type {HTMLButtonElement} */ (optionButtons[nextIndex]);
+        const nextDifficulty = normalizeDifficulty(nextButton.dataset.difficulty || 'normal');
+        event.preventDefault();
+        syncStartDifficultyUI(nextDifficulty);
+        nextButton.focus();
+    });
 }
 
 let lastHoverSfxAt = 0;
@@ -295,6 +364,7 @@ function init() {
     document.getElementById('restoreFromAdBtn').addEventListener('click', restoreAfterAdWatch);
 
     setupSettingsControls();
+    setupStartDifficultyControls();
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
     syncSaveButtons();
@@ -525,7 +595,7 @@ export function startGame() {
         statsOverlayEnabled: showPerformanceStats
     });
 
-    const selectedDifficulty = normalizeDifficulty(getSelectElement('startDifficulty').value);
+    const selectedDifficulty = getSelectedStartDifficulty();
     game.setRunDifficulty(selectedDifficulty);
     syncStartDifficultyUI(selectedDifficulty);
     
@@ -1017,13 +1087,23 @@ function syncSaveButtons() {
 }
 
 function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {
-    const difficultySelect = getSelectElement('startDifficulty');
-    if (!difficultySelect) {
+    const root = getStartDifficultyRoot();
+    if (!root) {
         return;
     }
 
-    const normalized = normalizeDifficulty(difficultySelect.value);
-    difficultySelect.value = normalizeDifficulty(difficulty ?? normalized);
+    const activeButton = /** @type {HTMLElement | null} */ (root.querySelector('.start-difficulty-option.active'));
+    const currentDifficulty = normalizeDifficulty(activeButton?.dataset.difficulty || 'normal');
+    const nextDifficulty = normalizeDifficulty(difficulty ?? currentDifficulty);
+    const optionButtons = root.querySelectorAll('.start-difficulty-option');
+
+    optionButtons.forEach((button) => {
+        const option = /** @type {HTMLButtonElement} */ (button);
+        const isActive = normalizeDifficulty(option.dataset.difficulty || '') === nextDifficulty;
+        option.classList.toggle('active', isActive);
+        option.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        option.tabIndex = isActive ? 0 : -1;
+    });
 }
 
 async function restoreAfterAdWatch() {
