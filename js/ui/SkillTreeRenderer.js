@@ -100,6 +100,23 @@ export class SkillTreeRenderer {
 		/** @private */ this._dragPanStartX = 0;
 		/** @private */ this._dragPanStartY = 0;
 		/** @private */ this._boundHandlers = null;
+
+		// ── Node element maps (for in-place updates) ──
+		/** @private @type {Map<string, HTMLElement>} */
+		this._attrNodeEls = new Map();
+		/** @private @type {Map<string, HTMLElement>} */
+		this._skillNodeEls = new Map();
+		/** @private @type {SVGLineElement[]} */
+		this._edgeEls = [];
+
+		// ── Smooth zoom animation ──
+		/** @private */ this._targetZoom = 1;
+		/** @private */ this._targetPanX = 0;
+		/** @private */ this._targetPanY = 0;
+		/** @private */ this._animRAF = 0;
+
+		/** @private – live ref for dynamic tooltips */
+		this._sm = null;
 	}
 
 	// ── public API ──────────────────────────────────────────────────────────────
@@ -119,14 +136,16 @@ export class SkillTreeRenderer {
 	 * @param {import('../managers/SkillManager.js').SkillManager} sm
 	 */
 	render(sm) {
-		const isFirstRender = !this._worldEl;
-		this.viewport.innerHTML = '';
+		this._cancelAnimation();
+		this._removePanZoom();
+		this._sm = sm;
 
-		// World container (fixed internal size, scaled via CSS)
-		this._worldEl = document.createElement('div');
-		this._worldEl.className = 'tree-world';
-		this._worldEl.style.width = WORLD_W + 'px';
-		this._worldEl.style.height = WORLD_H + 'px';
+		// Build new world element off-DOM
+		const oldWorld = this._worldEl;
+		const newWorld = document.createElement('div');
+		newWorld.className = 'tree-world';
+		newWorld.style.width = WORLD_W + 'px';
+		newWorld.style.height = WORLD_H + 'px';
 
 		// SVG layer for edges / rings
 		this._svgEl = document.createElementNS(SVG_NS, 'svg');
@@ -135,12 +154,20 @@ export class SkillTreeRenderer {
 		this._svgEl.setAttribute('width', String(WORLD_W));
 		this._svgEl.setAttribute('height', String(WORLD_H));
 		this._addSVGDefs();
-		this._worldEl.appendChild(this._svgEl);
+		newWorld.appendChild(this._svgEl);
 
 		// Compute positions
 		this._layout = this._computeLayout();
 
-		// Draw
+		// Clear element maps
+		this._attrNodeEls.clear();
+		this._skillNodeEls.clear();
+		this._edgeEls = [];
+
+		// Set worldEl before sub-renders so they can append to it
+		this._worldEl = newWorld;
+
+		// Draw (sub-renders store element refs in maps)
 		this._renderEdges(sm);
 		this._renderHub();
 		this._renderAttributeNodes(sm);
@@ -152,30 +179,196 @@ export class SkillTreeRenderer {
 		this._tooltipEl.style.display = 'none';
 		this._worldEl.appendChild(this._tooltipEl);
 
-		this.viewport.appendChild(this._worldEl);
-
-		// Compute base scale; reset pan/zoom only on first open
-		this._baseScale = this._computeBaseScale();
-		if (isFirstRender) {
-			this._zoom = 1.14;
-			this._panX = 0;
-			this._panY = 0;
+		// Swap DOM in one operation (no empty-frame flash)
+		if (oldWorld && oldWorld.parentNode === this.viewport) {
+			this.viewport.replaceChild(newWorld, oldWorld);
+		} else {
+			this.viewport.innerHTML = '';
+			this.viewport.appendChild(newWorld);
 		}
+
+		// Always reset view to centered default on full render
+		this._baseScale = this._computeBaseScale();
+		this._zoom = 1.14;
+		this._panX = 0;
+		this._panY = 0;
+		this._targetZoom = 1.14;
+		this._targetPanX = 0;
+		this._targetPanY = 0;
 		this._applyTransform();
 		this._installPanZoom();
 	}
 
-	/** Convenience – re-renders to reflect updated SkillManager state. */
-	update(sm) { this.render(sm); }
+	/**
+	 * Lightweight in-place update – patches node states, ranks, and edges
+	 * without rebuilding the DOM, so zoom/pan are perfectly preserved.
+	 * @param {import('../managers/SkillManager.js').SkillManager} sm
+	 */
+	update(sm) {
+		if (!this._worldEl || !this._layout) {
+			this.render(sm);
+			return;
+		}
+		this._sm = sm;
+		this._hideTooltip();
+		this._updateAttributeNodeStates(sm);
+		this._updateSkillNodeStates(sm);
+		this._updateEdgeStates(sm);
+	}
+
+	/** Reset view to centered default (call on panel open). */
+	resetView() {
+		this._cancelAnimation();
+		this._baseScale = this._computeBaseScale();
+		this._zoom = 1.14;
+		this._panX = 0;
+		this._panY = 0;
+		this._targetZoom = 1.14;
+		this._targetPanX = 0;
+		this._targetPanY = 0;
+		this._applyTransform();
+	}
+
+	// ── in-place state updates ──────────────────────────────────────────────────
+
+	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
+	_updateAttributeNodeStates(sm) {
+		for (const [key] of Object.entries(this._layout.attributes)) {
+			const el = this._attrNodeEls.get(key);
+			if (!el) continue;
+
+			const attr = ATTRIBUTES[key];
+			const pts = sm.attributes[key] || 0;
+			const canAllocate = sm.unspentAttributePoints > 0 && pts < attr.maxPoints;
+
+			// Update value display
+			const valueEl = el.querySelector('.tree-node__value');
+			if (valueEl) valueEl.textContent = String(pts);
+
+			// Toggle available state + button
+			const hadAvailable = el.classList.contains('tree-node--available');
+			if (canAllocate && !hadAvailable) {
+				el.classList.add('tree-node--available');
+				if (!el.querySelector('.tree-node__add')) {
+					const btn = document.createElement('button');
+					btn.className = 'tree-node__add';
+					btn.textContent = '+';
+					btn.onclick = (e) => {
+						e.stopPropagation();
+						if (this._onAttrAllocate) this._onAttrAllocate(key);
+					};
+					el.appendChild(btn);
+				}
+			} else if (!canAllocate && hadAvailable) {
+				el.classList.remove('tree-node--available');
+				const btn = el.querySelector('.tree-node__add');
+				if (btn) btn.remove();
+			}
+		}
+	}
+
+	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
+	_updateSkillNodeStates(sm) {
+		for (const [archKey, archData] of Object.entries(this._layout.archetypes)) {
+			const isChosen = sm.chosenArchetype === archKey;
+			const isPlayable = PLAYABLE_ARCHETYPES.includes(archKey);
+			const isAvailable = isChosen || (!sm.chosenArchetype && isPlayable);
+
+			for (const nd of archData.nodes) {
+				const el = this._skillNodeEls.get(nd.skillId);
+				if (!el) continue;
+
+				const skill = nd.skill;
+				const rank = sm.skillRanks[skill.id] || 0;
+				const check = sm.canLearnSkill(skill.id);
+				const canLearn = check.allowed;
+				const isLearned = rank > 0;
+				const isMaxed = rank >= skill.maxRank;
+
+				// Determine new state class
+				let newState = 'tree-node--locked';
+				if (!isAvailable && !isLearned) newState = 'tree-node--dimmed';
+				else if (isMaxed) newState = 'tree-node--maxed';
+				else if (isLearned) newState = 'tree-node--learned';
+				else if (canLearn && sm.unspentSkillPoints > 0) newState = 'tree-node--available';
+
+				// Swap state classes
+				el.classList.remove(
+					'tree-node--locked', 'tree-node--dimmed', 'tree-node--maxed',
+					'tree-node--learned', 'tree-node--available',
+				);
+				el.classList.add(newState);
+
+				// Update rank display
+				const rankEl = el.querySelector('.tree-node__rank');
+				if (rankEl) {
+					if (skill.maxRank > 1) {
+						rankEl.textContent = `${rank}/${skill.maxRank}`;
+					} else if (isLearned) {
+						rankEl.textContent = '✓';
+					}
+				}
+
+				// Toggle clickability
+				const shouldBeClickable = canLearn && sm.unspentSkillPoints > 0 && isAvailable;
+				const wasClickable = el.classList.contains('tree-node--clickable');
+				if (shouldBeClickable && !wasClickable) {
+					el.classList.add('tree-node--clickable');
+					el.onclick = () => {
+						if (this._onSkillLearn) this._onSkillLearn(skill.id);
+					};
+				} else if (!shouldBeClickable && wasClickable) {
+					el.classList.remove('tree-node--clickable');
+					el.onclick = null;
+				}
+			}
+		}
+	}
+
+	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
+	_updateEdgeStates(sm) {
+		const edges = this._layout.edges;
+		for (let i = 0; i < edges.length; i++) {
+			const edge = edges[i];
+			const line = this._edgeEls[i];
+			if (!line || edge.type === 'center-attr') continue;
+
+			const archColor = edge.archKey
+				? (ARCHETYPES[edge.archKey]?.color || '#0ff')
+				: '#0ff';
+			const srcOk = !edge.sourceSkillId || (sm.skillRanks[edge.sourceSkillId] > 0);
+			const tgtOk = edge.targetSkillId && sm.skillRanks[edge.targetSkillId] > 0;
+			const isChosen = sm.chosenArchetype === edge.archKey;
+			const isPlayable = PLAYABLE_ARCHETYPES.includes(edge.archKey);
+
+			// Remove old state classes
+			line.classList.remove('tree-edge--active', 'tree-edge--available', 'tree-edge--dim');
+
+			if (tgtOk && srcOk) {
+				line.classList.add('tree-edge--active');
+				line.style.stroke = archColor;
+			} else if (isChosen || (!sm.chosenArchetype && isPlayable)) {
+				line.classList.add('tree-edge--available');
+				line.style.stroke = archColor;
+			} else {
+				line.classList.add('tree-edge--dim');
+			}
+		}
+	}
 
 	/** Tear down DOM and event listeners. */
 	destroy() {
+		this._cancelAnimation();
 		this._removePanZoom();
 		this.viewport.innerHTML = '';
 		this._layout = null;
 		this._tooltipEl = null;
 		this._worldEl = null;
 		this._svgEl = null;
+		this._attrNodeEls.clear();
+		this._skillNodeEls.clear();
+		this._edgeEls = [];
+		this._sm = null;
 	}
 
 	// ── layout computation ──────────────────────────────────────────────────────
@@ -350,6 +543,7 @@ export class SkillTreeRenderer {
 
 			line.setAttribute('class', cls);
 			g.appendChild(line);
+			this._edgeEls.push(line);
 		}
 
 		this._svgEl.appendChild(g);
@@ -398,16 +592,18 @@ export class SkillTreeRenderer {
 			}
 
 			node.addEventListener('mouseenter', () => {
+				const currPts = this._sm ? (this._sm.attributes[key] || 0) : pts;
 				this._showTooltip(node, {
 					name: attr.label,
 					icon: attr.icon,
 					description: attr.description,
-					extra: `Points: ${pts} / ${attr.maxPoints}`,
+					extra: `Points: ${currPts} / ${attr.maxPoints}`,
 					color: '#0ff',
 				});
 			});
 			node.addEventListener('mouseleave', () => this._hideTooltip());
 
+			this._attrNodeEls.set(key, node);
 			this._worldEl.appendChild(node);
 		}
 	}
@@ -497,13 +693,17 @@ export class SkillTreeRenderer {
 			el.onclick = () => { if (this._onSkillLearn) this._onSkillLearn(skill.id); };
 		}
 
-		// Tooltip
+		// Tooltip (uses live _sm reference for fresh data after in-place updates)
 		el.addEventListener('mouseenter', () => {
 			const typeLabel = skill.type[0].toUpperCase() + skill.type.slice(1);
+			const currRank = this._sm ? (this._sm.skillRanks[skill.id] || 0) : rank;
+			const currCheck = this._sm ? this._sm.canLearnSkill(skill.id) : check;
+			const currMaxed = currRank >= skill.maxRank;
+			const currLearned = currRank > 0;
 			let status = '';
-			if (isMaxed) status = '✨ MAX RANK';
-			else if (isLearned) status = `Rank ${rank}/${skill.maxRank}`;
-			else if (!canLearn) status = `🔒 ${check.reason}`;
+			if (currMaxed) status = '✨ MAX RANK';
+			else if (currLearned) status = `Rank ${currRank}/${skill.maxRank}`;
+			else if (!currCheck.allowed) status = `🔒 ${currCheck.reason}`;
 			else status = 'Click to learn (1 SP)';
 
 			this._showTooltip(el, {
@@ -517,6 +717,7 @@ export class SkillTreeRenderer {
 		});
 		el.addEventListener('mouseleave', () => this._hideTooltip());
 
+		this._skillNodeEls.set(nd.skillId, el);
 		this._worldEl.appendChild(el);
 	}
 
@@ -583,31 +784,44 @@ export class SkillTreeRenderer {
 	_installPanZoom() {
 		this._removePanZoom(); // idempotent
 
+		const MIN_ZOOM = 0.35;
+		const MAX_ZOOM = 4;
+		const ZOOM_SPEED = 0.12;
+
 		const onWheel = (e) => {
 			e.preventDefault();
-			const zoomSpeed = 0.12;
 			const dir = e.deltaY < 0 ? 1 : -1;
-			const oldZoom = this._zoom;
-			this._zoom = Math.min(4, Math.max(0.35, this._zoom * (1 + dir * zoomSpeed)));
-			const ratio = this._zoom / oldZoom;
+			const oldTarget = this._targetZoom;
+			this._targetZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM,
+				this._targetZoom * (1 + dir * ZOOM_SPEED)));
+			const ratio = this._targetZoom / oldTarget;
 
-			// Zoom towards cursor position
+			// Zoom towards cursor position (applied to target pan)
 			const rect = this.viewport.getBoundingClientRect();
 			const mx = e.clientX - rect.left;
 			const my = e.clientY - rect.top;
 			const vpW = this.viewport.clientWidth || 800;
 			const vpH = this.viewport.clientHeight || 600;
-			const cx0 = (vpW / 2) + this._panX;
-			const cy0 = (vpH / 2) + this._panY;
-			this._panX -= (mx - cx0) * (ratio - 1);
-			this._panY -= (my - cy0) * (ratio - 1);
-			this._applyTransform();
+			const cx0 = (vpW / 2) + this._targetPanX;
+			const cy0 = (vpH / 2) + this._targetPanY;
+			this._targetPanX -= (mx - cx0) * (ratio - 1);
+			this._targetPanY -= (my - cy0) * (ratio - 1);
+
+			// Start eased animation if not already running
+			if (!this._animRAF) {
+				this._animRAF = requestAnimationFrame(() => this._animateToTarget());
+			}
 		};
 
 		const onPointerDown = (e) => {
 			// Only pan with left/middle button on the viewport background
 			if (e.button > 1) return;
 			if (/** @type {HTMLElement} */ (e.target).closest('.tree-node, .tree-tooltip')) return;
+			// Snap to current animated position and stop animation
+			this._cancelAnimation();
+			this._targetZoom = this._zoom;
+			this._targetPanX = this._panX;
+			this._targetPanY = this._panY;
 			this._isDragging = true;
 			this._dragStartX = e.clientX;
 			this._dragStartY = e.clientY;
@@ -621,6 +835,8 @@ export class SkillTreeRenderer {
 			if (!this._isDragging) return;
 			this._panX = this._dragPanStartX + (e.clientX - this._dragStartX);
 			this._panY = this._dragPanStartY + (e.clientY - this._dragStartY);
+			this._targetPanX = this._panX;
+			this._targetPanY = this._panY;
 			this._applyTransform();
 		};
 
@@ -637,6 +853,47 @@ export class SkillTreeRenderer {
 		this.viewport.style.cursor = 'grab';
 
 		this._boundHandlers = { onWheel, onPointerDown, onPointerMove, onPointerUp };
+	}
+
+	// ── smooth animation ────────────────────────────────────────────────────────
+
+	/**
+	 * Interpolate current zoom/pan toward target values (~200ms settle).
+	 * Balanced smoothness + responsiveness via RAF lerp.
+	 */
+	_animateToTarget() {
+		const LERP = 0.2;
+		const ZOOM_EPS = 0.001;
+		const PAN_EPS = 0.5;
+
+		const dz = this._targetZoom - this._zoom;
+		const dpx = this._targetPanX - this._panX;
+		const dpy = this._targetPanY - this._panY;
+
+		if (Math.abs(dz) < ZOOM_EPS && Math.abs(dpx) < PAN_EPS && Math.abs(dpy) < PAN_EPS) {
+			// Snap to final values
+			this._zoom = this._targetZoom;
+			this._panX = this._targetPanX;
+			this._panY = this._targetPanY;
+			this._applyTransform();
+			this._animRAF = 0;
+			return;
+		}
+
+		this._zoom += dz * LERP;
+		this._panX += dpx * LERP;
+		this._panY += dpy * LERP;
+		this._applyTransform();
+
+		this._animRAF = requestAnimationFrame(() => this._animateToTarget());
+	}
+
+	/** Cancel any in-flight zoom/pan animation. */
+	_cancelAnimation() {
+		if (this._animRAF) {
+			cancelAnimationFrame(this._animRAF);
+			this._animRAF = 0;
+		}
 	}
 
 	/** Remove pan/zoom event listeners. */

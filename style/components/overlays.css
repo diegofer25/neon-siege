@@ -73,6 +73,26 @@
   font-size: 18px;
 }
 
+#startScreen::before {
+  background:
+    linear-gradient(180deg, rgba(2, 5, 18, 0.42) 0%, rgba(2, 5, 18, 0.78) 100%),
+    radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(255, 45, 236, 0.12) 0%, transparent 45%),
+    url('../../assets/images/start_screen_bg.jpg') center/cover no-repeat;
+  animation: none;
+}
+
+#startScreen .start-logo {
+  width: clamp(96px, 18vw, 180px);
+  height: auto;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  box-shadow:
+    0 0 18px rgba(0, 255, 255, 0.28),
+    0 0 28px rgba(255, 45, 236, 0.2);
+}
+
 .start-difficulty-row {
   display: flex;
   align-items: center;

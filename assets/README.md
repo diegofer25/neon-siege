@@ -2,6 +2,44 @@
 
 This folder stores game audio and visual assets.
 
+## Image Generation
+
+This project includes an offline image generator for gameplay and menu assets using Gemini image generation.
+
+- Script: `scripts/generate_image.sh`
+- Default output: `assets/images/`
+- Runtime loader (entities): `js/utils/SpriteRegistry.js`
+
+Expected gameplay sprite basenames used by the game runtime:
+
+- `player_ship`
+- `enemy_basic`
+- `enemy_fast`
+- `enemy_tank`
+- `enemy_splitter_g1`
+- `enemy_splitter_g2`
+- `enemy_splitter_g3`
+- `boss_classic`
+- `boss_shield`
+
+Additional generated UI assets:
+
+- `start_screen_bg`
+- `start_screen_logo`
+- `favicon_neon`
+
+Generate one image:
+
+```bash
+./scripts/generate_image.sh "your prompt" "player_ship"
+```
+
+Favicon production files are under `assets/icons/`:
+
+- `favicon-16x16.png`
+- `favicon-32x32.png`
+- `apple-touch-icon.png`
+
 ## Sound Effects Generation
 
 This project includes an offline generator for SFX using ElevenLabs.

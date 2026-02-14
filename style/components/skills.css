@@ -176,11 +176,13 @@
     flex: 1;
     position: relative;
     overflow: hidden;
+    touch-action: none;
 }
 
 /* World container (fixed size, scaled with CSS transform) */
 .tree-world {
     position: absolute;
+    will-change: transform;
 }
 
 /* SVG edge layer */
