@@ -1535,8 +1535,6 @@ export function showLevelUpPanel() {
             }
         },
     );
-    treeRenderer.render(sm);
-
     const resetBtn = document.getElementById('levelUpResetBtn');
     const confirmBtn = document.getElementById('levelUpConfirmBtn');
     if (resetBtn) {
@@ -1558,8 +1556,10 @@ export function showLevelUpPanel() {
         }
     };
 
+    // Show panel BEFORE rendering so viewport has real dimensions for centering
     panel.classList.add('show');
     _updateLevelUpActionButtons(sm);
+    treeRenderer.render(sm);
 }
 
 /** Refresh tree + point badges after spending a point. */

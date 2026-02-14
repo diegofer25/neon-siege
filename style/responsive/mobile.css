@@ -201,6 +201,14 @@
   
   .stat-label, .stat-value { font-size: 7px; }
   .stat-icon { font-size: 10px; }
+
+  .skill-slots {
+    bottom: 68px;
+  }
+
+  .passive-slots {
+    bottom: 124px;
+  }
 }
 
 /* Mobile Breakpoint */
@@ -256,6 +264,14 @@
 
   .shop-details-title {
     font-size: 9px;
+  }
+
+  .skill-slots {
+    bottom: 64px;
+  }
+
+  .passive-slots {
+    bottom: 116px;
   }
 
   .shop-details-subtitle,

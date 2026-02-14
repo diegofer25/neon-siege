@@ -197,6 +197,16 @@ export class SkillTreeRenderer {
 		this._targetPanY = 0;
 		this._applyTransform();
 		this._installPanZoom();
+
+		// Deferred refit: recalculate once the viewport has painted real dimensions.
+		// Handles cases where render is called before the panel is fully visible.
+		requestAnimationFrame(() => {
+			const newBase = this._computeBaseScale();
+			if (Math.abs(newBase - this._baseScale) > 0.01) {
+				this._baseScale = newBase;
+				this._applyTransform();
+			}
+		});
 	}
 
 	/**

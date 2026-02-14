@@ -7,7 +7,7 @@
     display: flex;
     gap: 6px;
     position: absolute;
-    bottom: 12px;
+    bottom: 76px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
@@ -17,7 +17,7 @@
     display: flex;
     gap: 6px;
     position: absolute;
-    bottom: 72px;
+    bottom: 136px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
