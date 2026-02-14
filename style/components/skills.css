@@ -483,9 +483,34 @@
 
 /* Confirm button with glow */
 .glow-btn {
-    margin: 0 auto 14px;
-    display: block;
+    margin: 0;
+    display: inline-flex;
     min-width: 160px;
+}
+
+.skill-tree-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px 14px;
+}
+
+.skill-tree-actions button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: saturate(0.55);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.skill-tree-actions button:disabled::before {
+    display: none;
+}
+
+.skill-tree-actions button:disabled:hover {
+    animation: none;
+    transform: none;
 }
 
 /* ---- Pulse animation ---- */

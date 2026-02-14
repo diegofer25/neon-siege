@@ -154,11 +154,12 @@ export class SkillTreeRenderer {
 
 		this.viewport.appendChild(this._worldEl);
 
-		// Compute base scale; focus initial view on pickable/playable branches
+		// Compute base scale; reset pan/zoom only on first open
 		this._baseScale = this._computeBaseScale();
 		if (isFirstRender) {
-			const bounds = this._computeInitialFocusBounds(sm);
-			this._fitViewToBounds(bounds);
+			this._zoom = 1.14;
+			this._panX = 0;
+			this._panY = 0;
 		}
 		this._applyTransform();
 		this._installPanZoom();
@@ -563,79 +564,6 @@ export class SkillTreeRenderer {
 		const vpW = this.viewport.clientWidth || 800;
 		const vpH = this.viewport.clientHeight || 600;
 		return Math.min(vpW / WORLD_W, vpH / WORLD_H);
-	}
-
-	/**
-	 * Compute world bounds for the initial camera focus.
-	 * Focuses only playable trees (or chosen archetype) plus their linked attributes.
-	 */
-	_computeInitialFocusBounds(sm) {
-		const focusArchKeys = sm.chosenArchetype
-			? [sm.chosenArchetype]
-			: PLAYABLE_ARCHETYPES.filter((key) => !!this._layout.archetypes[key]);
-
-		let minX = Infinity;
-		let minY = Infinity;
-		let maxX = -Infinity;
-		let maxY = -Infinity;
-
-		const includeNode = (x, y, size) => {
-			const half = size / 2;
-			minX = Math.min(minX, x - half);
-			minY = Math.min(minY, y - half);
-			maxX = Math.max(maxX, x + half);
-			maxY = Math.max(maxY, y + half);
-		};
-
-		includeNode(CX, CY, HUB_SIZE);
-
-		for (const archKey of focusArchKeys) {
-			const archLayout = this._layout.archetypes[archKey];
-			if (!archLayout) continue;
-
-			const attrKey = ARCHETYPE_LAYOUT[archKey]?.attrKey;
-			const attrPos = attrKey ? this._layout.attributes[attrKey] : null;
-			if (attrPos) includeNode(attrPos.x, attrPos.y, ATTR_NODE_SIZE);
-
-			for (const node of archLayout.nodes) {
-				const size = node.type === 'ultimate' ? ULT_NODE_SIZE : NODE_SIZE;
-				includeNode(node.x, node.y, size);
-			}
-		}
-
-		if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
-			return { minX: 0, minY: 0, maxX: WORLD_W, maxY: WORLD_H };
-		}
-
-		const pad = 56;
-		return {
-			minX: Math.max(0, minX - pad),
-			minY: Math.max(0, minY - pad),
-			maxX: Math.min(WORLD_W, maxX + pad),
-			maxY: Math.min(WORLD_H, maxY + pad),
-		};
-	}
-
-	/** Fit current camera transform to world-space bounds. */
-	_fitViewToBounds(bounds) {
-		const vpW = this.viewport.clientWidth || 800;
-		const vpH = this.viewport.clientHeight || 600;
-
-		const width = Math.max(120, bounds.maxX - bounds.minX);
-		const height = Math.max(120, bounds.maxY - bounds.minY);
-		const usableW = Math.max(120, vpW - 80);
-		const usableH = Math.max(120, vpH - 80);
-
-		const desiredScale = Math.min(usableW / width, usableH / height);
-		const baseScale = this._computeBaseScale();
-		this._baseScale = baseScale;
-		this._zoom = Math.min(4, Math.max(0.35, desiredScale / baseScale));
-
-		const finalScale = this._baseScale * this._zoom;
-		const centerX = (bounds.minX + bounds.maxX) / 2;
-		const centerY = (bounds.minY + bounds.maxY) / 2;
-		this._panX = (WORLD_W / 2 - centerX) * finalScale;
-		this._panY = (WORLD_H / 2 - centerY) * finalScale;
 	}
 
 	/** Apply current zoom + pan transform to the world element. */

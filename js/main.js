@@ -1454,6 +1454,53 @@ import { SkillTreeRenderer } from './ui/SkillTreeRenderer.js';
 
 /** @type {SkillTreeRenderer|null} */
 let treeRenderer = null;
+/** @type {ReturnType<import('./managers/SkillManager.js').SkillManager['getSaveState']>|null} */
+let levelUpPanelSnapshot = null;
+
+function _areArraysEqual(a = [], b = []) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
+function _isObjectShallowEqual(a = {}, b = {}) {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+        if (a[key] !== b[key]) return false;
+    }
+    return true;
+}
+
+function _hasLevelUpSelectionChanges(sm) {
+    if (!levelUpPanelSnapshot) return false;
+
+    return !(
+        _isObjectShallowEqual(sm.attributes, levelUpPanelSnapshot.attributes) &&
+        _isObjectShallowEqual(sm.skillRanks, levelUpPanelSnapshot.skillRanks) &&
+        _isObjectShallowEqual(sm.treeInvestment, levelUpPanelSnapshot.treeInvestment) &&
+        _areArraysEqual(sm.equippedPassives, levelUpPanelSnapshot.equippedPassives) &&
+        _areArraysEqual(sm.equippedActives, levelUpPanelSnapshot.equippedActives) &&
+        sm.equippedUltimate === levelUpPanelSnapshot.equippedUltimate &&
+        sm.unspentSkillPoints === levelUpPanelSnapshot.unspentSkillPoints &&
+        sm.unspentAttributePoints === levelUpPanelSnapshot.unspentAttributePoints
+    );
+}
+
+function _updateLevelUpActionButtons(sm) {
+    const resetBtn = document.getElementById('levelUpResetBtn');
+    const confirmBtn = document.getElementById('levelUpConfirmBtn');
+    if (!resetBtn || !confirmBtn) return;
+
+    const hasChanges = _hasLevelUpSelectionChanges(sm);
+    const hasUnspentPoints = sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0;
+
+    resetBtn.disabled = !hasChanges;
+    confirmBtn.disabled = hasUnspentPoints;
+}
 
 /**
  * Show level-up panel (between waves or mid-wave).
@@ -1464,6 +1511,7 @@ export function showLevelUpPanel() {
     const sm = game.skillManager;
     const panel = document.getElementById('levelUpPanel');
     const titleEl = document.getElementById('levelUpTitle');
+    levelUpPanelSnapshot = sm.getSaveState();
     titleEl.textContent = `LEVEL ${sm.level}!`;
 
     // Update point badges
@@ -1489,8 +1537,19 @@ export function showLevelUpPanel() {
     );
     treeRenderer.render(sm);
 
+    const resetBtn = document.getElementById('levelUpResetBtn');
     const confirmBtn = document.getElementById('levelUpConfirmBtn');
+    if (resetBtn) {
+        resetBtn.onclick = () => {
+            if (!levelUpPanelSnapshot) return;
+            sm.restoreFromSave(levelUpPanelSnapshot);
+            _refreshTree(sm);
+            playSFX('ui_click');
+        };
+    }
     confirmBtn.onclick = () => {
+        if (confirmBtn.disabled) return;
+        levelUpPanelSnapshot = null;
         panel.classList.remove('show');
         if (game.gameState === 'levelup') {
             game.completeMidWaveLevelUp();
@@ -1500,6 +1559,7 @@ export function showLevelUpPanel() {
     };
 
     panel.classList.add('show');
+    _updateLevelUpActionButtons(sm);
 }
 
 /** Refresh tree + point badges after spending a point. */
@@ -1507,6 +1567,7 @@ function _refreshTree(sm) {
     document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
     document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
     if (treeRenderer) treeRenderer.update(sm);
+    _updateLevelUpActionButtons(sm);
 }
 
 /**
