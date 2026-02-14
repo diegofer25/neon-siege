@@ -194,6 +194,20 @@ export class Player {
         /** @type {Object|null} Aggregated ascension effects cache */
         this._ascensionEffects = null;
 
+		// ── Active skill buff state ──
+		/** @type {Object} Active skill buffs keyed by name, each with its own timer/state */
+		this._skillBuffs = {};
+
+		// ── Technomancer passive effect slots (set by Game._syncPlayerFromSkills) ──
+		/** @type {Object|null} Chain Hit config: {chance, range, escalation} */
+		this.chainHit = null;
+		/** @type {Object|null} Volatile Kills config: {percent, radius} */
+		this.volatileKills = null;
+		/** @type {Object|null} Elemental Synergy config: {bonus} */
+		this.elementalSynergy = null;
+		/** @type {Object|null} Meltdown config: {chance, damageRatio, radius} */
+		this.meltdown = null;
+
     }
 
     /**
@@ -224,6 +238,24 @@ export class Player {
         this.persistentCritBonus += amount;
         this.externalModifiers.critBonus = this.persistentCritBonus;
     }
+
+	/**
+	 * Activate a timed skill buff (called by Game.castActiveSkill).
+	 * @param {string} buffName - Unique buff identifier
+	 * @param {Object} config - Buff-specific configuration with at least a `duration` field (ms)
+	 */
+	activateSkillBuff(buffName, config) {
+		this._skillBuffs[buffName] = { ...config, elapsed: 0 };
+	}
+
+	/**
+	 * Check if a skill buff is currently active.
+	 * @param {string} buffName
+	 * @returns {Object|null} The buff state or null
+	 */
+	getSkillBuff(buffName) {
+		return this._skillBuffs[buffName] || null;
+	}
     
     /**
      * Reset player to initial state (called on game restart)
@@ -294,8 +326,15 @@ export class Player {
         
         this.overchargeBurst = null;
         this.emergencyHeal = null;
+
+        // Reset skill buffs and Technomancer passives
+        this._skillBuffs = {};
+        this.chainHit = null;
+        this.volatileKills = null;
+        this.elementalSynergy = null;
+        this.meltdown = null;
     }
-    
+
     /**
      * Update player state each frame
      * Handles rotation, targeting, firing, regeneration, and power-up effects
@@ -378,16 +417,87 @@ export class Player {
         }
         
         // Check for Emergency Heal activation
-        if (this.emergencyHeal && this.emergencyHeal.active && 
-            this.hp / this.maxHp <= this.emergencyHeal.healThreshold && 
+        if (this.emergencyHeal && this.emergencyHeal.active &&
+            this.hp / this.maxHp <= this.emergencyHeal.healThreshold &&
             this.emergencyHeal.cooldown <= 0) {
             this.activateEmergencyHeal();
         }
+
+		// ── Tick active skill buffs ──
+		this._updateSkillBuffs(delta, game);
     }
     
     /**
+     * Tick all active skill buffs, removing expired ones and executing per-frame effects.
+     * @private
+     * @param {number} delta - ms since last frame
+     * @param {import('./Game.js').Game} game
+     */
+    _updateSkillBuffs(delta, game) {
+        // ── Focused Fire: just a timed fire rate buff ──
+        const ff = this._skillBuffs.focusedFire;
+        if (ff) {
+            ff.elapsed += delta;
+            if (ff.elapsed >= ff.duration) {
+                delete this._skillBuffs.focusedFire;
+            }
+        }
+
+        // ── Bullet Storm: spawn homing projectiles over duration ──
+        const bs = this._skillBuffs.bulletStorm;
+        if (bs && bs.shotsRemaining > 0) {
+            bs.elapsed += delta;
+            bs.timer += delta;
+            while (bs.timer >= bs.interval && bs.shotsRemaining > 0) {
+                bs.timer -= bs.interval;
+                bs.shotsRemaining--;
+                // Fire a homing projectile at nearest enemy
+                const target = this.findNearestEnemy(game.enemies);
+                if (target) {
+                    const angle = Math.atan2(target.y - this.y, target.x - this.x);
+                    const baseDmg = GameConfig.PLAYER.BASE_DAMAGE * this.damageMod;
+                    const proj = this._createProjectile(game, angle, baseDmg);
+                    if (proj) {
+                        proj.hasHoming = true;
+                        proj.homingStrength = 0.08;
+                        game.projectiles.push(proj);
+                    }
+                }
+            }
+            if (bs.shotsRemaining <= 0 || bs.elapsed >= bs.duration) {
+                delete this._skillBuffs.bulletStorm;
+            }
+        }
+
+        // ── Aimbot Overdrive: rapid-fire homing shots at ALL enemies ──
+        const ao = this._skillBuffs.aimbotOverdrive;
+        if (ao) {
+            ao.elapsed += delta;
+            ao.fireTimer += delta;
+            while (ao.fireTimer >= ao.fireInterval && game.enemies.length > 0) {
+                ao.fireTimer -= ao.fireInterval;
+                // Pick a random enemy to fire at
+                const enemy = game.enemies[Math.floor(Math.random() * game.enemies.length)];
+                if (enemy) {
+                    const angle = Math.atan2(enemy.y - this.y, enemy.x - this.x);
+                    const baseDmg = GameConfig.PLAYER.BASE_DAMAGE * this.damageMod * ao.damageMultiplier;
+                    const proj = this._createProjectile(game, angle, baseDmg);
+                    if (proj) {
+                        proj.hasHoming = true;
+                        proj.homingStrength = 0.12;
+                        game.projectiles.push(proj);
+                    }
+                }
+            }
+            if (ao.elapsed >= ao.duration) {
+                delete this._skillBuffs.aimbotOverdrive;
+            }
+        }
+    }
+
+    /**
      * Update targeting system - track current target and decide when to switch
-     * 
+     *
      * @private
      * @param {Object} nearestEnemy - Closest enemy to player
      * @param {number} delta - Time elapsed since last frame
@@ -581,7 +691,13 @@ export class Player {
      * const interval = player.getFireInterval(); // Returns baseFireRate / 2
      */
     getFireInterval() {
-        return this.baseFireRate / this.fireRateMod;
+        let mod = this.fireRateMod;
+        // Focused Fire active buff doubles fire rate
+        const ff = this._skillBuffs.focusedFire;
+        if (ff) {
+            mod *= ff.fireRateMultiplier;
+        }
+        return this.baseFireRate / mod;
     }
     
     /**
@@ -947,6 +1063,9 @@ export class Player {
                 // Apply burn damage as percentage of enemy's max health
                 const burnDamage = enemy.maxHealth * damagePerSecond * deltaSeconds;
                 enemy.takeDamage(burnDamage);
+                enemy.isBurning = true;
+            } else {
+                enemy.isBurning = false;
             }
         });
     }

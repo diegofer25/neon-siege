@@ -190,8 +190,13 @@ export class SkillManager {
 				return { allowed: false, reason: `Max ${SKILL_SLOTS.ACTIVE_MAX} actives equipped.` };
 			}
 			if (skill.type === 'ultimate') {
-				if (!this.ultimateUnlocked) {
-					return { allowed: false, reason: 'Ultimate unlocks after defeating the first boss.' };
+				// Ultimate unlocks when any non-ultimate T4 skill in the same archetype is learned
+				const archetype = ARCHETYPES[archetypeKey];
+				const hasT4Passive = archetype.skills.some(
+					s => s.tier === 4 && s.type !== 'ultimate' && (this.skillRanks[s.id] || 0) >= 1
+				);
+				if (!hasT4Passive) {
+					return { allowed: false, reason: 'Learn a Tier 4 skill in this tree to unlock the ultimate.' };
 				}
 				if (this.equippedUltimate) {
 					return { allowed: false, reason: 'Ultimate slot already filled.' };
@@ -284,6 +289,20 @@ export class SkillManager {
 	}
 
 	/**
+	 * Get the skill definition and rank for an active/ultimate skill, used by Game
+	 * to execute the actual effect after tryCast() succeeds.
+	 * @param {string} skillId
+	 * @returns {{skill: Object, rank: number}|null}
+	 */
+	getActiveSkillInfo(skillId) {
+		const { skill } = this._findSkill(skillId);
+		if (!skill) return null;
+		const rank = this.skillRanks[skillId] || 0;
+		if (rank < 1) return null;
+		return { skill, rank };
+	}
+
+	/**
 	 * Get effective cooldown after level CDR + INT CDR + ascension modifiers.
 	 * @param {Object} skill
 	 * @returns {number} Effective cooldown in ms
@@ -367,7 +386,7 @@ export class SkillManager {
 			skillId: this.equippedUltimate,
 			skill: ultSkill,
 			isUltimate: true,
-			locked: !this.ultimateUnlocked,
+			locked: !this.equippedUltimate,
 		});
 
 		return slots;
@@ -415,9 +434,10 @@ export class SkillManager {
 			homingStrength: 0,
 			hasSynergyBonus: false,
 			synergyDamageBonus: 0,
-			hasEnergyOverload: false,
-			energyOverloadChargePerHit: 0,
-			energyOverloadBonusDamage: 1,
+			hasMeltdown: false,
+			meltdownChance: 0,
+			meltdownDamageRatio: 0,
+			meltdownRadius: 0,
 			chainDamageEscalation: 0,
 		};
 
@@ -486,10 +506,11 @@ export class SkillManager {
 					effects.hasSynergyBonus = true;
 					effects.synergyDamageBonus = skill.effect.synergyDamageBonus + skill.effect.bonusPerRank * (rank - 1);
 					break;
-				case 'techno_overload':
-					effects.hasEnergyOverload = true;
-					effects.energyOverloadChargePerHit = skill.effect.chargePerHit;
-					effects.energyOverloadBonusDamage = skill.effect.bonusDamageMultiplier;
+				case 'techno_meltdown':
+					effects.hasMeltdown = true;
+					effects.meltdownChance = skill.effect.meltdownChance + skill.effect.chancePerRank * (rank - 1);
+					effects.meltdownDamageRatio = skill.effect.meltdownDamageRatio;
+					effects.meltdownRadius = skill.effect.meltdownRadius;
 					break;
 				case 'techno_chain_master':
 					effects.chainDamageEscalation = skill.effect.chainDamageEscalation;

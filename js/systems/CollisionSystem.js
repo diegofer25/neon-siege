@@ -139,6 +139,41 @@ export class CollisionSystem {
             playSFX('impact_enemy_hit');
         }
 
+        // Meltdown: hitting a burning enemy triggers a bonus explosion
+        const meltdown = this.game.player?.meltdown;
+        if (meltdown && enemy.isBurning && Math.random() < meltdown.chance) {
+            const meltdownDmg = currentDamage * meltdown.damageRatio;
+            // Deal AoE damage around the burning enemy
+            for (const e of this.game.enemies) {
+                if (e === enemy || e.dying || e.health <= 0) continue;
+                const ddx = e.x - enemy.x;
+                const ddy = e.y - enemy.y;
+                if (ddx * ddx + ddy * ddy <= meltdown.radius * meltdown.radius) {
+                    e.takeDamage(meltdownDmg * (1 - Math.sqrt(ddx * ddx + ddy * ddy) / meltdown.radius));
+                }
+            }
+            this.game.createExplosion(enemy.x, enemy.y, 6);
+            this.game.createExplosionRing(enemy.x, enemy.y, meltdown.radius);
+        }
+
+        // Volatile Kills: enemy death explosion
+        if (enemy.health <= 0 && !enemy.dying) {
+            const volatileKills = this.game.player?.volatileKills;
+            if (volatileKills) {
+                const deathDmg = enemy.maxHealth * volatileKills.percent;
+                for (const e of this.game.enemies) {
+                    if (e === enemy || e.dying || e.health <= 0) continue;
+                    const ddx = e.x - enemy.x;
+                    const ddy = e.y - enemy.y;
+                    if (ddx * ddx + ddy * ddy <= volatileKills.radius * volatileKills.radius) {
+                        e.takeDamage(deathDmg);
+                    }
+                }
+                this.game.createExplosion(enemy.x, enemy.y, 10);
+                this.game.createExplosionRing(enemy.x, enemy.y, volatileKills.radius);
+            }
+        }
+
         // Non-piercing projectiles are consumed on first hit
         if (!projectile.piercing) {
             this._removeProjectileAt(projectileIndex);

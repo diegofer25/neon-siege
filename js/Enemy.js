@@ -43,6 +43,8 @@ export class Enemy {
         
         // Status effects
         this.slowFactor = 1; // Movement speed multiplier (1 = normal, <1 = slowed)
+        this._empSlowTimer = 0; // Remaining EMP slow duration (ms)
+        this.isBurning = false; // Whether enemy is currently affected by burn
         
         // Death animation properties
         this.dying = false; // Whether enemy is in death animation
@@ -111,8 +113,18 @@ export class Enemy {
             this.vy = 0;
         }
         
-        // Reset slow factor each frame (reapplied by slow towers if in range)
-        this.slowFactor = 1;
+        // Reset slow factor each frame (reapplied by slow towers if in range),
+        // unless an EMP timed slow is active
+        if (this._empSlowTimer > 0) {
+            this._empSlowTimer -= delta;
+            if (this._empSlowTimer <= 0) {
+                this._empSlowTimer = 0;
+                this.slowFactor = 1;
+            }
+            // slowFactor stays as set by EMP Pulse
+        } else {
+            this.slowFactor = 1;
+        }
         
         // Player collision is handled centrally by CollisionSystem
     }

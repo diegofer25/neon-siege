@@ -97,6 +97,10 @@ export class Projectile {
         this.shieldRegenDelay = 0;
         this.hasHoming = false;
         this.homingStrength = 0;
+
+        // Chain explosion tracking (prevents infinite chain loops)
+        this._isChainExplosion = false;
+        this._chainBounce = 0;
     }
     
     /**
@@ -247,6 +251,9 @@ export class Projectile {
         // Create visual explosion ring to show blast radius
         game.createExplosionRing(this.x, this.y, this.explosionRadius);
         
+        // Track enemies hit for chain explosion logic
+        const hitEnemies = [];
+
         // Apply area damage to all enemies within explosion radius
         game.enemies.forEach(enemy => {
             if (excludedEnemyId !== null && enemy.id === excludedEnemyId) {
@@ -268,7 +275,14 @@ export class Projectile {
             
             if (distance <= this.explosionRadius) {
                 // Calculate damage falloff based on distance from explosion center
-                const damage = this.explosionDamage * (1 - distance / this.explosionRadius);
+                let damage = this.explosionDamage * (1 - distance / this.explosionRadius);
+
+                // Elemental Synergy: bonus damage on burning enemies
+                const synergy = game.player?.elementalSynergy;
+                if (synergy && enemy.isBurning) {
+                    damage *= (1 + synergy.bonus);
+                }
+
                 game.trace('explosion.hit', {
                     enemyId: enemy.id,
                     damage,
@@ -276,7 +290,8 @@ export class Projectile {
                     distance
                 });
                 enemy.takeDamage(damage);
-                
+                hitEnemies.push(enemy);
+
                 // Display damage number floating text
                 const rect = game.canvas.getBoundingClientRect();
                 const canvasWidth = game.canvas.logicalWidth || game.canvas.width;
@@ -294,7 +309,66 @@ export class Projectile {
                 });
             }
         });
-        
+
+        // Chain Hit: chance to chain explosion to a nearby enemy
+        const chainHit = game.player?.chainHit;
+        if (chainHit && hitEnemies.length > 0 && !this._isChainExplosion) {
+            const chainChance = chainHit.chance;
+            if (Math.random() < chainChance) {
+                // Find nearest enemy NOT already hit by this explosion
+                const hitIds = new Set(hitEnemies.map(e => e.id));
+                if (excludedEnemyId !== null) hitIds.add(excludedEnemyId);
+                let nearest = null;
+                let nearestDist = Infinity;
+                for (const enemy of game.enemies) {
+                    if (hitIds.has(enemy.id) || enemy.dying || enemy.health <= 0) continue;
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const dist = dx * dx + dy * dy;
+                    if (dist <= chainHit.range * chainHit.range && dist < nearestDist) {
+                        nearestDist = dist;
+                        nearest = enemy;
+                    }
+                }
+                if (nearest) {
+                    // Chain Master: escalating damage per bounce
+                    const bounceNum = (this._chainBounce || 0) + 1;
+                    const escalation = chainHit.escalation || 0;
+                    const chainDamage = this.explosionDamage * (1 + escalation * bounceNum);
+
+                    game.createExplosion(nearest.x, nearest.y, 8);
+                    game.createExplosionRing(nearest.x, nearest.y, this.explosionRadius * 0.7);
+
+                    // Apply chain damage to the target
+                    nearest.takeDamage(chainDamage);
+
+                    // If Chain Master allows further chaining, attempt another bounce
+                    if (escalation > 0 && Math.random() < chainChance) {
+                        // Re-use explode logic for further chains
+                        const furtherHitIds = new Set([...hitIds, nearest.id]);
+                        let nextNearest = null;
+                        let nextDist = Infinity;
+                        for (const enemy of game.enemies) {
+                            if (furtherHitIds.has(enemy.id) || enemy.dying || enemy.health <= 0) continue;
+                            const ddx = enemy.x - nearest.x;
+                            const ddy = enemy.y - nearest.y;
+                            const d = ddx * ddx + ddy * ddy;
+                            if (d <= chainHit.range * chainHit.range && d < nextDist) {
+                                nextDist = d;
+                                nextNearest = enemy;
+                            }
+                        }
+                        if (nextNearest) {
+                            const nextDamage = chainDamage * (1 + escalation);
+                            nextNearest.takeDamage(nextDamage);
+                            game.createExplosion(nextNearest.x, nextNearest.y, 6);
+                            game.createExplosionRing(nextNearest.x, nextNearest.y, this.explosionRadius * 0.5);
+                        }
+                    }
+                }
+            }
+        }
+
         // Add screen shake effect for impact feedback
         game.addScreenShake(5, 200);
     }

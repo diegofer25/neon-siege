@@ -5,7 +5,7 @@
  * - 5 RPG attributes (STR, DEX, VIT, INT, LUCK) allocated via points
  * - 5 archetype skill trees (2 shipped: Gunner, Technomancer; 3 stubbed)
  * - 4 tiers per tree with gate thresholds (3/6/10 points)
- * - Ultimates per archetype, unlocked at first boss (wave 10)
+ * - Ultimates per archetype, unlocked by completing branch (T4 passive learned)
  * - Ascension modifiers (pick 1 of 3 every 10 waves)
  * - XP/level curve targeting 15-20 levels in a 50-wave run
  */
@@ -176,17 +176,11 @@ export const ARCHETYPES = {
 		color: '#ff4444',
 		icon: '🎯',
 		skills: [
-			// ── Tier 1 ──
-			{
-				id: 'gunner_rapid_fire',
-				name: 'Rapid Fire',
-				description: '+15% fire rate per rank.',
-				icon: '🔥',
-				type: 'passive',
-				tier: 1,
-				maxRank: 3,
-				effect: { fireRateBonus: 0.15 },
-			},
+			// ── Tier 1 "Fundamentals" ──
+			// Positional order determines T2 prerequisites:
+			//   [0] Sharp Rounds → Piercing Shots
+			//   [1] Rapid Fire   → Triple Shot
+			//   [2] Focused Fire → Quick Aim
 			{
 				id: 'gunner_sharp_rounds',
 				name: 'Sharp Rounds',
@@ -198,16 +192,28 @@ export const ARCHETYPES = {
 				effect: { damageBonus: 0.20 },
 			},
 			{
-				id: 'gunner_quick_aim',
-				name: 'Quick Aim',
-				description: '+20% turn speed per rank.',
-				icon: '🌀',
+				id: 'gunner_rapid_fire',
+				name: 'Rapid Fire',
+				description: '+15% fire rate per rank.',
+				icon: '🔥',
 				type: 'passive',
 				tier: 1,
-				maxRank: 2,
-				effect: { turnSpeedBonus: 0.20 },
+				maxRank: 3,
+				effect: { fireRateBonus: 0.15 },
 			},
-			// ── Tier 2 (gate: 3 pts) ──
+			{
+				id: 'gunner_focused_fire',
+				name: 'Focused Fire',
+				description: 'Active: +100% fire rate for 4s. 18s base CD. +1s duration per rank.',
+				icon: '💥',
+				type: 'active',
+				tier: 1,
+				maxRank: 2,
+				cooldown: 18000,
+				effect: { fireRateMultiplier: 2.0, duration: 4000, durationPerRank: 1000 },
+			},
+			// ── Tier 2 "Projectile Mastery" (gate: 3 pts) ──
+			// Prerequisites: [0]←Sharp Rounds  [1]←Rapid Fire  [2]←Focused Fire
 			{
 				id: 'gunner_piercing',
 				name: 'Piercing Shots',
@@ -229,17 +235,17 @@ export const ARCHETYPES = {
 				effect: { sideDamageBase: 0.30, sideDamagePerRank: 0.10 },
 			},
 			{
-				id: 'gunner_focused_fire',
-				name: 'Focused Fire',
-				description: 'Active: +100% fire rate for 4s. 18s base CD.',
-				icon: '💥',
-				type: 'active',
+				id: 'gunner_quick_aim',
+				name: 'Quick Aim',
+				description: '+20% turn speed per rank.',
+				icon: '🌀',
+				type: 'passive',
 				tier: 2,
 				maxRank: 2,
-				cooldown: 18000,
-				effect: { fireRateMultiplier: 2.0, duration: 4000, durationPerRank: 1000 },
+				effect: { turnSpeedBonus: 0.20 },
 			},
-			// ── Tier 3 (gate: 6 pts, token-locked) ──
+			// ── Tier 3 "Lethal Precision" (gate: 6 pts, token-locked) ──
+			// Prerequisites: [0]←Piercing  [1]←Triple Shot  [2]←Quick Aim
 			{
 				id: 'gunner_critical_mastery',
 				name: 'Critical Mastery',
@@ -251,6 +257,17 @@ export const ARCHETYPES = {
 				effect: { critChance: 0.08, critDamageMultiplier: 0.50 },
 			},
 			{
+				id: 'gunner_barrage',
+				name: 'Bullet Storm',
+				description: 'Active: Fire a rapid burst of 20 homing shots over 3s. 25s base CD. +5 shots per rank.',
+				icon: '🌪️',
+				type: 'active',
+				tier: 3,
+				maxRank: 2,
+				cooldown: 25000,
+				effect: { shotCount: 20, duration: 3000, shotsPerRank: 5 },
+			},
+			{
 				id: 'gunner_overcharge',
 				name: 'Overcharge Burst',
 				description: 'Every 8th shot deals 5x damage. -2 interval and +2x damage per rank.',
@@ -260,18 +277,8 @@ export const ARCHETYPES = {
 				maxRank: 2,
 				effect: { shotInterval: 8, damageMultiplier: 5, intervalReduction: 2, multiplierPerRank: 2 },
 			},
-			{
-				id: 'gunner_barrage',
-				name: 'Bullet Storm',
-				description: 'Active: Fire a rapid burst of 20 homing shots over 3s. 25s base CD.',
-				icon: '🌪️',
-				type: 'active',
-				tier: 3,
-				maxRank: 2,
-				cooldown: 25000,
-				effect: { shotCount: 20, duration: 3000, shotsPerRank: 5 },
-			},
-			// ── Tier 4 (gate: 10 pts, token-locked) ──
+			// ── Tier 4 "Perfection" (gate: 10 pts, token-locked) ──
+			// Prerequisites: [0]←Critical Mastery  [1]←Bullet Storm
 			{
 				id: 'gunner_homing',
 				name: 'Homing Rounds',
@@ -285,7 +292,7 @@ export const ARCHETYPES = {
 			{
 				id: 'gunner_aimbot_overdrive',
 				name: 'Aimbot Overdrive',
-				description: 'Ultimate: Lock onto every enemy simultaneously. Fire homing shots at all of them for 6s.',
+				description: 'Ultimate: Lock onto every enemy simultaneously. Fire homing shots at all of them for 6s. 90s base CD.',
 				icon: '🎯',
 				type: 'ultimate',
 				tier: 4,
@@ -303,11 +310,15 @@ export const ARCHETYPES = {
 		color: '#aa44ff',
 		icon: '⚡',
 		skills: [
-			// ── Tier 1 ──
+			// ── Tier 1 "Ignition" ──
+			// Positional order determines T2 prerequisites:
+			//   [0] Explosive Rounds → Chain Hit
+			//   [1] Bigger Booms     → Volatile Kills
+			//   [2] EMP Pulse        → Immolation Aura
 			{
 				id: 'techno_explosive_rounds',
 				name: 'Explosive Rounds',
-				description: 'Bullets explode on impact, dealing 30% damage in an area.',
+				description: 'Bullets explode on impact, dealing 30% damage in an area. 50px radius.',
 				icon: '💣',
 				type: 'passive',
 				tier: 1,
@@ -325,20 +336,22 @@ export const ARCHETYPES = {
 				effect: { radiusBonus: 0.25, damageBonus: 0.15 },
 			},
 			{
-				id: 'techno_burn',
-				name: 'Immolation Aura',
-				description: 'Burn nearby enemies for 1% max HP/sec. +20 range per rank.',
-				icon: '🔥',
-				type: 'passive',
+				id: 'techno_emp_pulse',
+				name: 'EMP Pulse',
+				description: 'Active: Slow all enemies by 60% for 4s in a large radius. 20s base CD. +1.5s duration per rank.',
+				icon: '📡',
+				type: 'active',
 				tier: 1,
-				maxRank: 3,
-				effect: { burnDamagePercent: 0.01, rangePerRank: 20, baseRange: 60 },
+				maxRank: 2,
+				cooldown: 20000,
+				effect: { slowAmount: 0.60, duration: 4000, radius: 200, durationPerRank: 1500 },
 			},
-			// ── Tier 2 (gate: 3 pts) ──
+			// ── Tier 2 "Amplification" (gate: 3 pts) ──
+			// Prerequisites: [0]←Explosive Rounds  [1]←Bigger Booms  [2]←EMP Pulse
 			{
 				id: 'techno_chain_hit',
 				name: 'Chain Hit',
-				description: 'Explosions have 30% chance (+15%/rank) to chain to a nearby enemy.',
+				description: 'Explosions have 30% chance (+15%/rank) to chain to a nearby enemy. 120px range.',
 				icon: '⛓️',
 				type: 'passive',
 				tier: 2,
@@ -346,27 +359,27 @@ export const ARCHETYPES = {
 				effect: { chainChance: 0.30, chainChancePerRank: 0.15, chainRange: 120 },
 			},
 			{
-				id: 'techno_emp_pulse',
-				name: 'EMP Pulse',
-				description: 'Active: Slow all enemies by 60% for 4s in a large radius. 20s base CD.',
-				icon: '📡',
-				type: 'active',
-				tier: 2,
-				maxRank: 2,
-				cooldown: 20000,
-				effect: { slowAmount: 0.60, duration: 4000, radius: 200, durationPerRank: 1500 },
-			},
-			{
 				id: 'techno_volatile_kills',
 				name: 'Volatile Kills',
-				description: 'Enemies explode on death, dealing 20% of their max HP to nearby. +10%/rank.',
+				description: 'Enemies explode on death, dealing 20% of their max HP to nearby. +10%/rank. 80px radius.',
 				icon: '💀',
 				type: 'passive',
 				tier: 2,
 				maxRank: 2,
 				effect: { deathExplosionPercent: 0.20, percentPerRank: 0.10, deathExplosionRadius: 80 },
 			},
-			// ── Tier 3 (gate: 6 pts, token-locked) ──
+			{
+				id: 'techno_burn',
+				name: 'Immolation Aura',
+				description: 'Burn nearby enemies for 1% max HP/sec. +20 range per rank.',
+				icon: '🔥',
+				type: 'passive',
+				tier: 2,
+				maxRank: 3,
+				effect: { burnDamagePercent: 0.01, rangePerRank: 20, baseRange: 60 },
+			},
+			// ── Tier 3 "Elemental Mastery" (gate: 6 pts, token-locked) ──
+			// Prerequisites: [0]←Chain Hit  [1]←Volatile Kills  [2]←Immolation Aura
 			{
 				id: 'techno_elemental_synergy',
 				name: 'Elemental Synergy',
@@ -380,7 +393,7 @@ export const ARCHETYPES = {
 			{
 				id: 'techno_neon_nova',
 				name: 'Neon Nova',
-				description: 'Active: Massive AoE blast dealing 40% max HP to all enemies in range. 30s base CD.',
+				description: 'Active: Massive AoE blast dealing 40% max HP to all enemies in range. 30s base CD. +50px radius per rank.',
 				icon: '☀️',
 				type: 'active',
 				tier: 3,
@@ -389,16 +402,17 @@ export const ARCHETYPES = {
 				effect: { damagePercent: 0.40, radius: 250, radiusPerRank: 50 },
 			},
 			{
-				id: 'techno_overload',
-				name: 'Energy Overload',
-				description: 'Taking damage charges energy. At full charge, next ability deals +100% damage.',
-				icon: '⚡',
+				id: 'techno_meltdown',
+				name: 'Meltdown',
+				description: 'Projectiles hitting burning enemies have 15% (+10%/rank) chance to trigger a bonus explosion.',
+				icon: '🌋',
 				type: 'passive',
 				tier: 3,
-				maxRank: 1,
-				effect: { chargePerHit: 0.20, bonusDamageMultiplier: 2.0 },
+				maxRank: 2,
+				effect: { meltdownChance: 0.15, chancePerRank: 0.10, meltdownDamageRatio: 0.50, meltdownRadius: 60 },
 			},
-			// ── Tier 4 (gate: 10 pts, token-locked) ──
+			// ── Tier 4 "Cataclysm" (gate: 10 pts, token-locked) ──
+			// Prerequisites: [0]←Elemental Synergy  [1]←Neon Nova
 			{
 				id: 'techno_chain_master',
 				name: 'Chain Master',

@@ -573,7 +573,7 @@ export class Game {
 	 * @private
 	 */
 	_showBetweenWaveUI() {
-		// First boss: prompt archetype commitment + ultimate unlock
+		// First boss: prompt archetype commitment (ultimate unlocks via T4 progression)
 		if (this.wave === 10 && !this.skillManager.chosenArchetype) {
 			this.gameState = Game.STATES.ARCHETYPE;
 			showArchetypeSelectPanel();
@@ -614,6 +614,205 @@ export class Game {
 			this.challengeSystem.onWaveStart();
 			this.waveManager.startWave(this.wave);
 		});
+	}
+
+	/**
+	 * Cast an active/ultimate skill — triggers cooldown and executes the gameplay effect.
+	 * Called from keybind handler in main.js.
+	 * @param {string} skillId
+	 * @returns {boolean} true if cast succeeded
+	 */
+	castActiveSkill(skillId) {
+		if (!this.skillManager.tryCast(skillId)) return false;
+
+		const info = this.skillManager.getActiveSkillInfo(skillId);
+		if (!info) return false;
+
+		const { skill, rank } = info;
+
+		switch (skill.id) {
+			// ── Gunner actives ──
+			case 'gunner_focused_fire': {
+				const duration = skill.effect.duration + skill.effect.durationPerRank * (rank - 1);
+				this.player.activateSkillBuff('focusedFire', {
+					fireRateMultiplier: skill.effect.fireRateMultiplier,
+					duration,
+				});
+				this.effectsManager.addScreenShake(3, 150);
+				const { width, height } = this.getLogicalCanvasSize();
+				createFloatingText('FOCUSED FIRE!', width / 2, height / 2 - 30, 'level-up');
+				playSFX('powerup');
+				break;
+			}
+			case 'gunner_barrage': {
+				const shotCount = skill.effect.shotCount + skill.effect.shotsPerRank * (rank - 1);
+				this.player.activateSkillBuff('bulletStorm', {
+					shotsRemaining: shotCount,
+					duration: skill.effect.duration,
+					interval: skill.effect.duration / shotCount,
+					timer: 0,
+				});
+				this.effectsManager.addScreenShake(5, 200);
+				const { width, height } = this.getLogicalCanvasSize();
+				createFloatingText('BULLET STORM!', width / 2, height / 2 - 30, 'level-up');
+				playSFX('powerup');
+				break;
+			}
+
+			// ── Gunner ultimate ──
+			case 'gunner_aimbot_overdrive': {
+				this.player.activateSkillBuff('aimbotOverdrive', {
+					duration: skill.effect.duration,
+					damageMultiplier: skill.effect.damagePerShot,
+					fireInterval: 80, // rapid-fire interval in ms
+					fireTimer: 0,
+				});
+				this.effectsManager.addScreenShake(8, 400);
+				const { width, height } = this.getLogicalCanvasSize();
+				createFloatingText('AIMBOT OVERDRIVE!', width / 2, height / 2 - 30, 'milestone-major');
+				screenFlash();
+				playSFX('boss_defeat');
+				break;
+			}
+
+			// ── Technomancer actives ──
+			case 'techno_emp_pulse': {
+				const duration = skill.effect.duration + skill.effect.durationPerRank * (rank - 1);
+				const radius = skill.effect.radius;
+				const px = this.player.x;
+				const py = this.player.y;
+				const slowFactor = Math.max(0.1, 1 - skill.effect.slowAmount);
+				// Apply slow to all enemies in radius via timed slow
+				for (const enemy of this.enemies) {
+					const dx = enemy.x - px;
+					const dy = enemy.y - py;
+					if (dx * dx + dy * dy <= radius * radius) {
+						enemy.slowFactor = slowFactor;
+						enemy._empSlowTimer = duration;
+					}
+				}
+				// Visual: expanding ring
+				this.createExplosionRing(px, py, radius);
+				this.effectsManager.addScreenShake(4, 200);
+				const { width, height } = this.getLogicalCanvasSize();
+				createFloatingText('EMP PULSE!', width / 2, height / 2 - 30, 'level-up');
+				playSFX('powerup');
+				break;
+			}
+			case 'techno_neon_nova': {
+				const radius = skill.effect.radius + skill.effect.radiusPerRank * (rank - 1);
+				const px = this.player.x;
+				const py = this.player.y;
+				let hitCount = 0;
+				for (const enemy of this.enemies) {
+					const dx = enemy.x - px;
+					const dy = enemy.y - py;
+					if (dx * dx + dy * dy <= radius * radius) {
+						const damage = enemy.maxHealth * skill.effect.damagePercent;
+						enemy.takeDamage(damage);
+						hitCount++;
+					}
+				}
+				// Visual: massive explosion + ring
+				this.createExplosion(px, py, 60);
+				this.createExplosionRing(px, py, radius);
+				this.effectsManager.addScreenShake(10, 400);
+				const { width, height } = this.getLogicalCanvasSize();
+				createFloatingText(`NEON NOVA! (${hitCount} hit)`, width / 2, height / 2 - 30, 'level-up');
+				screenFlash();
+				playSFX('boss_defeat');
+				break;
+			}
+
+			// ── Technomancer ultimate ──
+			case 'techno_lightning_cascade': {
+				this._executeLightningCascade(skill);
+				break;
+			}
+
+			default:
+				break;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Execute Lightning Cascade ultimate — chain lightning bouncing between all enemies.
+	 * @private
+	 */
+	_executeLightningCascade(skill) {
+		if (this.enemies.length === 0) return;
+
+		const maxBounces = skill.effect.maxBounces;
+		const amplification = skill.effect.bounceAmplification;
+		let damage = skill.effect.baseDamage;
+		const px = this.player.x;
+		const py = this.player.y;
+
+		// Sort enemies by distance from player, start with nearest
+		const sorted = [...this.enemies].sort((a, b) => {
+			const da = (a.x - px) ** 2 + (a.y - py) ** 2;
+			const db = (b.x - px) ** 2 + (b.y - py) ** 2;
+			return da - db;
+		});
+
+		const visited = new Set();
+		let current = sorted[0];
+		let bounceCount = 0;
+		const chainPositions = [{ x: px, y: py }]; // start from player
+
+		while (current && bounceCount < maxBounces) {
+			visited.add(current.id);
+			chainPositions.push({ x: current.x, y: current.y });
+
+			current.takeDamage(damage);
+			bounceCount++;
+			damage *= (1 + amplification);
+
+			// Find nearest unvisited enemy
+			let nearest = null;
+			let nearestDist = Infinity;
+			for (const enemy of this.enemies) {
+				if (visited.has(enemy.id) || enemy.hp <= 0) continue;
+				const dx = enemy.x - current.x;
+				const dy = enemy.y - current.y;
+				const dist = dx * dx + dy * dy;
+				if (dist < nearestDist) {
+					nearestDist = dist;
+					nearest = enemy;
+				}
+			}
+			current = nearest;
+		}
+
+		// Visual: lightning chain effect
+		for (let i = 0; i < chainPositions.length - 1; i++) {
+			const from = chainPositions[i];
+			const to = chainPositions[i + 1];
+			this._createLightningEffect(from, to);
+		}
+
+		this.effectsManager.addScreenShake(12, 500);
+		const { width, height } = this.getLogicalCanvasSize();
+		createFloatingText(`LIGHTNING CASCADE! (${bounceCount} bounces)`, width / 2, height / 2 - 30, 'milestone-major');
+		screenFlash();
+		playSFX('boss_defeat');
+	}
+
+	/**
+	 * Create a visual lightning line effect between two points.
+	 * @private
+	 */
+	_createLightningEffect(from, to) {
+		// Use particles to simulate lightning along the path
+		const segments = 6;
+		for (let i = 0; i <= segments; i++) {
+			const t = i / segments;
+			const x = from.x + (to.x - from.x) * t + (Math.random() - 0.5) * 15;
+			const y = from.y + (to.y - from.y) * t + (Math.random() - 0.5) * 15;
+			this.particles.push(new Particle(x, y, '#aa44ff', 3 + Math.random() * 4, 300 + Math.random() * 200));
+		}
 	}
 
 	/**
@@ -695,6 +894,20 @@ export class Game {
 			this.player.overchargeBurst = null;
 		}
 
+		// Technomancer passives: chain hit, volatile kills, elemental synergy, meltdown, chain master
+		this.player.chainHit = passives.chainChance > 0
+			? { chance: passives.chainChance, range: passives.chainRange, escalation: passives.chainDamageEscalation }
+			: null;
+		this.player.volatileKills = passives.hasVolatileKills
+			? { percent: passives.volatileKillPercent, radius: passives.volatileKillRadius }
+			: null;
+		this.player.elementalSynergy = passives.hasSynergyBonus
+			? { bonus: passives.synergyDamageBonus }
+			: null;
+		this.player.meltdown = passives.hasMeltdown
+			? { chance: passives.meltdownChance, damageRatio: passives.meltdownDamageRatio, radius: passives.meltdownRadius }
+			: null;
+
 		// Life steal from ascension
 		this.player.hasLifeSteal = ascension.lifeStealPercent > 0;
 		this.player._ascensionLifeSteal = ascension.lifeStealPercent;
@@ -712,7 +925,7 @@ export class Game {
 			const { width, height } = this.getLogicalCanvasSize();
 			const label = archetypeKey.charAt(0) + archetypeKey.slice(1).toLowerCase();
 			createFloatingText(`${label} ARCHETYPE CHOSEN!`, width / 2, height / 2 - 40, 'milestone-major');
-			createFloatingText('ULTIMATE UNLOCKED!', width / 2, height / 2, 'level-up');
+			createFloatingText('Master the tree to unlock your Ultimate!', width / 2, height / 2, 'level-up');
 			this.effectsManager.addScreenShake(10, 400);
 			screenFlash();
 			playSFX('boss_defeat');

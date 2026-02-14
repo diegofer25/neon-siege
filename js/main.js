@@ -623,7 +623,7 @@ function setupInputHandlers() {
                 const slots = game.skillManager.getKeybindSlots();
                 const slot = slots[slotIndex];
                 if (slot?.skillId) {
-                    game.skillManager.tryCast(slot.skillId);
+                    game.castActiveSkill(slot.skillId);
                 }
             }
         }
