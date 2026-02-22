@@ -435,7 +435,122 @@ export const GameConfig = {
         GRID_SIZE: 50,
         
         /** @type {number} Background grid opacity (0.0 to 1.0) */
-        GRID_ALPHA: 0.1
+        GRID_ALPHA: 0.1,
+
+        /**
+         * Player aura visual effects driven by attribute & skill investment.
+         * Tunable thresholds, colors, particle counts, and timing.
+         */
+        PLAYER_AURAS: {
+            /** Maximum dedicated aura particles (separate budget from combat particles) */
+            MAX_AURA_PARTICLES: 30,
+
+            /** STR — fire glow & wisps */
+            STR: {
+                color: '#ff4500',
+                colorAlt: '#ff8c00',
+                /** shadowBlur range: base 15 → 15 + level * GLOW_PER_POINT */
+                GLOW_PER_POINT: 0.4,
+                /** Fire-wisp orbit starts at this attribute level */
+                WISP_THRESHOLD: 15,
+                /** Max orbiting wisps */
+                MAX_WISPS: 4,
+                /** Orbit radius (px from player centre) */
+                ORBIT_RADIUS: 22,
+                /** Orbit angular speed (rad/s) */
+                ORBIT_SPEED: 1.8,
+                /** Radial gradient starts at this attribute level */
+                GRADIENT_THRESHOLD: 8,
+            },
+
+            /** DEX — speed lines, tracers, target-sweep arc */
+            DEX: {
+                color: '#00e5ff',
+                /** Number of arc streaks when rotating */
+                SPEED_LINES: 5,
+                /** Streak length multiplied by dexLevel (px) */
+                STREAK_LEN_PER_POINT: 0.6,
+                /** Target-sweep arc decay time (ms) */
+                SWEEP_DURATION: 220,
+                /** Tracer trail extra length per DEX point (px) */
+                TRACER_LEN_PER_POINT: 0.4,
+            },
+
+            /** VIT — heartbeat pulse ring */
+            VIT: {
+                color: '#00ff88',
+                /** Base pulse speed (multiplier on sin frequency) */
+                BASE_PULSE_SPEED: 0.003,
+                /** Additional pulse speed per VIT point */
+                PULSE_SPEED_PER_POINT: 0.00006,
+                /** Ring thickness range 1→4 */
+                MIN_THICKNESS: 1,
+                MAX_THICKNESS: 4,
+                /** Ring alpha range 0.1→0.5 */
+                MIN_ALPHA: 0.1,
+                MAX_ALPHA: 0.5,
+                /** Orbit offset from player radius */
+                RING_OFFSET: 12,
+            },
+
+            /** INT — orbiting arcane sparks */
+            INT: {
+                colors: ['#00ffff', '#aa44ff'],
+                /** One spark per this many INT points */
+                POINTS_PER_SPARK: 8,
+                /** Maximum orbiting sparks */
+                MAX_SPARKS: 6,
+                /** Orbit radius */
+                ORBIT_RADIUS: 20,
+                /** Orbit angular speed (rad/s) */
+                ORBIT_SPEED: 2.2,
+                /** Trail afterglow starts at this INT level */
+                TRAIL_THRESHOLD: 30,
+            },
+
+            /** LUCK — golden sparkle glitter */
+            LUCK: {
+                color: '#ffd700',
+                /** Spawn probability per frame = luckLevel * CHANCE_PER_POINT */
+                CHANCE_PER_POINT: 0.003,
+                /** Max concurrent sparkles */
+                MAX_SPARKLES: 8,
+                /** Sparkle radius (px) */
+                SPARKLE_RADIUS: 2.5,
+                /** Sparkle life range (ms) */
+                MIN_LIFE: 200,
+                MAX_LIFE: 400,
+                /** Spawn radius from player centre */
+                SPAWN_RADIUS: 22,
+            },
+
+            /** Purchase moment juice */
+            PURCHASE: {
+                /** Screen shake on skill learn */
+                SKILL_SHAKE_INTENSITY: 3,
+                SKILL_SHAKE_DURATION: 150,
+                /** Particle burst count on skill learn */
+                SKILL_BURST_COUNT: 12,
+                /** Particle burst count on attribute allocate */
+                ATTR_BURST_COUNT: 6,
+                /** Flash pulse duration (ms) */
+                FLASH_DURATION: 300,
+            },
+
+            /** Skill-specific VFX timing */
+            SKILL_VFX: {
+                /** Critical Mastery spark interval (ms) */
+                CRIT_SPARK_INTERVAL: 2000,
+                CRIT_SPARK_DURATION: 100,
+                /** Elemental Synergy color swap interval (ms) */
+                SYNERGY_SWAP_INTERVAL: 500,
+                /** Volatile Kills shimmer frequency (Hz) */
+                VOLATILE_SHIMMER_HZ: 4,
+                /** Chain Hit lightning flicker interval range (ms) */
+                CHAIN_FLICKER_MIN: 400,
+                CHAIN_FLICKER_MAX: 1200,
+            },
+        },
     },
 
     /**

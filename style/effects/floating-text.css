@@ -115,6 +115,16 @@
   animation: comboFloat 1.2s ease-out forwards;
 }
 
+/* Skill Acquired Floating Text (purchase juice) */
+.floating-text.skill-acquired {
+  color: #ff2dec;
+  text-shadow: 0 0 10px #ff2dec, 0 0 24px #ff2dec, 0 0 40px rgba(255, 45, 236, 0.4);
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  animation: skillAcquiredFloat 1.5s ease-out forwards;
+}
+
 @keyframes comboFloat {
   0% { opacity: 1; transform: translateY(0) scale(1.3); }
   50% { opacity: 1; transform: translateY(-20px) scale(1); }
@@ -145,6 +155,13 @@
   0% { opacity: 1; transform: translateY(0) scale(1.8); }
   30% { opacity: 1; transform: translateY(-15px) scale(1.1); }
   100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+}
+
+@keyframes skillAcquiredFloat {
+  0% { opacity: 1; transform: translateY(0) scale(2); }
+  20% { opacity: 1; transform: translateY(-8px) scale(1.2); }
+  70% { opacity: 1; transform: translateY(-30px) scale(1); }
+  100% { opacity: 0; transform: translateY(-55px) scale(0.85); }
 }
 
 /* Mobile responsive sizes */

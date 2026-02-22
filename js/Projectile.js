@@ -101,6 +101,9 @@ export class Projectile {
         // Chain explosion tracking (prevents infinite chain loops)
         this._isChainExplosion = false;
         this._chainBounce = 0;
+
+        // DEX tracer level (0 = no tracer, higher = longer glow trail)
+        this.tracerLevel = 0;
     }
     
     /**
@@ -427,6 +430,27 @@ export class Projectile {
         ctx.arc(this.x, this.y, drawSize, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+
+        // DEX tracer — extended glowing trail behind the projectile
+        if (this.tracerLevel > 0 && this.trail.length >= 2) {
+            ctx.save();
+            const tracerLen = 3 + this.tracerLevel * 0.4; // longer trail at higher DEX
+            const tracerColor = '#00e5ff';
+            ctx.strokeStyle = tracerColor;
+            ctx.shadowColor = tracerColor;
+            ctx.shadowBlur = 4 + this.tracerLevel * 0.15;
+            ctx.lineWidth = 1.5;
+            const steps = Math.min(this.trail.length, Math.ceil(tracerLen));
+            for (let i = 0; i < steps - 1; i++) {
+                const t = 1 - i / steps;
+                ctx.globalAlpha = t * 0.6;
+                ctx.beginPath();
+                ctx.moveTo(this.trail[i].x, this.trail[i].y);
+                ctx.lineTo(this.trail[i + 1].x, this.trail[i + 1].y);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
         
         ctx.restore();
     }

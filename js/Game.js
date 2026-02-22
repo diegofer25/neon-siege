@@ -476,7 +476,6 @@ export class Game {
 				wave: this.wave,
 				score: this.score,
 				level: this.skillManager.level,
-				archetype: null,
 			});
 			if (!this._gameOverTracked) {
 				this._gameOverTracked = true;
@@ -490,7 +489,6 @@ export class Game {
 					wave: this.wave,
 					score: this.score,
 					level: this.skillManager.level,
-					archetype: null,
 				});
 			}
 		}
@@ -896,6 +894,20 @@ export class Game {
 
 		// Store ascension effects on player for runtime access
 		this.player._ascensionEffects = ascension;
+
+		// ── Visual state for player auras / VFX ──
+		const rawAttrs = this.skillManager.attributes;
+		this.player.visualState.strLevel = rawAttrs.STR || 0;
+		this.player.visualState.dexLevel = rawAttrs.DEX || 0;
+		this.player.visualState.vitLevel = rawAttrs.VIT || 0;
+		this.player.visualState.intLevel = rawAttrs.INT || 0;
+		this.player.visualState.luckLevel = rawAttrs.LUCK || 0;
+		this.player.visualState.learnedSkills = new Set(this.skillManager.equippedPassives);
+		for (const id of Object.keys(this.skillManager.skillRanks)) {
+			if (this.skillManager.skillRanks[id] > 0) {
+				this.player.visualState.learnedSkills.add(id);
+			}
+		}
 	}
 
 	/**

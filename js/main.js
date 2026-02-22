@@ -11,6 +11,15 @@ import { settingsManager } from './managers/SettingsManager.js';
 import { saveStateManager } from './managers/SaveStateManager.js';
 import { SOUND_EFFECT_MANIFEST } from '../scripts/sfx-manifest.mjs';
 
+/** Attribute-to-color mapping for purchase burst particles */
+const ATTR_COLORS = {
+    STR: '#ff4500',
+    DEX: '#00e5ff',
+    VIT: '#00ff88',
+    INT: '#aa44ff',
+    LUCK: '#ffd700',
+};
+
 //=============================================================================
 // GLOBAL STATE AND CONFIGURATION
 //=============================================================================
@@ -1350,6 +1359,32 @@ function resetSettingsToDefaults() {
 //=============================================================================
 
 /**
+ * Spawn a colored particle burst at a location (used for purchase juice).
+ * @param {number} x
+ * @param {number} y
+ * @param {number} count
+ * @param {string} color
+ */
+function _createColoredBurst(x, y, count, color) {
+    if (!game) return;
+    const em = game.effectsManager;
+    if (!em) return;
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+        const speed = 40 + Math.random() * 80;
+        const life = 300 + Math.random() * 400;
+        const particle = game.particlePool.get(
+            x, y,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            life,
+            color
+        );
+        game.particles.push(particle);
+    }
+}
+
+/**
  * Create floating text animation effect
  * @param {string} text - Text to display
  * @param {number} x - X coordinate for text position
@@ -1500,10 +1535,32 @@ export function showLevelUpPanel() {
             sm.learnSkill(skillId);
             _refreshTree(sm);
             playSFX('ui_purchase_success');
+            // Purchase juice: burst + shake + flash + floating text
+            if (game?.player && game.effectsManager) {
+                const p = game.player;
+                const cfg = GameConfig.VFX.PLAYER_AURAS.PURCHASE;
+                game.effectsManager.addScreenShake(cfg.SKILL_SHAKE_INTENSITY, cfg.SKILL_SHAKE_DURATION);
+                _createColoredBurst(p.x, p.y, cfg.SKILL_BURST_COUNT, '#ff2dec');
+                p.visualState.flashTimer = cfg.FLASH_DURATION;
+                p.visualState.flashColor = '#ff2dec';
+                const skillDef = sm.getSkillDef(skillId);
+                if (skillDef) {
+                    createFloatingText(skillDef.label, p.x, p.y - 40, 'skill-acquired');
+                }
+            }
         },
         (attrKey) => {
             if (sm.allocateAttribute(attrKey)) {
                 _refreshTree(sm);
+                // Attribute purchase juice: small colored burst + flash
+                if (game?.player && game.effectsManager) {
+                    const p = game.player;
+                    const cfg = GameConfig.VFX.PLAYER_AURAS.PURCHASE;
+                    const color = ATTR_COLORS[attrKey] || '#fff';
+                    _createColoredBurst(p.x, p.y, cfg.ATTR_BURST_COUNT, color);
+                    p.visualState.flashTimer = cfg.FLASH_DURATION * 0.5;
+                    p.visualState.flashColor = color;
+                }
             }
         },
     );
@@ -1599,7 +1656,6 @@ export function showAscensionPanel() {
  */
 export function closeAllSkillOverlays() {
     document.getElementById('levelUpPanel')?.classList.remove('show');
-    document.getElementById('archetypeSelectPanel')?.classList.remove('show');
     document.getElementById('ascensionPanel')?.classList.remove('show');
 }
 
