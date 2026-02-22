@@ -1497,9 +1497,10 @@ function _updateLevelUpActionButtons(sm) {
 
     const hasChanges = _hasLevelUpSelectionChanges(sm);
     const hasUnspentPoints = sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0;
+    const mustSpendPoints = game?.gameState === 'levelup';
 
     resetBtn.disabled = !hasChanges;
-    confirmBtn.disabled = hasUnspentPoints;
+    confirmBtn.disabled = mustSpendPoints && hasUnspentPoints;
 }
 
 /**
