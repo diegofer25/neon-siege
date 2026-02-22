@@ -65,11 +65,17 @@ export const GameConfig = {
         /** @type {number} Minimum canvas width in pixels for playability */
         MIN_WIDTH: 320,
         
-        /** @type {number} Maximum canvas width in pixels to prevent UI scaling issues */
+        /** @type {number} Reference width used as scale baseline (scale = 1.0 at this width) */
         MAX_WIDTH: 800,
         
-        /** @type {number} Maximum canvas height in pixels */
+        /** @type {number} Reference height used as scale baseline (scale = 1.0 at this height) */
         MAX_HEIGHT: 600,
+
+        /** @type {number} Hard upper limit on canvas width (supports up to 8K) */
+        HARD_MAX_WIDTH: 7680,
+
+        /** @type {number} Hard upper limit on canvas height (supports up to 8K) */
+        HARD_MAX_HEIGHT: 4320,
         
         /**
          * Validates canvas dimensions against game requirements
@@ -79,8 +85,8 @@ export const GameConfig = {
          * @throws {Error} If dimensions are outside valid ranges
          */
         validateDimensions(width, height) {
-            validateRange(width, this.MIN_WIDTH, this.MAX_WIDTH, 'Canvas width');
-            validateRange(height, this.MIN_WIDTH * 0.75, this.MAX_HEIGHT, 'Canvas height');
+            validateRange(width, this.MIN_WIDTH, this.HARD_MAX_WIDTH, 'Canvas width');
+            validateRange(height, this.MIN_WIDTH * 0.75, this.HARD_MAX_HEIGHT, 'Canvas height');
         }
     },
 

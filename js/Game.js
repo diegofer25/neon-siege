@@ -294,7 +294,7 @@ export class Game {
 	}
 
 	getEntityScale() {
-		return Math.max(0.72, Math.min(this.getArenaScale(), 1));
+		return Math.max(0.72, Math.min(this.getArenaScale(), 1.5));
 	}
 
 	applyResponsiveEntityScale() {

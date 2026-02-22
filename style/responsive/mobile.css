@@ -9,15 +9,7 @@
     --spacing-xxl: 20px;
   }
   
-  #gameContainer {
-    padding: 4px;
-  }
-  
-  #gameCanvas {
-    max-width: 98vw;
-    max-height: 95vh;
-    border: 1px solid var(--color-primary-neon);
-  }
+  /* #gameContainer and #gameCanvas fill viewport — no overrides needed */
   
   .overlay h1 { font-size: 32px; }
   
@@ -218,15 +210,7 @@
     --spacing-xxl: 15px;
   }
   
-  #gameContainer {
-    padding: 2px;
-  }
-  
-  #gameCanvas {
-    max-width: 99vw;
-    max-height: 98vh;
-    border: 1px solid var(--color-primary-neon);
-  }
+  /* #gameContainer and #gameCanvas fill viewport — no overrides needed */
   
   .overlay h1 { font-size: 24px; }
   .overlay h2 { font-size: 18px; }

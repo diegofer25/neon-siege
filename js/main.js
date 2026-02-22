@@ -494,34 +494,20 @@ function setupCanvas() {
     const canvas = input.canvas;
     const container = document.getElementById('gameContainer');
     
-    // Target aspect ratio for consistent gameplay experience
-    const targetAspectRatio = GameConfig.CANVAS.TARGET_ASPECT_RATIO;
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
-    const containerAspectRatio = containerWidth / containerHeight;
-    const isCompactViewport = Math.min(containerWidth, containerHeight) <= 500;
-    const viewportFillScale = isCompactViewport ? 0.98 : 0.95;
-    
-    let canvasWidth, canvasHeight;
-    
-    // Calculate optimal canvas size based on container aspect ratio
-    if (containerAspectRatio > targetAspectRatio) {
-        // Container is wider, fit to height
-        canvasHeight = Math.min(containerHeight * viewportFillScale, GameConfig.CANVAS.MAX_HEIGHT);
-        canvasWidth = canvasHeight * targetAspectRatio;
-    } else {
-        // Container is taller, fit to width
-        canvasWidth = Math.min(containerWidth * viewportFillScale, GameConfig.CANVAS.MAX_WIDTH);
-        canvasHeight = canvasWidth / targetAspectRatio;
-    }
+
+    // Fill the entire container — no aspect ratio enforcement, no margins
+    let canvasWidth = containerWidth;
+    let canvasHeight = containerHeight;
     
     // Ensure minimum playable size on small screens
     const minWidth = GameConfig.CANVAS.MIN_WIDTH;
-    const minHeight = minWidth / targetAspectRatio;
+    const minHeight = Math.round(minWidth * 0.75);
     
     if (canvasWidth < minWidth) {
         canvasWidth = minWidth;
-        canvasHeight = minHeight;
+        canvasHeight = Math.max(canvasHeight, minHeight);
     }
     
     // Store logical dimensions (CSS pixels) for gameplay coordinates
