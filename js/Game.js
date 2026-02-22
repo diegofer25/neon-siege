@@ -16,10 +16,9 @@ import { ChallengeSystem } from "./systems/ChallengeSystem.js";
 import { AscensionSystem } from "./systems/AscensionSystem.js";
 import { getMilestoneForWave, isMiniMilestone } from "./config/MilestoneConfig.js";
 import { LEVEL_CONFIG } from "./config/SkillConfig.js";
-import { playSFX, createFloatingText, screenFlash, showLevelUpPanel, showArchetypeSelectPanel, showAscensionPanel, closeAllSkillOverlays } from "./main.js";
+import { playSFX, createFloatingText, screenFlash, showLevelUpPanel, showAscensionPanel, closeAllSkillOverlays } from "./main.js";
 import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
-import { monetizationManager } from "./managers/MonetizationManager.js";
 
 const DEFAULT_RUNTIME_SETTINGS = {
 	screenShakeEnabled: true,
@@ -46,7 +45,6 @@ export class Game {
 		POWERUP: "powerup",        // kept for compatibility; now means "between-wave skill screen"
 		LEVELUP: "levelup",        // mid-wave brief pause for skill pick
 		ASCENSION: "ascension",    // Ascension pick event (every 10 waves)
-		ARCHETYPE: "archetype",    // Archetype commitment after first boss
 		GAMEOVER: "gameover",
 	};
 
@@ -478,7 +476,7 @@ export class Game {
 				wave: this.wave,
 				score: this.score,
 				level: this.skillManager.level,
-				archetype: this.skillManager.chosenArchetype,
+				archetype: null,
 			});
 			if (!this._gameOverTracked) {
 				this._gameOverTracked = true;
@@ -492,11 +490,7 @@ export class Game {
 					wave: this.wave,
 					score: this.score,
 					level: this.skillManager.level,
-					archetype: this.skillManager.chosenArchetype,
-				});
-				monetizationManager.registerOpportunity("game_over", {
-					wave: this.wave,
-					score: this.score
+					archetype: null,
 				});
 			}
 		}
@@ -558,28 +552,16 @@ export class Game {
 			isBossWave: this.waveManager.isBossWave
 		});
 
-		monetizationManager.registerOpportunity("between_waves", {
-			wave: this.wave,
-			isBossWave: this.waveManager.isBossWave
-		});
-
 		// Decide what UI to show between waves
 		this._showBetweenWaveUI();
 	}
 
 	/**
 	 * Determine the right between-wave screen to show.
-	 * Priority: Archetype commitment (first boss) > Ascension > Skill allocation.
+	 * Priority: Ascension > Skill allocation.
 	 * @private
 	 */
 	_showBetweenWaveUI() {
-		// First boss: prompt archetype commitment (ultimate unlocks via T4 progression)
-		if (this.wave === 10 && !this.skillManager.chosenArchetype) {
-			this.gameState = Game.STATES.ARCHETYPE;
-			showArchetypeSelectPanel();
-			return;
-		}
-
 		// Ascension event every 10 waves
 		if (this.ascensionSystem.isAscensionWave(this.wave)) {
 			this.gameState = Game.STATES.ASCENSION;
@@ -811,7 +793,7 @@ export class Game {
 			const t = i / segments;
 			const x = from.x + (to.x - from.x) * t + (Math.random() - 0.5) * 15;
 			const y = from.y + (to.y - from.y) * t + (Math.random() - 0.5) * 15;
-			this.particles.push(new Particle(x, y, '#aa44ff', 3 + Math.random() * 4, 300 + Math.random() * 200));
+			this.particles.push(new Particle(x, y, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, 300 + Math.random() * 200, '#aa44ff'));
 		}
 	}
 
@@ -914,27 +896,6 @@ export class Game {
 
 		// Store ascension effects on player for runtime access
 		this.player._ascensionEffects = ascension;
-	}
-
-	/**
-	 * Handle archetype selection (called from UI after first boss).
-	 * @param {string} archetypeKey
-	 */
-	selectArchetype(archetypeKey) {
-		if (this.skillManager.commitArchetype(archetypeKey)) {
-			const { width, height } = this.getLogicalCanvasSize();
-			const label = archetypeKey.charAt(0) + archetypeKey.slice(1).toLowerCase();
-			createFloatingText(`${label} ARCHETYPE CHOSEN!`, width / 2, height / 2 - 40, 'milestone-major');
-			createFloatingText('Master the tree to unlock your Ultimate!', width / 2, height / 2, 'level-up');
-			this.effectsManager.addScreenShake(10, 400);
-			screenFlash();
-			playSFX('boss_defeat');
-			telemetry.track('archetype_chosen', { archetype: archetypeKey, wave: this.wave });
-
-			// Show skill allocation screen after archetype pick
-			this.gameState = Game.STATES.POWERUP;
-			showLevelUpPanel();
-		}
 	}
 
 	/**

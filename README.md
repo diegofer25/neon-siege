@@ -307,10 +307,8 @@ neon-td-vanilla/
 │       ├── PerformanceManager.js # Performance monitoring
 │       ├── SkillManager.js       # Run-level progression
 │       ├── ProgressionManager.js # Persistent meta progression
-│       ├── TelemetryManager.js   # Analytics instrumentation
-│       └── MonetizationManager.js # Rewarded ad abstraction layer
+│       └── TelemetryManager.js   # Analytics instrumentation
 ├── docs/
-│   └── monetization-telemetry.md # Event schema + integration guide
 └── README.md
 ```
 
@@ -350,13 +348,9 @@ http://localhost:8080/?stats=true
 
 This displays real-time FPS, frame time, and optimization status.
 
-### Monetization Telemetry Debugging
+### Telemetry Debugging
 
 - Add `?telemetry=true` to log analytics events in the browser console.
-- Add `?rewardedMock=true` to simulate rewarded-ad success flow without an SDK.
-- Consent is required before start; reopen preferences from the ⚖️ button in the HUD.
-
-See `docs/monetization-telemetry.md` for event definitions and integration notes.
 
 ### Balancing Guidelines
 

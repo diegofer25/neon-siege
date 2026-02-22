@@ -7,10 +7,8 @@
 import { Game } from './Game.js';
 import { GameConfig } from './config/GameConfig.js';
 import { telemetry } from './managers/TelemetryManager.js';
-import { consentManager } from './managers/ConsentManager.js';
 import { settingsManager } from './managers/SettingsManager.js';
 import { saveStateManager } from './managers/SaveStateManager.js';
-import { monetizationManager } from './managers/MonetizationManager.js';
 import { SOUND_EFFECT_MANIFEST } from '../scripts/sfx-manifest.mjs';
 
 //=============================================================================
@@ -29,7 +27,6 @@ let showPerformanceStats = false;
 /** @type {number|null} Active animation frame request id */
 let animationFrameId = null;
 let settingsModalWasPlaying = false;
-let adRestoreConsumedThisGameOver = false;
 const RUN_DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
 
 const APP_RUNTIME_KEY = '__NEON_TD_RUNTIME__';
@@ -462,9 +459,6 @@ function init() {
     // Display initial start screen
     document.getElementById('startScreen').classList.add('show');
 
-    // Initialize consent controls and prompt when no decision is stored
-    consentManager.bindUI();
-
     telemetry.track('app_initialized', {
         userAgent: navigator.userAgent,
         viewportWidth: window.innerWidth,
@@ -482,7 +476,6 @@ function init() {
     document.getElementById('clearSaveBtn').addEventListener('click', clearSavedGame);
     document.getElementById('resetSettingsBtn').addEventListener('click', resetSettingsToDefaults);
     document.getElementById('loadAfterGameOverBtn').addEventListener('click', () => loadGameFromSave('game_over'));
-    document.getElementById('restoreFromAdBtn').addEventListener('click', restoreAfterAdWatch);
 
     setupSettingsControls();
     setupStartDifficultyControls();
@@ -716,15 +709,9 @@ export function toggleMute() {
  * Hides start screen, starts audio, and begins game loop
  */
 export function startGame() {
-    if (!consentManager.hasDecision()) {
-        consentManager.showConsentPrompt();
-        return;
-    }
-
     document.getElementById('startScreen').classList.remove('show');
     document.getElementById('gameOver').classList.remove('show');
     playSFX('ui_start_game');
-    adRestoreConsumedThisGameOver = false;
 
     telemetry.startSession({
         entryPoint: 'start_screen',
@@ -756,7 +743,6 @@ function restartGame() {
     document.getElementById('gameOver').classList.remove('show');
     document.getElementById('startScreen').classList.remove('show');
     playSFX('ui_restart_game');
-    adRestoreConsumedThisGameOver = false;
 
     telemetry.track('run_restart', {
         fromWave: game.wave,
@@ -1128,7 +1114,6 @@ function showGameOver() {
 
     const hasSave = saveStateManager.hasSave();
     document.getElementById('loadAfterGameOverBtn').style.display = hasSave ? 'inline-block' : 'none';
-    document.getElementById('restoreFromAdBtn').style.display = hasSave && !adRestoreConsumedThisGameOver ? 'inline-block' : 'none';
 
     playSFX('game_over');
 
@@ -1312,7 +1297,6 @@ function loadGameFromSave(source = 'unknown') {
     syncStartDifficultyUI(game.getRunDifficulty());
 
     settingsModalWasPlaying = false;
-    adRestoreConsumedThisGameOver = source === 'game_over_ad' ? true : adRestoreConsumedThisGameOver;
     syncSaveButtons();
     return true;
 }
@@ -1353,36 +1337,6 @@ function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {
         option.setAttribute('aria-checked', isActive ? 'true' : 'false');
         option.tabIndex = isActive ? 0 : -1;
     });
-}
-
-async function restoreAfterAdWatch() {
-    if (adRestoreConsumedThisGameOver || !saveStateManager.hasSave()) {
-        return;
-    }
-
-    telemetry.track('restore_ad_requested', {
-        wave: game.wave
-    });
-
-    const result = await monetizationManager.tryShowRewarded(
-        'game_over_restore_save',
-        { wave: game.wave },
-        null
-    );
-
-    if (!result?.rewardGranted) {
-        telemetry.track('restore_ad_failed', {
-            wave: game.wave,
-            shown: !!result?.shown
-        });
-        return;
-    }
-
-    adRestoreConsumedThisGameOver = true;
-    telemetry.track('restore_ad_completed', {
-        wave: game.wave
-    });
-    loadGameFromSave('game_over_ad');
 }
 
 function resetSettingsToDefaults() {
@@ -1449,7 +1403,7 @@ export function screenFlash() {
 //=============================================================================
 // SKILL UI RENDERING
 //=============================================================================
-import { ARCHETYPES, PLAYABLE_ARCHETYPES, SKILL_SLOTS } from './config/SkillConfig.js';
+import { SKILL_SLOTS } from './config/SkillConfig.js';
 import { SkillTreeRenderer } from './ui/SkillTreeRenderer.js';
 
 /** @type {SkillTreeRenderer|null} */
@@ -1491,8 +1445,10 @@ function _hasLevelUpSelectionChanges(sm) {
 }
 
 function _updateLevelUpActionButtons(sm) {
-    const resetBtn = document.getElementById('levelUpResetBtn');
-    const confirmBtn = document.getElementById('levelUpConfirmBtn');
+    /** @type {HTMLButtonElement | null} */
+    const resetBtn = document.querySelector('button#levelUpResetBtn');
+    /** @type {HTMLButtonElement | null} */
+    const confirmBtn = document.querySelector('button#levelUpConfirmBtn');
     if (!resetBtn || !confirmBtn) return;
 
     const hasChanges = _hasLevelUpSelectionChanges(sm);
@@ -1501,6 +1457,12 @@ function _updateLevelUpActionButtons(sm) {
 
     resetBtn.disabled = !hasChanges;
     confirmBtn.disabled = mustSpendPoints && hasUnspentPoints;
+    
+    if (!confirmBtn.disabled && !hasUnspentPoints) {
+        confirmBtn.classList.add('ready-to-confirm');
+    } else {
+        confirmBtn.classList.remove('ready-to-confirm');
+    }
 }
 
 /**
@@ -1518,6 +1480,14 @@ export function showLevelUpPanel() {
     // Update point badges
     document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
     document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
+    
+    const attrBadge = document.getElementById('attrBadge');
+    const skillBadge = document.getElementById('skillBadge');
+    const hintEl = document.getElementById('levelUpHint');
+    
+    if (attrBadge) attrBadge.classList.toggle('has-points', sm.unspentAttributePoints > 0);
+    if (skillBadge) skillBadge.classList.toggle('has-points', sm.unspentSkillPoints > 0);
+    if (hintEl) hintEl.style.display = (sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0) ? 'block' : 'none';
 
     // Render the skill tree
     const viewport = document.getElementById('skillTreeViewport');
@@ -1536,8 +1506,10 @@ export function showLevelUpPanel() {
             }
         },
     );
-    const resetBtn = document.getElementById('levelUpResetBtn');
-    const confirmBtn = document.getElementById('levelUpConfirmBtn');
+    /** @type {HTMLButtonElement | null} */
+    const resetBtn = document.querySelector('button#levelUpResetBtn');
+    /** @type {HTMLButtonElement | null} */
+    const confirmBtn = document.querySelector('button#levelUpConfirmBtn');
     if (resetBtn) {
         resetBtn.onclick = () => {
             if (!levelUpPanelSnapshot) return;
@@ -1546,59 +1518,51 @@ export function showLevelUpPanel() {
             playSFX('ui_click');
         };
     }
-    confirmBtn.onclick = () => {
-        if (confirmBtn.disabled) return;
-        levelUpPanelSnapshot = null;
-        panel.classList.remove('show');
-        if (game.gameState === 'levelup') {
-            game.completeMidWaveLevelUp();
-        } else {
-            game.continueToNextWave();
-        }
-    };
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            if (confirmBtn.disabled) return;
+            levelUpPanelSnapshot = null;
+            panel.classList.remove('show');
+            if (game.gameState === 'levelup') {
+                game.completeMidWaveLevelUp();
+            } else {
+                game.continueToNextWave();
+            }
+        };
+    }
 
     // Show panel BEFORE rendering so viewport has real dimensions for centering
     panel.classList.add('show');
     _updateLevelUpActionButtons(sm);
     treeRenderer.render(sm);
+
+    // Show first-time onboarding banner  
+    const hasSeenSkillTree = localStorage.getItem('neon_seen_skilltree');
+    const onboardingEl = document.getElementById('skillTreeOnboarding');
+    if (!hasSeenSkillTree && onboardingEl) {
+        onboardingEl.classList.add('show');
+        setTimeout(() => {
+            onboardingEl.classList.remove('show');
+            localStorage.setItem('neon_seen_skilltree', '1');
+        }, 5000);
+    }
 }
 
 /** Refresh tree + point badges after spending a point. */
 function _refreshTree(sm) {
     document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
     document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
+    
+    const attrBadge = document.getElementById('attrBadge');
+    const skillBadge = document.getElementById('skillBadge');
+    const hintEl = document.getElementById('levelUpHint');
+    
+    if (attrBadge) attrBadge.classList.toggle('has-points', sm.unspentAttributePoints > 0);
+    if (skillBadge) skillBadge.classList.toggle('has-points', sm.unspentSkillPoints > 0);
+    if (hintEl) hintEl.style.display = (sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0) ? 'block' : 'none';
+
     if (treeRenderer) treeRenderer.update(sm);
     _updateLevelUpActionButtons(sm);
-}
-
-/**
- * Show archetype selection panel (first boss wave).
- */
-export function showArchetypeSelectPanel() {
-    if (!game || !game.skillManager) return;
-    const container = document.getElementById('archetypeOptions');
-    container.innerHTML = '';
-
-    for (const key of PLAYABLE_ARCHETYPES) {
-        const archetype = ARCHETYPES[key];
-        if (!archetype) continue;
-        const card = document.createElement('div');
-        card.className = 'archetype-card';
-        card.style.setProperty('--arch-color', archetype.color);
-        card.innerHTML = `
-            <div class="archetype-icon">${archetype.icon || '🎯'}</div>
-            <div class="archetype-name">${archetype.label}</div>
-            <div class="archetype-desc">${archetype.description || ''}</div>
-        `;
-        card.onclick = () => {
-            game.selectArchetype(key);
-            document.getElementById('archetypeSelectPanel').classList.remove('show');
-            playSFX('ui_purchase_success');
-        };
-        container.appendChild(card);
-    }
-
-    document.getElementById('archetypeSelectPanel').classList.add('show');
 }
 
 /**

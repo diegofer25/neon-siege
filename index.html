@@ -207,45 +207,9 @@
                     <button id="clearSaveBtn" class="danger">Delete Save</button>
                 </div>
                 <div class="settings-actions">
-                    <button id="consentManageBtn" title="Privacy preferences">Privacy</button>
                     <button id="resetSettingsBtn">Reset Defaults</button>
                     <button id="closeSettingsBtn" class="primary">Close</button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Consent Screen -->
-        <div id="consentScreen" class="overlay">
-            <div class="consent-panel">
-                <h2>Privacy Preferences</h2>
-                <p>Choose how your data is used for analytics and ads.</p>
-                <p>You can change this anytime from Settings → Privacy.</p>
-
-                <div class="consent-options">
-                    <label>
-                        <input id="consentAnalytics" type="checkbox">
-                        Allow analytics
-                    </label>
-                    <label>
-                        <input id="consentAds" type="checkbox">
-                        Allow ads
-                    </label>
-                    <label>
-                        <input id="consentPersonalizedAds" type="checkbox">
-                        Allow personalized ads
-                    </label>
-                </div>
-
-                <div class="consent-actions">
-                    <button id="consentEssentialBtn">Essential Only</button>
-                    <button id="consentSaveBtn">Save Choices</button>
-                    <button id="consentAcceptAllBtn" class="primary">Accept All</button>
-                </div>
-
-                <p class="consent-note">
-                    Replace this placeholder URL before launch:
-                    <a href="https://example.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-                </p>
             </div>
         </div>
 
@@ -253,10 +217,13 @@
         <div id="levelUpPanel" class="overlay">
             <div class="skill-tree-panel">
                 <div class="skill-tree-header">
-                    <h2 id="levelUpTitle">LEVEL UP!</h2>
+                    <div class="skill-tree-title-group">
+                        <h2 id="levelUpTitle">LEVEL UP!</h2>
+                        <span id="levelUpHint" class="level-up-hint">Click glowing nodes to spend points!</span>
+                    </div>
                     <div class="skill-tree-points">
-                        <span class="points-badge attr-badge">⚡ <span id="attrPointsLeft">3</span> AP</span>
-                        <span class="points-badge skill-badge">🔮 <span id="skillPointsLeft">1</span> SP</span>
+                        <span id="attrBadge" class="points-badge attr-badge">⚡ <span id="attrPointsLeft">3</span> AP</span>
+                        <span id="skillBadge" class="points-badge skill-badge">🔮 <span id="skillPointsLeft">1</span> SP</span>
                     </div>
                 </div>
                 <div class="skill-tree-viewport" id="skillTreeViewport">
@@ -265,6 +232,14 @@
                 <div class="skill-tree-actions">
                     <button id="levelUpResetBtn" class="glow-btn" disabled>RESET</button>
                     <button id="levelUpConfirmBtn" class="primary glow-btn" disabled>CONFIRM</button>
+                </div>
+            </div>
+            <!-- First-time onboarding banner (outside skill-tree-panel to avoid viewport clipping) -->
+            <div id="skillTreeOnboarding" class="skill-tree-onboarding">
+                <div class="onboarding-content">
+                    <div class="onboarding-row"><span class="onboarding-icon">⚡</span><span><strong>AP (Attribute Points)</strong> — Click the <strong>+ button</strong> on the glowing centre nodes to boost your stats</span></div>
+                    <div class="onboarding-row"><span class="onboarding-icon">🔮</span><span><strong>SP (Skill Points)</strong> — Click any <strong>glowing skill node</strong> on the outer rings to unlock an ability</span></div>
+                    <div class="onboarding-row"><span class="onboarding-icon">✅</span><span>Spend all points, then hit <strong>CONFIRM</strong> to continue the run</span></div>
                 </div>
             </div>
         </div>
@@ -302,7 +277,6 @@
                 <div class="go-stat-row"><span>Level Reached</span><span id="finalLevel">1</span></div>
             </div>
             <div id="nearMissInfo" class="near-miss" style="display: none;"></div>
-            <button id="restoreFromAdBtn" style="display: none;">WATCH AD TO RESTORE SAVE</button>
             <button id="loadAfterGameOverBtn" style="display: none;">LOAD LAST SAVE</button>
             <button id="restartBtn">START AGAIN</button>
         </div>

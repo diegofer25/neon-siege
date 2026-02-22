@@ -280,9 +280,8 @@ export class SkillTreeRenderer {
 	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
 	_updateSkillNodeStates(sm) {
 		for (const [archKey, archData] of Object.entries(this._layout.archetypes)) {
-			const isChosen = sm.chosenArchetype === archKey;
 			const isPlayable = PLAYABLE_ARCHETYPES.includes(archKey);
-			const isAvailable = isChosen || (!sm.chosenArchetype && isPlayable);
+			const isAvailable = isPlayable;
 
 			for (const nd of archData.nodes) {
 				const el = this._skillNodeEls.get(nd.skillId);
@@ -348,7 +347,6 @@ export class SkillTreeRenderer {
 				: '#0ff';
 			const srcOk = !edge.sourceSkillId || (sm.skillRanks[edge.sourceSkillId] > 0);
 			const tgtOk = edge.targetSkillId && sm.skillRanks[edge.targetSkillId] > 0;
-			const isChosen = sm.chosenArchetype === edge.archKey;
 			const isPlayable = PLAYABLE_ARCHETYPES.includes(edge.archKey);
 
 			// Remove old state classes
@@ -357,7 +355,7 @@ export class SkillTreeRenderer {
 			if (tgtOk && srcOk) {
 				line.classList.add('tree-edge--active');
 				line.style.stroke = archColor;
-			} else if (isChosen || (!sm.chosenArchetype && isPlayable)) {
+			} else if (isPlayable) {
 				line.classList.add('tree-edge--available');
 				line.style.stroke = archColor;
 			} else {
@@ -537,13 +535,12 @@ export class SkillTreeRenderer {
 			} else {
 				const srcOk = !edge.sourceSkillId || (sm.skillRanks[edge.sourceSkillId] > 0);
 				const tgtOk = edge.targetSkillId && sm.skillRanks[edge.targetSkillId] > 0;
-				const isChosen = sm.chosenArchetype === edge.archKey;
 				const isPlayable = PLAYABLE_ARCHETYPES.includes(edge.archKey);
 
 				if (tgtOk && srcOk) {
 					cls += ' tree-edge--active';
 					line.style.stroke = archColor;
-				} else if (isChosen || (!sm.chosenArchetype && isPlayable)) {
+				} else if (isPlayable) {
 					cls += ' tree-edge--available';
 					line.style.stroke = archColor;
 				} else {
@@ -603,11 +600,14 @@ export class SkillTreeRenderer {
 
 			node.addEventListener('mouseenter', () => {
 				const currPts = this._sm ? (this._sm.attributes[key] || 0) : pts;
+				const currUnspent = this._sm ? this._sm.unspentAttributePoints : 0;
+				const canAllocateNow = currUnspent > 0 && currPts < attr.maxPoints;
 				this._showTooltip(node, {
 					name: attr.label,
 					icon: attr.icon,
 					description: attr.description,
 					extra: `Points: ${currPts} / ${attr.maxPoints}`,
+					actionHint: canAllocateNow ? '👆 Click + to allocate!' : '',
 					color: '#0ff',
 				});
 			});
@@ -621,13 +621,12 @@ export class SkillTreeRenderer {
 	/** @param {import('../managers/SkillManager.js').SkillManager} sm */
 	_renderSkillNodes(sm) {
 		for (const [archKey, archData] of Object.entries(this._layout.archetypes)) {
-			const isChosen = sm.chosenArchetype === archKey;
 			const isPlayable = PLAYABLE_ARCHETYPES.includes(archKey);
-			const isAvailable = isChosen || (!sm.chosenArchetype && isPlayable);
+			const isAvailable = isPlayable;
 			const isStub = !isPlayable;
 
 			// Sector label at the outermost ring
-			this._renderArchLabel(archData, isChosen, isStub);
+			this._renderArchLabel(archData, false, isStub);
 
 			// Skill nodes
 			for (const nd of archData.nodes) {
@@ -715,6 +714,9 @@ export class SkillTreeRenderer {
 			else if (currLearned) status = `Rank ${currRank}/${skill.maxRank}`;
 			else if (!currCheck.allowed) status = `🔒 ${currCheck.reason}`;
 			else status = 'Click to learn (1 SP)';
+			
+			const canSpendNow = currCheck.allowed && (this._sm ? this._sm.unspentSkillPoints > 0 : false) && !currMaxed;
+			const actionHint = canSpendNow ? '👆 Click to unlock!' : '';
 
 			this._showTooltip(el, {
 				name: skill.name,
@@ -722,6 +724,7 @@ export class SkillTreeRenderer {
 				description: skill.description,
 				extra: `${typeLabel} · Tier ${skill.tier}`,
 				status,
+				actionHint,
 				color: archData.color,
 			});
 		});
@@ -760,6 +763,7 @@ export class SkillTreeRenderer {
 			<div class="tree-tooltip__extra">${data.extra || ''}</div>
 			<div class="tree-tooltip__desc">${data.description}</div>
 			${data.status ? `<div class="tree-tooltip__status">${data.status}</div>` : ''}
+			${data.actionHint ? `<div class="tree-tooltip__action-hint">${data.actionHint}</div>` : ''}
 		`;
 		this._tooltipEl.style.display = 'block';
 	}

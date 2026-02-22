@@ -13,7 +13,6 @@ import {
 	ATTRIBUTES,
 	ATTRIBUTE_POINTS_PER_LEVEL,
 	ARCHETYPES,
-	PLAYABLE_ARCHETYPES,
 	TIER_GATES,
 	TIER_UNLOCK_COSTS,
 	SKILL_SLOTS,
@@ -58,10 +57,6 @@ export class SkillManager {
 		// Unspent points
 		this.unspentSkillPoints = 0;
 		this.unspentAttributePoints = 0;
-
-		// Whether the player has committed to an archetype (happens at first boss)
-		this.chosenArchetype = null;
-		this.ultimateUnlocked = false;
 
 		// Level tracking (authoritative source of truth; Game.js delegates here)
 		this.level = 1;
@@ -236,22 +231,6 @@ export class SkillManager {
 			}
 		}
 
-		return true;
-	}
-
-	// ─── ARCHETYPE COMMITMENT ────────────────────────────────────────────────────
-
-	/**
-	 * Called when player defeats first boss. Lets them choose primary archetype.
-	 * @param {string} archetypeKey
-	 * @returns {boolean}
-	 */
-	commitArchetype(archetypeKey) {
-		if (this.chosenArchetype) return false;
-		if (!PLAYABLE_ARCHETYPES.includes(archetypeKey)) return false;
-
-		this.chosenArchetype = archetypeKey;
-		this.ultimateUnlocked = true;
 		return true;
 	}
 
@@ -536,8 +515,6 @@ export class SkillManager {
 			cooldowns: { ...this.cooldowns },
 			unspentSkillPoints: this.unspentSkillPoints,
 			unspentAttributePoints: this.unspentAttributePoints,
-			chosenArchetype: this.chosenArchetype,
-			ultimateUnlocked: this.ultimateUnlocked,
 			level: this.level,
 			xp: this.xp,
 			xpToNextLevel: this.xpToNextLevel,
@@ -556,8 +533,6 @@ export class SkillManager {
 		this.cooldowns = { ...state.cooldowns };
 		this.unspentSkillPoints = state.unspentSkillPoints || 0;
 		this.unspentAttributePoints = state.unspentAttributePoints || 0;
-		this.chosenArchetype = state.chosenArchetype || null;
-		this.ultimateUnlocked = !!state.ultimateUnlocked;
 		this.level = state.level || 1;
 		this.xp = state.xp || 0;
 		this.xpToNextLevel = state.xpToNextLevel || LEVEL_CONFIG.getXPForLevel(this.level);
@@ -602,3 +577,4 @@ export class SkillManager {
 		return previousTierSkills[prereqIndex] || null;
 	}
 }
+

@@ -1,12 +1,11 @@
 /**
- * Lightweight telemetry manager for analytics and monetization instrumentation.
+ * Lightweight telemetry manager for analytics and instrumentation.
  *
  * Dispatches events to:
  * - `window.gtag` when available
  * - `window.dataLayer` when available
  * - `document` as CustomEvent (`neon:telemetry`) for local listeners
  */
-import { consentManager } from './ConsentManager.js';
 
 export class TelemetryManager {
     constructor() {
@@ -45,10 +44,8 @@ export class TelemetryManager {
             sessionId: this.sessionId
         };
 
-        if (consentManager.canTrackAnalytics()) {
-            this._emitToDataLayer(event);
-            this._emitToGtag(event);
-        }
+        this._emitToDataLayer(event);
+        this._emitToGtag(event);
         this._emitToDocument(event);
 
         if (this.debugEnabled) {
