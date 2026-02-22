@@ -185,26 +185,32 @@ export class Boss extends Enemy {
     }
 
     drawBossHealthBar(ctx) {
-        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
-        const barWidth = canvasWidth * 0.6;
-        const barHeight = 20;
+        const canvasWidth  = this.game.canvas.logicalWidth  || this.game.canvas.width;
+        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
+        const barWidth  = canvasWidth * 0.6;
+        const barHeight = 22;
         const barX = (canvasWidth - barWidth) / 2;
-        const barY = 20;
+        const barY = canvasHeight - 48;
         const healthPercent = this.health / this.maxHealth;
+
+        // Label above bar
+        ctx.fillStyle = '#ff00ff';
+        ctx.font = '11px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('BOSS', canvasWidth / 2, barY - 6);
 
         // Background
         ctx.fillStyle = '#333';
         ctx.fillRect(barX, barY, barWidth, barHeight);
 
-        // Health
+        // Health fill
         ctx.fillStyle = '#ff00ff';
         ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
 
-        // Text
-        ctx.fillStyle = '#fff';
-        ctx.font = '14px "Press Start 2P", monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('BOSS', canvasWidth / 2, barY + 15);
+        // Border
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
     }
 
     static createBoss(game) {
@@ -674,38 +680,39 @@ export class ShieldBoss extends Boss {
     }
     
     drawShieldBossHealthBar(ctx) {
-        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
-        const barWidth = canvasWidth * 0.6;
-        const barHeight = 20;
+        const canvasWidth  = this.game.canvas.logicalWidth  || this.game.canvas.width;
+        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
+        const barWidth  = canvasWidth * 0.6;
+        const barHeight = 22;
         const barX = (canvasWidth - barWidth) / 2;
-        const barY = 20;
+        const barY = canvasHeight - 48;
         const healthPercent = this.health / this.maxHealth;
         const shieldPercent = this.shield / this.maxShield;
-        
+
+        // Label above bar
+        const bossText = this.vulnerabilityPhase ? 'SHIELD BOSS - VULNERABLE!' : 'SHIELD BOSS';
+        ctx.fillStyle = this.vulnerabilityPhase ? '#ffff00' : '#00ffff';
+        ctx.font = '11px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(bossText, canvasWidth / 2, barY - 6);
+
         // Background
         ctx.fillStyle = '#333';
         ctx.fillRect(barX, barY, barWidth, barHeight);
-        
-        // Health bar
+
+        // Health fill
         ctx.fillStyle = '#ff4444';
         ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
-        
-        // Shield bar (overlaid)
+
+        // Shield overlay
         if (this.shieldActive && this.shield > 0) {
-            ctx.fillStyle = '#00ffff';
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
             ctx.fillRect(barX, barY, barWidth * shieldPercent, barHeight);
         }
-        
+
         // Border
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = this.vulnerabilityPhase ? '#ffff00' : '#00ffff';
+        ctx.lineWidth = 1.5;
         ctx.strokeRect(barX, barY, barWidth, barHeight);
-        
-        // Text
-        ctx.fillStyle = '#fff';
-        ctx.font = '14px "Press Start 2P", monospace';
-        ctx.textAlign = 'center';
-        const bossText = this.vulnerabilityPhase ? 'SHIELD BOSS - VULNERABLE!' : 'SHIELD BOSS';
-        ctx.fillText(bossText, canvasWidth / 2, barY + 15);
     }
 }
