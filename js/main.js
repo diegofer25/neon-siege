@@ -429,6 +429,7 @@ function init() {
     
     // Configure all input event listeners
     setupInputHandlers();
+    _setupHudTooltips();
     
     // Handle dynamic window resizing
     window.addEventListener('resize', handleResize);
@@ -973,6 +974,20 @@ function updateHUD() {
 
             nameEl.textContent = `${skill.icon || '✨'} ${rank}`;
             slotEl.classList.add('filled');
+        }
+    }
+
+    // Update ascension modifier badges
+    if (game.ascensionSystem) {
+        const ascContainer = document.getElementById('ascensionSlots');
+        if (ascContainer) {
+            const mods = game.ascensionSystem.activeModifiers;
+            if (ascContainer.dataset.modCount !== String(mods.length)) {
+                ascContainer.dataset.modCount = String(mods.length);
+                ascContainer.innerHTML = mods.map(m =>
+                    `<div class="ascension-badge" data-tooltip-type="ascension" data-mod-id="${m.id}" title="">${m.icon}</div>`
+                ).join('');
+            }
         }
     }
 
@@ -1600,6 +1615,130 @@ export function closeAllSkillOverlays() {
     document.getElementById('levelUpPanel')?.classList.remove('show');
     document.getElementById('archetypeSelectPanel')?.classList.remove('show');
     document.getElementById('ascensionPanel')?.classList.remove('show');
+}
+
+// ─── HUD TOOLTIP SYSTEM ──────────────────────────────────────────────────────
+
+/** @type {HTMLElement|null} */
+let _hudTooltipEl = null;
+
+function _setupHudTooltips() {
+    _hudTooltipEl = document.getElementById('hudTooltip');
+    if (!_hudTooltipEl) return;
+
+    document.addEventListener('mouseover', (e) => {
+        if (!game) return;
+        const target = /** @type {Element} */(e.target);
+        const skillSlot = /** @type {HTMLElement|null} */(target.closest('.skill-slot[data-tooltip-type]'));
+        const passiveSlot = /** @type {HTMLElement|null} */(target.closest('.passive-slot[data-tooltip-type]'));
+        const ascBadge = /** @type {HTMLElement|null} */(target.closest('.ascension-badge[data-mod-id]'));
+
+        if (skillSlot) {
+            const slotIdx = parseInt(skillSlot.dataset.slot, 10);
+            const slots = game.skillManager?.getKeybindSlots?.();
+            const slot = slots?.[slotIdx];
+            if (slot?.skill) {
+                const rank = game.skillManager.getSkillRank(slot.skillId);
+                const cdInfo = game.skillManager.getCooldownInfo(slot.skillId);
+                const cdSec = (cdInfo.total / 1000).toFixed(1);
+                const typeLabel = /** @type {any} */(slot)?.isUltimate ? 'Ultimate' : 'Active';
+                _showHudTooltip({
+                    icon: slot.skill.icon || '⚡',
+                    name: slot.skill.name,
+                    meta: `${typeLabel} · Tier ${slot.skill.tier} · Rank ${rank}/${slot.skill.maxRank}`,
+                    desc: slot.skill.description,
+                    cd: `Cooldown: ${cdSec}s`,
+                    type: 'active',
+                }, skillSlot);
+            } else {
+                _hideHudTooltip();
+            }
+            return;
+        }
+
+        if (passiveSlot) {
+            const slotIdx = parseInt(passiveSlot.dataset.passiveSlot, 10);
+            const skillId = game.skillManager?.equippedPassives?.[slotIdx];
+            if (skillId) {
+                const skill = game.skillManager.getSkillDef(skillId);
+                const rank = game.skillManager.getSkillRank(skillId);
+                if (skill) {
+                    _showHudTooltip({
+                        icon: skill.icon || '✨',
+                        name: skill.name,
+                        meta: `Passive · Tier ${skill.tier} · Rank ${rank}/${skill.maxRank}`,
+                        desc: skill.description,
+                        cd: undefined,
+                        type: 'passive',
+                    }, passiveSlot);
+                    return;
+                }
+            }
+            _hideHudTooltip();
+            return;
+        }
+
+        if (ascBadge) {
+            const modId = ascBadge.dataset.modId;
+            const mod = game.ascensionSystem?.activeModifiers?.find(m => m.id === modId);
+            if (mod) {
+                _showHudTooltip({
+                    icon: mod.icon || '✨',
+                    name: mod.name,
+                    meta: 'Ascension Modifier',
+                    desc: mod.description,
+                    cd: undefined,
+                    type: 'ascension',
+                }, ascBadge);
+                return;
+            }
+        }
+
+        if (!target.closest('.hud-tooltip')) {
+            _hideHudTooltip();
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (_hudTooltipEl && _hudTooltipEl.style.display !== 'none') {
+            _positionHudTooltip(e.clientX, e.clientY);
+        }
+    });
+}
+
+function _showHudTooltip({ icon, name, meta, desc, cd, type }, anchorEl) {
+    if (!_hudTooltipEl) return;
+    _hudTooltipEl.className = `hud-tooltip${type === 'ascension' ? ' hud-tooltip--ascension' : ''}`;
+    _hudTooltipEl.innerHTML = `
+        <div class="hud-tooltip__header">
+            <span class="hud-tooltip__icon">${icon}</span>
+            <span class="hud-tooltip__name">${name}</span>
+        </div>
+        <div class="hud-tooltip__meta">${meta}</div>
+        <div class="hud-tooltip__desc">${desc}</div>
+        ${cd ? `<div class="hud-tooltip__cd">${cd}</div>` : ''}
+    `;
+    _hudTooltipEl.style.display = 'block';
+    const rect = anchorEl.getBoundingClientRect();
+    _positionHudTooltip(rect.left + rect.width / 2, rect.top);
+}
+
+function _hideHudTooltip() {
+    if (_hudTooltipEl) _hudTooltipEl.style.display = 'none';
+}
+
+function _positionHudTooltip(cx, cy) {
+    if (!_hudTooltipEl) return;
+    const tw = _hudTooltipEl.offsetWidth;
+    const th = _hudTooltipEl.offsetHeight;
+    const margin = 10;
+    let x = cx - tw / 2;
+    let y = cy - th - 12;
+    // Clamp to viewport
+    x = Math.max(margin, Math.min(window.innerWidth - tw - margin, x));
+    if (y < margin) y = cy + 20; // flip below if too high
+    _hudTooltipEl.style.left = x + 'px';
+    _hudTooltipEl.style.top = y + 'px';
 }
 
 // Initialize application when DOM content is fully loaded

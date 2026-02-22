@@ -11,6 +11,7 @@
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
+    pointer-events: auto;
 }
 
 .passive-slots {
@@ -21,6 +22,7 @@
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
+    pointer-events: auto;
 }
 
 .passive-slot {
@@ -775,4 +777,111 @@
 
 .onboarding-row strong {
     color: #0ff;
+}
+
+/* ================================================================
+   ASCENSION MODIFIER BADGES (HUD)
+   ================================================================ */
+
+.ascension-slots {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: absolute;
+    bottom: 190px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    pointer-events: auto;
+    max-width: 320px;
+}
+
+.ascension-badge {
+    width: 30px;
+    height: 30px;
+    border: 2px solid rgba(255, 215, 0, 0.65);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: default;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.3), inset 0 0 6px rgba(255, 215, 0, 0.08);
+    transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+}
+
+.ascension-badge:hover {
+    transform: scale(1.18);
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.65);
+}
+
+/* ================================================================
+   HUD FLOATING TOOLTIP
+   ================================================================ */
+
+.hud-tooltip {
+    position: fixed;
+    z-index: 9999;
+    background: rgba(4, 8, 20, 0.96);
+    border: 1px solid rgba(0, 255, 255, 0.45);
+    border-radius: 8px;
+    padding: 10px 14px;
+    pointer-events: none;
+    max-width: 230px;
+    min-width: 140px;
+    box-shadow: 0 0 24px rgba(0, 255, 255, 0.12), 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.hud-tooltip__header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+}
+
+.hud-tooltip__icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.hud-tooltip__name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #0ff;
+    line-height: 1.4;
+}
+
+.hud-tooltip__meta {
+    font-family: 'Audiowide', sans-serif;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 7px;
+}
+
+.hud-tooltip__desc {
+    font-family: 'Audiowide', sans-serif;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.55;
+}
+
+.hud-tooltip__cd {
+    font-family: 'Audiowide', sans-serif;
+    font-size: 9px;
+    color: rgba(255, 200, 60, 0.9);
+    margin-top: 6px;
+}
+
+.hud-tooltip--ascension {
+    border-color: rgba(255, 215, 0, 0.5);
+    box-shadow: 0 0 24px rgba(255, 215, 0, 0.1), 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.hud-tooltip--ascension .hud-tooltip__name {
+    color: #ffd700;
 }
