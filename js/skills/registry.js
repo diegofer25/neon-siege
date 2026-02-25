@@ -26,7 +26,7 @@ import { LifeStealPlugin } from './ascension/LifeStealPlugin.js';
 /**
  * @type {Map<string, typeof import('./BaseSkillPlugin.js').BaseSkillPlugin>}
  */
-export const SKILL_PLUGIN_REGISTRY = new Map([
+export const SKILL_PLUGIN_REGISTRY = new Map(/** @type {Array<[string, typeof import('./BaseSkillPlugin.js').BaseSkillPlugin]>} */ ([
 	// Gunner
 	['gunner_rapid_fire', RapidFirePlugin],
 
@@ -36,4 +36,4 @@ export const SKILL_PLUGIN_REGISTRY = new Map([
 
 	// Ascension modifiers
 	['asc_vampiric', LifeStealPlugin],
-]);
+]));

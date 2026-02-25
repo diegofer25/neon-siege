@@ -110,6 +110,8 @@ export class Player {
 		this.piercingLevel = 0;
 		/** @type {boolean} Whether player fires three projectiles per shot */
 		this.hasTripleShot = false;
+		/** @type {number} Damage multiplier for side projectiles in triple shot */
+		this.tripleShotSideDamage = 1.0;
 		/** @type {boolean} Whether player heals when killing enemies */
 		this.hasLifeSteal = false;
 		/** @type {boolean} Whether slow field is active */
