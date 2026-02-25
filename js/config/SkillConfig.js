@@ -125,21 +125,14 @@ export const SKILL_SLOTS = {
 // ─── TIER GATES ────────────────────────────────────────────────────────────────
 
 /**
- * Points invested in a single tree required to unlock each tier.
- * Tier 1: always available
- * Tier 2: 3+ points in tree
- * Tier 3: 6+ points in tree (requires Legacy Token unlock)
- * Tier 4: 10+ points in tree (requires Legacy Token unlock, includes ultimate)
+ * Skill progression gates:
+ * - Each skill requires its directly-connected prerequisite at the same rank.
+ *   e.g. to buy rank 2 of a Tier 2 skill, the connected Tier 1 skill must be rank 2.
+ * - Ultimates are standalone (not part of a branch). They require at least
+ *   ULTIMATE_MIN_TREE_INVESTMENT total skill ranks invested in that archetype.
+ * - No Legacy Token or point-investment tier gates.
  */
-export const TIER_GATES = [0, 3, 6, 10];
-
-/**
- * Legacy Token costs to unlock tier 3 and 4 branches per archetype
- */
-export const TIER_UNLOCK_COSTS = {
-	tier3: 15,
-	tier4: 30,
-};
+export const ULTIMATE_MIN_TREE_INVESTMENT = 15;
 
 // ─── COOLDOWN SYSTEM ───────────────────────────────────────────────────────────
 

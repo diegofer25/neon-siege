@@ -1,11 +1,11 @@
 /**
  * @fileoverview SkillManager — owns the unified skill tree state, attribute allocation,
- * tier-gate validation, cooldown ticking, and APIs consumed by Player/Game/UI.
+ * prerequisite validation, cooldown ticking, and APIs consumed by Player/Game/UI.
  *
  * Design:
  * - One instance per run, created in Game.js
- * - All skill trees are open; tier gates (3/6/10) restrict deep investment
- * - Legacy Token gates for tier 3–4 checked via ProgressionManager
+ * - All skill trees are open; each skill requires its connected prerequisite at the same rank
+ * - Ultimates are standalone — gated by total tree investment (ULTIMATE_MIN_TREE_INVESTMENT)
  * - Escalating tempo: cooldowns decrease with level + INT
  */
 
@@ -13,8 +13,7 @@ import {
 	ATTRIBUTES,
 	ATTRIBUTE_POINTS_PER_LEVEL,
 	ARCHETYPES,
-	TIER_GATES,
-	TIER_UNLOCK_COSTS,
+	ULTIMATE_MIN_TREE_INVESTMENT,
 	SKILL_SLOTS,
 	COOLDOWN_CONFIG,
 	LEVEL_CONFIG,
@@ -173,28 +172,14 @@ export class SkillManager {
 		if (currentRank >= skill.maxRank) return { allowed: false, reason: 'Max rank reached.' };
 		if (this.unspentSkillPoints < 1) return { allowed: false, reason: 'No skill points available.' };
 
-		// Tier gate check
-		const treePoints = this.treeInvestment[archetypeKey] || 0;
-		const requiredPoints = skill.tier === 2 ? 0 : (TIER_GATES[skill.tier - 1] || 0);
-		if (treePoints < requiredPoints) {
-			return { allowed: false, reason: `Need ${requiredPoints} points in ${ARCHETYPES[archetypeKey].label} tree (have ${treePoints}).` };
-		}
-
-		const prereq = this._getTierPrerequisite(skillId, archetypeKey);
-		if (prereq) {
-			const prereqRank = this.skillRanks[prereq.id] || 0;
-			if (prereqRank < nextRank) {
-				return { allowed: false, reason: `Need ${prereq.name} at rank ${nextRank}.` };
-			}
-		}
-
-		// Tier 3-4 legacy token gate
-		if (skill.tier >= 3) {
-			const unlockId = skill.tier === 3 ? 'SKILL_TIER_3' : 'SKILL_TIER_4';
-			if (!this.progressionManager.isUnlocked(unlockId)) {
-				const tierKey = skill.tier === 3 ? 'tier3' : 'tier4';
-				const cost = TIER_UNLOCK_COSTS[tierKey];
-				return { allowed: false, reason: `Unlock tier ${skill.tier} skills with ${cost} Legacy Tokens.` };
+		// Prerequisite check (skip for ultimates — they are standalone nodes)
+		if (skill.type !== 'ultimate') {
+			const prereq = this._getTierPrerequisite(skillId, archetypeKey);
+			if (prereq) {
+				const prereqRank = this.skillRanks[prereq.id] || 0;
+				if (prereqRank < nextRank) {
+					return { allowed: false, reason: `Need ${prereq.name} at rank ${nextRank}.` };
+				}
 			}
 		}
 
@@ -207,13 +192,10 @@ export class SkillManager {
 				return { allowed: false, reason: `Max ${SKILL_SLOTS.ACTIVE_MAX} actives equipped.` };
 			}
 			if (skill.type === 'ultimate') {
-				// Ultimate unlocks when any non-ultimate T4 skill in the same archetype is learned
-				const archetype = ARCHETYPES[archetypeKey];
-				const hasT4Passive = archetype.skills.some(
-					s => s.tier === 4 && s.type !== 'ultimate' && (this.skillRanks[s.id] || 0) >= 1
-				);
-				if (!hasT4Passive) {
-					return { allowed: false, reason: 'Learn a Tier 4 skill in this tree to unlock the ultimate.' };
+				// Ultimate requires minimum total investment in this archetype's tree
+				const treePoints = this.treeInvestment[archetypeKey] || 0;
+				if (treePoints < ULTIMATE_MIN_TREE_INVESTMENT) {
+					return { allowed: false, reason: `Need ${ULTIMATE_MIN_TREE_INVESTMENT} skill points in ${ARCHETYPES[archetypeKey].label} tree (have ${treePoints}).` };
 				}
 				if (this.equippedUltimate) {
 					return { allowed: false, reason: 'Ultimate slot already filled.' };
