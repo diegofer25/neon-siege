@@ -93,21 +93,26 @@ export class EffectsManager {
             GameConfig.VFX.PARTICLE_LIMITS.MAX_PARTICLES / 2 : 
             GameConfig.VFX.PARTICLE_LIMITS.MAX_PARTICLES;
             
-        // Remove excess particles if over limit
+        // Remove excess particles if over limit (pop from end for O(1) per removal)
         while (this.game.particles.length > particleLimit) {
-            const particle = this.game.particles.shift();
+            const particle = this.game.particles.pop();
             if (particle._fromPool) {
                 this.game.particlePool.release(particle);
             }
         }
         
-        // Update remaining particles
-        for (let i = this.game.particles.length - 1; i >= 0; i--) {
-            const particle = this.game.particles[i];
+        // Update remaining particles (swap-and-pop instead of splice for O(1) removal)
+        const particles = this.game.particles;
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const particle = particles[i];
             particle.update(delta);
             
             if (particle.isDead()) {
-                this.game.particles.splice(i, 1);
+                const last = particles.length - 1;
+                if (i !== last) {
+                    particles[i] = particles[last];
+                }
+                particles.pop();
                 if (particle._fromPool) {
                     this.game.particlePool.release(particle);
                 }

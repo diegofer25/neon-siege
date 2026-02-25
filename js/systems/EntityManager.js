@@ -55,8 +55,13 @@ export class EntityManager {
             type: enemy.isBoss ? 'boss' : (enemy.isSplitter ? 'splitter' : 'normal'),
         });
 
-        // Remove enemy and update counters
-        this.game.enemies.splice(index, 1);
+        // Remove enemy and update counters (swap-and-pop for O(1))
+        const enemies = this.game.enemies;
+        const lastIdx = enemies.length - 1;
+        if (index !== lastIdx) {
+            enemies[index] = enemies[lastIdx];
+        }
+        enemies.pop();
         this.game.waveManager.onEnemyKilled();
 
         // Combo system
@@ -147,10 +152,16 @@ export class EntityManager {
         // Skip cleanup if game is not playing
         if (this.game.gameState !== 'playing') return;
 
-        for (let i = this.game.projectiles.length - 1; i >= 0; i--) {
-            const projectile = this.game.projectiles[i];
+        const projectiles = this.game.projectiles;
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            const projectile = projectiles[i];
             if (projectile.isOffScreen(this.game.canvas)) {
-                this.game.projectiles.splice(i, 1);
+                // Swap-and-pop for O(1) removal
+                const last = projectiles.length - 1;
+                if (i !== last) {
+                    projectiles[i] = projectiles[last];
+                }
+                projectiles.pop();
                 if (projectile._fromPool) {
                     this.game.projectilePool.release(projectile);
                 }
@@ -196,12 +207,18 @@ export class EntityManager {
      * @param {number} delta - Time elapsed since last frame
      */
     _updateProjectiles(delta) {
-        for (let index = this.game.projectiles.length - 1; index >= 0; index--) {
-            const projectile = this.game.projectiles[index];
+        const projectiles = this.game.projectiles;
+        for (let index = projectiles.length - 1; index >= 0; index--) {
+            const projectile = projectiles[index];
             projectile.update(delta);
 
             if (projectile.isOffScreen(this.game.canvas)) {
-                this.game.projectiles.splice(index, 1);
+                // Swap-and-pop for O(1) removal
+                const last = projectiles.length - 1;
+                if (index !== last) {
+                    projectiles[index] = projectiles[last];
+                }
+                projectiles.pop();
                 if (projectile._fromPool) {
                     this.game.projectilePool.release(projectile);
                 }

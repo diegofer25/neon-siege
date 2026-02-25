@@ -160,7 +160,12 @@ export class ObjectPool {
             return false;
         }
         
-        this.active.splice(index, 1);
+        // Swap-and-pop: O(1) removal instead of O(n) splice
+        const last = this.active.length - 1;
+        if (index !== last) {
+            this.active[index] = this.active[last];
+        }
+        this.active.pop();
         
         if (this.pool.length < this.maxSize) {
             this.pool.push(obj);

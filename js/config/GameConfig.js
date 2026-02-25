@@ -480,7 +480,7 @@ export const GameConfig = {
          */
         PARTICLE_LIMITS: {
             /** @type {number} Maximum particles active at once */
-            MAX_PARTICLES: 200,
+            MAX_PARTICLES: 150,
             
             /** @type {number} Maximum projectiles active at once */
             MAX_PROJECTILES: 100
@@ -633,17 +633,17 @@ export const GameConfig = {
         HIGH: {
             particlePoolSize: { initial: 80, max: 240 },
             projectilePoolSize: { initial: 60, max: 160 },
-            particleLimit: 200
+            particleLimit: 150
         },
         MEDIUM: {
             particlePoolSize: { initial: 60, max: 180 },
             projectilePoolSize: { initial: 45, max: 120 },
-            particleLimit: 140
+            particleLimit: 80
         },
         LOW: {
             particlePoolSize: { initial: 40, max: 120 },
             projectilePoolSize: { initial: 30, max: 90 },
-            particleLimit: 90
+            particleLimit: 50
         }
     },
 

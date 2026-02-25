@@ -3,6 +3,7 @@ import { GameConfig } from '../config/GameConfig.js';
 import { playSFX } from './../main.js';
 import { vfxHelper } from './../managers/VFXHelper.js';
 import { ActionTypes } from '../state/index.js';
+import { SpatialGrid } from '../utils/SpatialGrid.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
@@ -17,22 +18,53 @@ export class CollisionSystem {
      */
     constructor(game) {
         this.game = game;
+        /** @type {SpatialGrid|null} */
+        this._enemyGrid = null;
+    }
+
+    /**
+     * Rebuild the spatial hash grid with current enemy positions.
+     * Called once per frame before collision checks.
+     * @private
+     */
+    _rebuildEnemyGrid() {
+        const canvas = this.game.canvas;
+        const w = canvas.logicalWidth || canvas.width;
+        const h = canvas.logicalHeight || canvas.height;
+        if (!this._enemyGrid) {
+            this._enemyGrid = new SpatialGrid(120, w, h);
+        } else {
+            this._enemyGrid.resize(w, h);
+            this._enemyGrid.clear();
+        }
+        const enemies = this.game.enemies;
+        for (let i = 0; i < enemies.length; i++) {
+            this._enemyGrid.insert(enemies[i]);
+        }
     }
 
     /**
      * Check all collision types and handle responses.
      */
     checkAllCollisions() {
+        this._rebuildEnemyGrid();
         this._checkProjectileEnemyCollisions();
         this._checkPlayerEnemyCollisions();
         this._checkEnemyProjectilePlayerCollisions();
     }
 
     _removeProjectileAt(index) {
-        const projectile = this.game.projectiles[index];
+        const projectiles = this.game.projectiles;
+        const projectile = projectiles[index];
         if (!projectile) return;
 
-        this.game.projectiles.splice(index, 1);
+        // Swap-and-pop: O(1) removal instead of O(n) splice
+        const last = projectiles.length - 1;
+        if (index !== last) {
+            projectiles[index] = projectiles[last];
+        }
+        projectiles.pop();
+
         if (projectile._fromPool) {
             this.game.projectilePool.release(projectile);
         }
@@ -43,14 +75,17 @@ export class CollisionSystem {
      * @private
      */
     _checkProjectileEnemyCollisions() {
-        for (let pIndex = this.game.projectiles.length - 1; pIndex >= 0; pIndex--) {
-            const projectile = this.game.projectiles[pIndex];
+        const projectiles = this.game.projectiles;
+        for (let pIndex = projectiles.length - 1; pIndex >= 0; pIndex--) {
+            const projectile = projectiles[pIndex];
             if (!projectile || projectile.isEnemyProjectile) continue;
 
-            for (let eIndex = this.game.enemies.length - 1; eIndex >= 0; eIndex--) {
-                const enemy = this.game.enemies[eIndex];
-                if (!enemy) continue;
-                if (enemy.dying || enemy.health <= 0) continue;
+            // Spatial grid query: only check nearby enemies instead of all
+            const queryRadius = projectile.radius + 60;
+            const nearby = this._enemyGrid.query(projectile.x, projectile.y, queryRadius);
+
+            for (const enemy of nearby) {
+                if (!enemy || enemy.dying || enemy.health <= 0) continue;
 
                 if (MathUtils.circleCollision(projectile, enemy)) {
                     const projectileRemoved = this._handleProjectileHit(projectile, enemy, pIndex);
@@ -234,7 +269,13 @@ export class CollisionSystem {
             enemyDamage: enemy.damage,
             enemiesBefore: this.game.enemies.length
         });
-        this.game.enemies.splice(enemyIndex, 1);
+        // Swap-and-pop: O(1) removal
+        const enemies = this.game.enemies;
+        const lastIdx = enemies.length - 1;
+        if (enemyIndex !== lastIdx) {
+            enemies[enemyIndex] = enemies[lastIdx];
+        }
+        enemies.pop();
     }
 
     /**

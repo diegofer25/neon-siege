@@ -114,6 +114,10 @@ export class Projectile {
 
         // Echo flag: prevents recursive echo duplication
         this._isEcho = false;
+
+        // Homing throttle state
+        this._homingFrame = 0;
+        this._homingTarget = null;
     }
     
     /**
@@ -171,50 +175,74 @@ export class Projectile {
     }
     
     /**
-     * Apply basic homing behavior to track nearby enemies
+     * Apply basic homing behavior to track nearby enemies.
+     * Throttled: only recalculates nearest target every 3 frames.
      * 
      * @param {Array.<import('./Enemy.js').Enemy>} enemies - Array of enemy objects
      * @param {number} delta - Time elapsed since last frame
      */
     applyHoming(enemies, delta) {
-        // Find nearest enemy within reasonable range
-        /** @type {import('./Enemy.js').Enemy|null} */
+        this._homingFrame++;
+
+        // On non-scan frames, steer toward cached target if still alive
+        if (this._homingFrame % 3 !== 0 && this._homingTarget) {
+            const target = this._homingTarget;
+            if (target.dying || target.health <= 0) {
+                this._homingTarget = null;
+            } else {
+                this._steerToward(target, delta);
+                return;
+            }
+        }
+
+        // Full nearest-enemy search (runs every 3rd frame or when cache is stale)
         let nearestEnemy = null;
-        let nearestDistance = 150; // Only home within 150 pixels
-        
-        enemies.forEach(enemy => {
-            if (enemy.dying) return; // Skip dying enemies
-            
-            const distance = MathUtils.distance(this.x, this.y, enemy.x, enemy.y);
-            
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
+        let nearestDistSq = 150 * 150; // Only home within 150 pixels
+
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
+            if (enemy.dying) continue;
+
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq < nearestDistSq) {
+                nearestDistSq = distSq;
                 nearestEnemy = enemy;
             }
-        });
-        
+        }
+
+        this._homingTarget = nearestEnemy;
         if (nearestEnemy) {
-            // Calculate desired direction to target
-            const dx = nearestEnemy.x - this.x;
-            const dy = nearestEnemy.y - this.y;
-            const distance = MathUtils.distance(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
-            
-            if (distance > 0) {
-                // Normalize desired direction
-                const desiredVx = (dx / distance) * this.speed;
-                const desiredVy = (dy / distance) * this.speed;
-                
-                // Apply homing strength to blend current velocity with desired velocity
-                const strength = this.homingStrength * (delta / 1000);
-                this.vx = this.vx * (1 - strength) + desiredVx * strength;
-                this.vy = this.vy * (1 - strength) + desiredVy * strength;
-                
-                // Maintain original speed
-                const currentSpeed = MathUtils.distance(0, 0, this.vx, this.vy);
-                if (currentSpeed > 0) {
-                    this.vx = (this.vx / currentSpeed) * this.speed;
-                    this.vy = (this.vy / currentSpeed) * this.speed;
-                }
+            this._steerToward(nearestEnemy, delta);
+        }
+    }
+
+    /**
+     * Steer velocity toward a target entity.
+     * @private
+     * @param {{ x: number, y: number }} target
+     * @param {number} delta
+     */
+    _steerToward(target, delta) {
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq > 0) {
+            const distance = Math.sqrt(distSq);
+            const desiredVx = (dx / distance) * this.speed;
+            const desiredVy = (dy / distance) * this.speed;
+
+            const strength = this.homingStrength * (delta / 1000);
+            this.vx = this.vx * (1 - strength) + desiredVx * strength;
+            this.vy = this.vy * (1 - strength) + desiredVy * strength;
+
+            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (currentSpeed > 0) {
+                this.vx = (this.vx / currentSpeed) * this.speed;
+                this.vy = (this.vy / currentSpeed) * this.speed;
             }
         }
     }
@@ -365,16 +393,16 @@ export class Projectile {
     draw(ctx) {
         ctx.save();
         
-        // Enhanced glow for critical hits
-        if (this.isCriticalVisual) {
-            ctx.shadowColor = this.glowColor;
-            ctx.shadowBlur = 20; // Stronger glow for critical hits
-        } else {
-            ctx.shadowColor = '#fff';
-            ctx.shadowBlur = 10;
-        }
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        // Fake glow: larger semi-transparent circle behind the body (replaces shadowBlur)
+        const glowAlpha = this.isCriticalVisual ? 0.35 : 0.2;
+        const glowRadius = this.isCriticalVisual ? 12 : 8;
+        const glowColor = this.isCriticalVisual ? this.glowColor : '#fff';
+        ctx.globalAlpha = glowAlpha;
+        ctx.fillStyle = glowColor;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
         
         // Different colors and sizes for special projectiles
         let fillColor = '#fff';
@@ -412,14 +440,12 @@ export class Projectile {
         ctx.fill();
         ctx.stroke();
 
-        // DEX tracer — extended glowing trail behind the projectile
+        // DEX tracer — extended glowing trail behind the projectile (no shadowBlur)
         if (this.tracerLevel > 0 && this.trail.length >= 2) {
             ctx.save();
-            const tracerLen = 3 + this.tracerLevel * 0.4; // longer trail at higher DEX
+            const tracerLen = 3 + this.tracerLevel * 0.4;
             const tracerColor = '#00e5ff';
             ctx.strokeStyle = tracerColor;
-            ctx.shadowColor = tracerColor;
-            ctx.shadowBlur = 4 + this.tracerLevel * 0.15;
             ctx.lineWidth = 1.5;
             const steps = Math.min(this.trail.length, Math.ceil(tracerLen));
             for (let i = 0; i < steps - 1; i++) {

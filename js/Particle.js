@@ -192,13 +192,7 @@ export class Particle {
         // Set alpha (ensure proper range)
         ctx.globalAlpha = Math.max(0, Math.min(1, this.alpha));
         
-        // Set glow effect
-        ctx.shadowColor = this.glowColor;
-        ctx.shadowBlur = 5;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        
-        // Draw particle
+        // Draw particle (no shadowBlur for performance — particles are too small for glow to matter)
         ctx.fillStyle = this.color;
         
         const renderRadius = Math.max(0, this.radius * this.scale);
@@ -398,7 +392,7 @@ export class Particle {
             particle.lineWidth = 6 * lifePercent; // Thicker at start
         };
         
-        // Override draw method for ring rendering
+        // Override draw method for ring rendering (no shadowBlur for performance)
         particle.draw = function(ctx) {
             if (particle.isDead()) return;
             
@@ -406,8 +400,6 @@ export class Particle {
             ctx.globalAlpha = particle.alpha;
             ctx.strokeStyle = particle.color;
             ctx.lineWidth = particle.lineWidth;
-            ctx.shadowColor = particle.color;
-            ctx.shadowBlur = 15;
             
             ctx.beginPath();
             ctx.arc(particle.x, particle.y, particle.currentRadius, 0, Math.PI * 2);

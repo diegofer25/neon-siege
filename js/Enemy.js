@@ -179,12 +179,14 @@ export class Enemy {
             drawColor = '#fff';
         }
         
-        // Set glow effect
+        // Fake glow: semi-transparent circle behind enemy body (replaces expensive shadowBlur)
         ctx.save();
-        ctx.shadowColor = this.glowColor;
-        ctx.shadowBlur = 10 * intensity;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = this.glowColor;
+        ctx.globalAlpha = 0.25 * intensity;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius + 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
         
         // Draw enemy body
         if (this.dying) {
