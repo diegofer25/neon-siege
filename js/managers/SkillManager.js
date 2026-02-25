@@ -351,24 +351,24 @@ export class SkillManager {
 	}
 
 	/**
-	 * Get the QWER keybind mapping for equipped actives + ultimate.
+	 * Get the QERT keybind mapping for equipped actives + ultimate.
 	 * @returns {Array<{key: string, skillId: string|null, skill: Object|null}>}
 	 */
 	getKeybindSlots() {
-		const keys = ['Q', 'W', 'E', 'R'];
+		const keys = ['Q', 'E', 'R', 'T'];
 		const slots = [];
 
-		// Q, W, E → actives
+		// Q, E, R → actives
 		for (let i = 0; i < 3; i++) {
 			const skillId = this.equippedActives[i] || null;
 			const skill = skillId ? this._findSkill(skillId).skill : null;
 			slots.push({ key: keys[i], skillId, skill });
 		}
 
-		// R → ultimate
+		// T → ultimate
 		const ultSkill = this.equippedUltimate ? this._findSkill(this.equippedUltimate).skill : null;
 		slots.push({
-			key: 'R',
+			key: 'T',
 			skillId: this.equippedUltimate,
 			skill: ultSkill,
 			isUltimate: true,

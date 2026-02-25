@@ -426,8 +426,12 @@ export class Game {
 		const centerY = logicalHeight / 2;
 
 		if (this.player) {
-			this.player.x = centerX;
-			this.player.y = centerY;
+			// Scale player position proportionally to new canvas size
+			this.player.x = (this.player.x / prevWidth) * logicalWidth;
+			this.player.y = (this.player.y / prevHeight) * logicalHeight;
+			// Clamp to canvas bounds
+			this.player.x = Math.max(this.player.radius, Math.min(logicalWidth - this.player.radius, this.player.x));
+			this.player.y = Math.max(this.player.radius, Math.min(logicalHeight - this.player.radius, this.player.y));
 		}
 
 		this.applyResponsiveEntityScale();

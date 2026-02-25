@@ -460,9 +460,9 @@ function setupInputHandlers() {
             closeSettingsModal();
         }
 
-        // QWER skill casting (only when playing)
+        // QERT skill casting (only when playing)
         if (game && game.gameState === 'playing') {
-            const slotMap = { KeyQ: 0, KeyW: 1, KeyE: 2, KeyR: 3 };
+            const slotMap = { KeyQ: 0, KeyE: 1, KeyR: 2, KeyT: 3 };
             if (e.code in slotMap) {
                 const slotIndex = slotMap[e.code];
                 const slots = game.skillManager.getKeybindSlots();
@@ -473,8 +473,8 @@ function setupInputHandlers() {
             }
         }
         
-        // Prevent spacebar page scrolling
-        if (e.code === 'Space') {
+        // Prevent spacebar and arrow key page scrolling during gameplay
+        if (e.code === 'Space' || e.code.startsWith('Arrow')) {
             e.preventDefault();
         }
     });

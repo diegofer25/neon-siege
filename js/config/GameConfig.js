@@ -106,6 +106,8 @@ export const GameConfig = {
         BASE_FIRE_RATE: 1000,
         /** @type {number} Player collision radius in pixels */
         RADIUS: 20,
+        /** @type {number} Player movement speed in pixels per second */
+        MOVE_SPEED: 200,
         /** @type {number} Base projectile speed in pixels per second */
         BASE_PROJECTILE_SPEED: 400,
         // Player-specific ability constants

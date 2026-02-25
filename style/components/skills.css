@@ -2,7 +2,7 @@
    SKILL SYSTEM UI
    ================================================================ */
 
-/* ---- Skill Slot Bar (QWER HUD) ---- */
+/* ---- Skill Slot Bar (QERT HUD) ---- */
 .skill-slots {
     display: flex;
     gap: 6px;

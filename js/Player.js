@@ -330,6 +330,9 @@ export class Player {
         if (this.enemyProjectileIFrames > 0) {
             this.enemyProjectileIFrames = Math.max(0, this.enemyProjectileIFrames - delta);
         }
+
+        // Handle WASD / Arrow key movement
+        this._updateMovement(delta, input, game);
         
         // Find and acquire target
         const nearestEnemy = this.findNearestEnemy(game.enemies);
@@ -408,6 +411,43 @@ export class Player {
 
 		// ── Tick visual state timers ──
 		this._updateVisualTimers(delta);
+    }
+
+    /**
+     * Handle WASD / Arrow key movement each frame.
+     * Clamps the player position to stay within the visible canvas.
+     *
+     * @private
+     * @param {number} delta - ms since last frame
+     * @param {Object} input - Input state with `keys` map
+     * @param {import('./Game.js').Game} game
+     */
+    _updateMovement(delta, input, game) {
+        if (!input?.keys) return;
+
+        let dx = 0;
+        let dy = 0;
+
+        if (input.keys['KeyW'] || input.keys['ArrowUp'])    dy -= 1;
+        if (input.keys['KeyS'] || input.keys['ArrowDown'])  dy += 1;
+        if (input.keys['KeyA'] || input.keys['ArrowLeft'])  dx -= 1;
+        if (input.keys['KeyD'] || input.keys['ArrowRight']) dx += 1;
+
+        if (dx === 0 && dy === 0) return;
+
+        // Normalize diagonal movement
+        const len = Math.sqrt(dx * dx + dy * dy);
+        dx /= len;
+        dy /= len;
+
+        const speed = GameConfig.PLAYER.MOVE_SPEED * (delta / 1000);
+        this.x += dx * speed;
+        this.y += dy * speed;
+
+        // Clamp to canvas bounds
+        const { width: cw, height: ch } = game.getLogicalCanvasSize();
+        this.x = Math.max(this.radius, Math.min(cw - this.radius, this.x));
+        this.y = Math.max(this.radius, Math.min(ch - this.radius, this.y));
     }
     
     /**

@@ -223,7 +223,7 @@ class HUDManager {
             }).join('');
         }
 
-        // QWER skill slots
+        // QERT skill slots
         if (g.skillManager) {
             const slots = g.skillManager.getKeybindSlots();
             for (let i = 0; i < 4; i++) {
