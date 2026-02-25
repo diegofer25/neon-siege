@@ -931,6 +931,8 @@ export class Game {
 
 		this.player.fireRateMod = this.skillEffectEngine.resolveStatValue('fireRate', attrs.fireRateMultiplier, pluginMods);
 		this.player.rotationSpeedMod = this.skillEffectEngine.resolveStatValue('rotationSpeed', attrs.turnSpeedMultiplier, pluginMods);
+		this.player.projectileSpeedMod = this.skillEffectEngine.resolveStatValue('projectileSpeed', attrs.projectileSpeedMultiplier, pluginMods);
+		this.player.moveSpeedMod = this.skillEffectEngine.resolveStatValue('moveSpeed', attrs.moveSpeedMultiplier, pluginMods);
 
 		// Pierce and homing from modifiers
 		this.player.piercingLevel = Math.round(this.skillEffectEngine.resolveStatValue('pierceCount', 0, pluginMods));

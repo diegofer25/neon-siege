@@ -21,22 +21,24 @@ export const ATTRIBUTES = {
 	STR: {
 		id: 'STR',
 		label: 'Strength',
-		description: 'Increases bullet damage and explosion damage.',
+		description: 'Increases bullet damage, bullet speed, and explosion damage.',
 		icon: '💥',
 		perPoint: {
 			damageMultiplier: 0.05,      // +5% damage per point
 			explosionDamage: 0.04,        // +4% explosion damage per point
+			projectileSpeedMultiplier: 0.03, // +3% projectile speed per point
 		},
 		maxPoints: 50,
 	},
 	DEX: {
 		id: 'DEX',
 		label: 'Dexterity',
-		description: 'Increases fire rate and turn speed.',
+		description: 'Increases fire rate, turn speed, and movement speed.',
 		icon: '⚡',
 		perPoint: {
 			fireRateMultiplier: 0.04,     // +4% fire rate per point
 			turnSpeedMultiplier: 0.03,    // +3% turn speed per point
+			moveSpeedMultiplier: 0.03,    // +3% movement speed per point
 		},
 		maxPoints: 50,
 	},

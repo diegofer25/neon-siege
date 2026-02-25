@@ -149,6 +149,8 @@ export class Player {
         this.fireRateMod = 1;
         /** @type {number} Projectile speed multiplier */
         this.projectileSpeedMod = 1;
+        /** @type {number} Movement speed multiplier (from DEX attribute) */
+        this.moveSpeedMod = 1;
         /** @type {number} Rotation speed multiplier (2.0 = twice as fast rotation) */
         this.rotationSpeedMod = 1;
         /** @type {{regenMultiplier:number, turnSpeedMultiplier:number, critBonus:number}} */
@@ -340,6 +342,7 @@ export class Player {
         this.damageMod = 1;
         this.fireRateMod = 1;
         this.projectileSpeedMod = 1;
+        this.moveSpeedMod = 1;
         this.rotationSpeedMod = 1;
         this.persistentCritBonus = 0;
 
@@ -485,14 +488,14 @@ export class Player {
         dx /= len;
         dy /= len;
 
-        const speed = GameConfig.PLAYER.MOVE_SPEED * (delta / 1000);
+        const speed = GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * (delta / 1000);
         this.x += dx * speed;
         this.y += dy * speed;
 
         // Store velocity for renderer (px/s, normalized direction × move speed)
         this.isMoving = true;
-        this.moveVx = dx * GameConfig.PLAYER.MOVE_SPEED;
-        this.moveVy = dy * GameConfig.PLAYER.MOVE_SPEED;
+        this.moveVx = dx * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod;
+        this.moveVy = dy * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod;
 
         // Clamp to canvas bounds
         const { width: cw, height: ch } = game.getLogicalCanvasSize();

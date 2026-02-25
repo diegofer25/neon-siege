@@ -142,8 +142,10 @@ export class SkillManager {
 		return {
 			damageMultiplier: 1 + str * ATTRIBUTES.STR.perPoint.damageMultiplier,
 			explosionDamageMultiplier: 1 + str * ATTRIBUTES.STR.perPoint.explosionDamage,
+			projectileSpeedMultiplier: 1 + str * ATTRIBUTES.STR.perPoint.projectileSpeedMultiplier,
 			fireRateMultiplier: 1 + dex * ATTRIBUTES.DEX.perPoint.fireRateMultiplier,
 			turnSpeedMultiplier: 1 + dex * ATTRIBUTES.DEX.perPoint.turnSpeedMultiplier,
+			moveSpeedMultiplier: 1 + dex * ATTRIBUTES.DEX.perPoint.moveSpeedMultiplier,
 			maxHpBonus: vit * ATTRIBUTES.VIT.perPoint.maxHpBonus,
 			shieldCapacity: vit * ATTRIBUTES.VIT.perPoint.shieldCapacity,
 			hpRegen: vit * ATTRIBUTES.VIT.perPoint.hpRegen,
