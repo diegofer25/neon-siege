@@ -16,6 +16,9 @@ import { ChallengeSystem } from "./systems/ChallengeSystem.js";
 import { AscensionSystem } from "./systems/AscensionSystem.js";
 import { getMilestoneForWave, isMiniMilestone } from "./config/MilestoneConfig.js";
 import { LEVEL_CONFIG } from "./config/SkillConfig.js";
+import { GameEventBus } from "./skills/GameEventBus.js";
+import { SkillEffectEngine } from "./skills/SkillEffectEngine.js";
+import { SKILL_PLUGIN_REGISTRY } from "./skills/registry.js";
 import { playSFX, createFloatingText, screenFlash, showLevelUpPanel, showAscensionPanel, closeAllSkillOverlays } from "./main.js";
 import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
@@ -136,6 +139,14 @@ export class Game {
 		this.achievementSystem = new AchievementSystem(this);
 		this.challengeSystem = new ChallengeSystem(this);
 		this.ascensionSystem = new AscensionSystem(this);
+
+		// Skill plugin system
+		this.eventBus = new GameEventBus();
+		this.skillEffectEngine = new SkillEffectEngine(this.eventBus, this);
+		this.skillEffectEngine.registerAll(SKILL_PLUGIN_REGISTRY);
+
+		// Wire engine into SkillManager for auto-notification on skill learn
+		this.skillManager._skillEffectEngine = this.skillEffectEngine;
 	}
 
 	/**
@@ -324,6 +335,8 @@ export class Game {
 		this.player.reset();
 		this.skillManager.reset();
 		this.ascensionSystem.reset();
+		this.skillEffectEngine.reset();
+		this.eventBus.clear();
 		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
 		this.waveManager.setDifficulty(this.runDifficulty);
@@ -471,6 +484,9 @@ export class Game {
 		// Handle collisions
 		this.collisionSystem.checkAllCollisions();
 
+		// Emit per-frame tick event for skill plugins
+		this.eventBus.emit('tick', { delta });
+
 		// Check game over
 		if (this.player.hp <= 0) {
 			this.gameState = "gameover";
@@ -544,6 +560,9 @@ export class Game {
 		this.challengeSystem.onWaveComplete();
 		this.achievementSystem.onWaveComplete();
 
+		// Emit wave:completed event for skill plugins
+		this.eventBus.emit('wave:completed', { wave: this.wave });
+
 		telemetry.track("wave_complete", {
 			wave: this.wave,
 			score: this.score,
@@ -611,6 +630,11 @@ export class Game {
 		if (!info) return false;
 
 		const { skill, rank } = info;
+
+		// Try plugin system first — if a plugin handles the cast, skip legacy switch
+		if (this.skillEffectEngine.castSkill(skill.id, { skill, rank })) {
+			return true;
+		}
 
 		switch (skill.id) {
 			// ── Gunner actives ──
@@ -807,6 +831,9 @@ export class Game {
 		const passives = this.skillManager.getPassiveEffects();
 		const ascension = this.ascensionSystem.getAggregatedEffects();
 
+		// Gather plugin-based modifiers
+		const pluginMods = this.skillEffectEngine.getAggregatedModifiers({ attrs, ascension });
+
 		// Base stats from attributes
 		const baseHp = GameConfig.PLAYER.BASE_HP;
 		const newMaxHp = Math.floor((baseHp + attrs.maxHpBonus) * (ascension.maxHpMultiplier || 1));
@@ -826,12 +853,19 @@ export class Game {
 		this.player.hpRegen = attrs.hpRegen + (ascension.hpRegenBonus || 0);
 		this.player.shieldRegen = attrs.shieldCapacity > 0 ? attrs.shieldCapacity * 0.05 : 0;
 
-		// Combat modifiers from attributes + passives + ascension
-		this.player.damageMod = attrs.damageMultiplier * (1 + passives.damageBonus) * (ascension.damageMultiplier || 1);
-		this.player.fireRateMod = attrs.fireRateMultiplier * (1 + passives.fireRateBonus);
-		this.player.rotationSpeedMod = attrs.turnSpeedMultiplier * (1 + passives.turnSpeedBonus);
+		// Combat modifiers from attributes + passives + ascension + plugins
+		// Plugin 'damage' modifiers layer on top
+		let baseDamage = attrs.damageMultiplier * (1 + passives.damageBonus) * (ascension.damageMultiplier || 1);
+		this.player.damageMod = this.skillEffectEngine.resolveStatValue('damage', baseDamage, pluginMods);
 
-		// Passive skill effects
+		// Plugin 'fireRate' modifiers replace legacy passives.fireRateBonus for migrated skills
+		let baseFireRate = attrs.fireRateMultiplier * (1 + passives.fireRateBonus);
+		this.player.fireRateMod = this.skillEffectEngine.resolveStatValue('fireRate', baseFireRate, pluginMods);
+
+		let baseRotation = attrs.turnSpeedMultiplier * (1 + passives.turnSpeedBonus);
+		this.player.rotationSpeedMod = this.skillEffectEngine.resolveStatValue('rotationSpeed', baseRotation, pluginMods);
+
+		// Passive skill effects (legacy path — will shrink as plugins are migrated)
 		this.player.piercingLevel = passives.pierceCount;
 		this.player.hasTripleShot = passives.hasTripleShot;
 		this.player.tripleShotSideDamage = passives.tripleShotSideDamage;
@@ -877,13 +911,18 @@ export class Game {
 			this.player.overchargeBurst = null;
 		}
 
-		// Technomancer passives: chain hit, volatile kills, elemental synergy, meltdown, chain master
+		// Technomancer passives: chain hit, volatile kills (legacy fallback), elemental synergy, meltdown
 		this.player.chainHit = passives.chainChance > 0
 			? { chance: passives.chainChance, range: passives.chainRange, escalation: passives.chainDamageEscalation }
 			: null;
-		this.player.volatileKills = passives.hasVolatileKills
-			? { percent: passives.volatileKillPercent, radius: passives.volatileKillRadius }
-			: null;
+		// Only set legacy volatileKills if the plugin isn't handling it
+		if (!this.skillEffectEngine.hasPlugin('techno_volatile_kills')) {
+			this.player.volatileKills = passives.hasVolatileKills
+				? { percent: passives.volatileKillPercent, radius: passives.volatileKillRadius }
+				: null;
+		} else {
+			this.player.volatileKills = null; // Plugin handles via event
+		}
 		this.player.elementalSynergy = passives.hasSynergyBonus
 			? { bonus: passives.synergyDamageBonus }
 			: null;
@@ -891,9 +930,15 @@ export class Game {
 			? { chance: passives.meltdownChance, damageRatio: passives.meltdownDamageRatio, radius: passives.meltdownRadius }
 			: null;
 
-		// Life steal from ascension
-		this.player.hasLifeSteal = ascension.lifeStealPercent > 0;
-		this.player._ascensionLifeSteal = ascension.lifeStealPercent;
+		// Life steal from ascension (legacy fallback — skipped if plugin handles it)
+		if (!this.skillEffectEngine.hasPlugin('asc_vampiric')) {
+			this.player.hasLifeSteal = ascension.lifeStealPercent > 0;
+			this.player._ascensionLifeSteal = ascension.lifeStealPercent;
+		} else {
+			// Plugin handles life steal via enemy:killed event
+			this.player.hasLifeSteal = false;
+			this.player._ascensionLifeSteal = 0;
+		}
 
 		// Store ascension effects on player for runtime access
 		this.player._ascensionEffects = ascension;
@@ -911,6 +956,43 @@ export class Game {
 				this.player.visualState.learnedSkills.add(id);
 			}
 		}
+
+		// Emit stats:sync event for plugins that need to react to stat changes
+		this.eventBus.emit('stats:sync', { player: this.player, attrs, passives, ascension });
+	}
+
+	/**
+	 * Re-equip all plugins from current SkillManager + AscensionSystem state.
+	 * Used after restoring from save or on any full re-sync.
+	 * @private
+	 */
+	_reequipPluginsFromState() {
+		this.skillEffectEngine.reset();
+		this.eventBus.clear();
+
+		// Re-equip skill plugins
+		const allEquipped = [
+			...this.skillManager.equippedPassives,
+			...this.skillManager.equippedActives,
+		];
+		if (this.skillManager.equippedUltimate) {
+			allEquipped.push(this.skillManager.equippedUltimate);
+		}
+		for (const skillId of allEquipped) {
+			const rank = this.skillManager.skillRanks[skillId] || 0;
+			if (rank < 1) continue;
+			const { skill } = this.skillManager._findSkill(skillId);
+			if (skill) {
+				this.skillEffectEngine.equipSkill(skillId, rank, skill);
+			}
+		}
+
+		// Re-equip ascension plugins
+		for (const mod of this.ascensionSystem.activeModifiers) {
+			if (this.skillEffectEngine.hasPlugin(mod.id)) {
+				this.skillEffectEngine.equipSkill(mod.id, 1, mod);
+			}
+		}
 	}
 
 	/**
@@ -919,6 +1001,12 @@ export class Game {
 	 */
 	selectAscension(modifierId) {
 		if (this.ascensionSystem.selectModifier(modifierId)) {
+			// Equip ascension plugin if registered
+			const mod = this.ascensionSystem.activeModifiers.find(m => m.id === modifierId);
+			if (mod && this.skillEffectEngine.hasPlugin(modifierId)) {
+				this.skillEffectEngine.equipSkill(modifierId, 1, mod);
+			}
+
 			this._syncPlayerFromSkills();
 			telemetry.track('ascension_picked', { modifierId, wave: this.wave });
 
@@ -1199,6 +1287,8 @@ export class Game {
 		if (snapshot.ascensionSystem) {
 			this.ascensionSystem.restoreFromSave(snapshot.ascensionSystem);
 		}
+		// Re-equip plugins for restored skills
+		this._reequipPluginsFromState();
 		this._syncPlayerFromSkills();
 
 		// Overlay HP/shield from snapshot (player may have taken damage before save)

@@ -139,6 +139,13 @@ export class CollisionSystem {
             playSFX('impact_enemy_hit');
         }
 
+        // Emit enemy:hit event for skill plugins
+        this.game.eventBus.emit('enemy:hit', {
+            enemy,
+            projectile,
+            damage: currentDamage,
+        });
+
         // Meltdown: hitting a burning enemy triggers a bonus explosion
         const meltdown = this.game.player?.meltdown;
         if (meltdown && enemy.isBurning && Math.random() < meltdown.chance) {
@@ -156,10 +163,10 @@ export class CollisionSystem {
             this.game.createExplosionRing(enemy.x, enemy.y, meltdown.radius);
         }
 
-        // Volatile Kills: enemy death explosion
+        // Volatile Kills: enemy death explosion (handled by plugin if registered, legacy fallback)
         if (enemy.health <= 0 && !enemy.dying) {
             const volatileKills = this.game.player?.volatileKills;
-            if (volatileKills) {
+            if (volatileKills && !this.game.skillEffectEngine.hasPlugin('techno_volatile_kills')) {
                 const deathDmg = enemy.maxHealth * volatileKills.percent;
                 for (const e of this.game.enemies) {
                     if (e === enemy || e.dying || e.health <= 0) continue;
@@ -200,6 +207,9 @@ export class CollisionSystem {
 
         // Damage player
         this.game.player.takeDamage(enemy.damage);
+
+        // Emit player:damaged event for skill plugins
+        this.game.eventBus.emit('player:damaged', { damage: enemy.damage, source: 'enemy' });
         
         // Visual and audio feedback
         this.game.effectsManager.addScreenShake(
@@ -288,6 +298,9 @@ export class CollisionSystem {
 
         // Damage player
         this.game.player.takeDamage(projectile.damage, 'enemyProjectile');
+
+        // Emit player:damaged event for skill plugins
+        this.game.eventBus.emit('player:damaged', { damage: projectile.damage, source: 'enemyProjectile' });
         
         // Visual and audio feedback
         this.game.effectsManager.addScreenShake(8, 200);

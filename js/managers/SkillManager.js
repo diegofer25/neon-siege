@@ -26,6 +26,8 @@ export class SkillManager {
 	 */
 	constructor(progressionManager) {
 		this.progressionManager = progressionManager;
+		/** @type {import('../skills/SkillEffectEngine.js').SkillEffectEngine|null} Set by Game.js */
+		this._skillEffectEngine = null;
 		this.reset();
 	}
 
@@ -231,6 +233,11 @@ export class SkillManager {
 			}
 		}
 
+		// Notify SkillEffectEngine (if available — set by Game.js after construction)
+		if (this._skillEffectEngine) {
+			this._skillEffectEngine.equipSkill(skillId, this.skillRanks[skillId], skill);
+		}
+
 		return true;
 	}
 
@@ -425,6 +432,11 @@ export class SkillManager {
 			if (rank < 1) continue;
 			const { skill } = this._findSkill(skillId);
 			if (!skill) continue;
+
+			// Skip skills handled by plugins — their effects come via SkillEffectEngine
+			if (this._skillEffectEngine && this._skillEffectEngine.hasPlugin(skillId)) {
+				continue;
+			}
 
 			switch (skill.id) {
 				// ── Gunner passives ──

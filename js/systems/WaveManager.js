@@ -54,6 +54,9 @@ export class WaveManager {
         this.isBossWave = this.currentWave > 0 && this.currentWave % 10 === 0;
         playSFX(this.isBossWave ? 'wave_boss_alert' : 'wave_start');
 
+        // Emit wave:started event for skill plugins
+        this.game.eventBus.emit('wave:started', { wave: waveNumber });
+
         // Apply a wave modifier (or none) at the start of each wave.
         // Boss waves intentionally have no modifier to keep tuning simpler.
         let modifierKey = null;
