@@ -394,10 +394,12 @@ export class SkillManager {
 
 	/**
 	 * Build aggregated passive effects from all equipped passives.
-	 * @returns {Object} Combined passive modifiers for Player consumption.
+	 * All skill effects are now handled by the SkillEffectEngine plugin system.
+	 * This method returns safe defaults for any code that may still reference the shape.
+	 * @returns {Object} Combined passive modifiers (all defaults — plugins handle effects)
 	 */
 	getPassiveEffects() {
-		const effects = {
+		return {
 			fireRateBonus: 0,
 			damageBonus: 0,
 			turnSpeedBonus: 0,
@@ -426,92 +428,6 @@ export class SkillManager {
 			meltdownRadius: 0,
 			chainDamageEscalation: 0,
 		};
-
-		for (const skillId of this.equippedPassives) {
-			const rank = this.skillRanks[skillId] || 0;
-			if (rank < 1) continue;
-			const { skill } = this._findSkill(skillId);
-			if (!skill) continue;
-
-			// Skip skills handled by plugins — their effects come via SkillEffectEngine
-			if (this._skillEffectEngine && this._skillEffectEngine.hasPlugin(skillId)) {
-				continue;
-			}
-
-			switch (skill.id) {
-				// ── Gunner passives ──
-				case 'gunner_rapid_fire':
-					effects.fireRateBonus += skill.effect.fireRateBonus * rank;
-					break;
-				case 'gunner_sharp_rounds':
-					effects.damageBonus += skill.effect.damageBonus * rank;
-					break;
-				case 'gunner_quick_aim':
-					effects.turnSpeedBonus += skill.effect.turnSpeedBonus * rank;
-					break;
-				case 'gunner_piercing':
-					effects.pierceCount += skill.effect.pierceCount * rank;
-					break;
-				case 'gunner_triple_shot':
-					effects.hasTripleShot = true;
-					effects.tripleShotSideDamage = skill.effect.sideDamageBase + skill.effect.sideDamagePerRank * (rank - 1);
-					break;
-				case 'gunner_critical_mastery':
-					effects.critChanceBonus += skill.effect.critChance * rank;
-					effects.critDamageMultiplier += skill.effect.critDamageMultiplier * rank;
-					break;
-				case 'gunner_overcharge':
-					effects.overcharge = {
-						shotInterval: skill.effect.shotInterval - skill.effect.intervalReduction * (rank - 1),
-						damageMultiplier: skill.effect.damageMultiplier + skill.effect.multiplierPerRank * (rank - 1),
-					};
-					break;
-				case 'gunner_homing':
-					effects.homingStrength = skill.effect.homingStrength;
-					break;
-
-				// ── Technomancer passives ──
-				case 'techno_explosive_rounds':
-					effects.hasExplosiveRounds = true;
-					effects.explosionDamageRatio = skill.effect.explosionDamageRatio;
-					effects.explosionRadius = skill.effect.explosionRadius;
-					break;
-				case 'techno_bigger_booms':
-					effects.explosionRadius += effects.explosionRadius * skill.effect.radiusBonus * rank;
-					effects.explosionDamageRatio += skill.effect.damageBonus * rank;
-					break;
-				case 'techno_burn':
-					effects.burnDamagePercent += skill.effect.burnDamagePercent * rank;
-					effects.burnRange = skill.effect.baseRange + skill.effect.rangePerRank * rank;
-					break;
-				case 'techno_chain_hit':
-					effects.chainChance = skill.effect.chainChance + skill.effect.chainChancePerRank * (rank - 1);
-					effects.chainRange = skill.effect.chainRange;
-					break;
-				case 'techno_volatile_kills':
-					effects.hasVolatileKills = true;
-					effects.volatileKillPercent = skill.effect.deathExplosionPercent + skill.effect.percentPerRank * (rank - 1);
-					effects.volatileKillRadius = skill.effect.deathExplosionRadius;
-					break;
-				case 'techno_elemental_synergy':
-					effects.hasSynergyBonus = true;
-					effects.synergyDamageBonus = skill.effect.synergyDamageBonus + skill.effect.bonusPerRank * (rank - 1);
-					break;
-				case 'techno_meltdown':
-					effects.hasMeltdown = true;
-					effects.meltdownChance = skill.effect.meltdownChance + skill.effect.chancePerRank * (rank - 1);
-					effects.meltdownDamageRatio = skill.effect.meltdownDamageRatio;
-					effects.meltdownRadius = skill.effect.meltdownRadius;
-					break;
-				case 'techno_chain_master':
-					effects.chainDamageEscalation = skill.effect.chainDamageEscalation;
-					break;
-				default:
-					break;
-			}
-		}
-
-		return effects;
 	}
 
 	// ─── SAVE / RESTORE ──────────────────────────────────────────────────────────

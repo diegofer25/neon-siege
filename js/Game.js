@@ -620,6 +620,7 @@ export class Game {
 	/**
 	 * Cast an active/ultimate skill — triggers cooldown and executes the gameplay effect.
 	 * Called from keybind handler in main.js.
+	 * All active/ultimate skills are now handled by their plugin's onCast() method.
 	 * @param {string} skillId
 	 * @returns {boolean} true if cast succeeded
 	 */
@@ -631,184 +632,16 @@ export class Game {
 
 		const { skill, rank } = info;
 
-		// Try plugin system first — if a plugin handles the cast, skip legacy switch
-		if (this.skillEffectEngine.castSkill(skill.id, { skill, rank })) {
-			return true;
-		}
-
-		switch (skill.id) {
-			// ── Gunner actives ──
-			case 'gunner_focused_fire': {
-				const duration = skill.effect.duration + skill.effect.durationPerRank * (rank - 1);
-				this.player.activateSkillBuff('focusedFire', {
-					fireRateMultiplier: skill.effect.fireRateMultiplier,
-					duration,
-				});
-				this.effectsManager.addScreenShake(3, 150);
-				const { width, height } = this.getLogicalCanvasSize();
-				createFloatingText('FOCUSED FIRE!', width / 2, height / 2 - 30, 'level-up');
-				playSFX('powerup');
-				break;
-			}
-			case 'gunner_barrage': {
-				const shotCount = skill.effect.shotCount + skill.effect.shotsPerRank * (rank - 1);
-				this.player.activateSkillBuff('bulletStorm', {
-					shotsRemaining: shotCount,
-					duration: skill.effect.duration,
-					interval: skill.effect.duration / shotCount,
-					timer: 0,
-				});
-				this.effectsManager.addScreenShake(5, 200);
-				const { width, height } = this.getLogicalCanvasSize();
-				createFloatingText('BULLET STORM!', width / 2, height / 2 - 30, 'level-up');
-				playSFX('powerup');
-				break;
-			}
-
-			// ── Gunner ultimate ──
-			case 'gunner_aimbot_overdrive': {
-				this.player.activateSkillBuff('aimbotOverdrive', {
-					duration: skill.effect.duration,
-					damageMultiplier: skill.effect.damagePerShot,
-					fireInterval: 80, // rapid-fire interval in ms
-					fireTimer: 0,
-				});
-				this.effectsManager.addScreenShake(8, 400);
-				const { width, height } = this.getLogicalCanvasSize();
-				createFloatingText('AIMBOT OVERDRIVE!', width / 2, height / 2 - 30, 'milestone-major');
-				screenFlash();
-				playSFX('boss_defeat');
-				break;
-			}
-
-			// ── Technomancer actives ──
-			case 'techno_emp_pulse': {
-				const duration = skill.effect.duration + skill.effect.durationPerRank * (rank - 1);
-				const radius = skill.effect.radius;
-				const px = this.player.x;
-				const py = this.player.y;
-				const slowFactor = Math.max(0.1, 1 - skill.effect.slowAmount);
-				// Apply slow to all enemies in radius via timed slow
-				for (const enemy of this.enemies) {
-					const dx = enemy.x - px;
-					const dy = enemy.y - py;
-					if (dx * dx + dy * dy <= radius * radius) {
-						enemy.slowFactor = slowFactor;
-						enemy._empSlowTimer = duration;
-					}
-				}
-				// Visual: expanding ring
-				this.createExplosionRing(px, py, radius);
-				this.effectsManager.addScreenShake(4, 200);
-				const { width, height } = this.getLogicalCanvasSize();
-				createFloatingText('EMP PULSE!', width / 2, height / 2 - 30, 'level-up');
-				playSFX('powerup');
-				break;
-			}
-			case 'techno_neon_nova': {
-				const radius = skill.effect.radius + skill.effect.radiusPerRank * (rank - 1);
-				const px = this.player.x;
-				const py = this.player.y;
-				let hitCount = 0;
-				for (const enemy of this.enemies) {
-					const dx = enemy.x - px;
-					const dy = enemy.y - py;
-					if (dx * dx + dy * dy <= radius * radius) {
-						const damage = enemy.maxHealth * skill.effect.damagePercent;
-						enemy.takeDamage(damage);
-						hitCount++;
-					}
-				}
-				// Visual: massive explosion + ring
-				this.createExplosion(px, py, 60);
-				this.createExplosionRing(px, py, radius);
-				this.effectsManager.addScreenShake(10, 400);
-				const { width, height } = this.getLogicalCanvasSize();
-				createFloatingText(`NEON NOVA! (${hitCount} hit)`, width / 2, height / 2 - 30, 'level-up');
-				screenFlash();
-				playSFX('boss_defeat');
-				break;
-			}
-
-			// ── Technomancer ultimate ──
-			case 'techno_lightning_cascade': {
-				this._executeLightningCascade(skill);
-				break;
-			}
-
-			default:
-				break;
-		}
-
+		// Dispatch to plugin — all active/ultimate skills are registered plugins
+		this.skillEffectEngine.castSkill(skill.id, { skill, rank });
 		return true;
 	}
 
 	/**
-	 * Execute Lightning Cascade ultimate — chain lightning bouncing between all enemies.
-	 * @private
-	 */
-	_executeLightningCascade(skill) {
-		if (this.enemies.length === 0) return;
-
-		const maxBounces = skill.effect.maxBounces;
-		const amplification = skill.effect.bounceAmplification;
-		let damage = skill.effect.baseDamage;
-		const px = this.player.x;
-		const py = this.player.y;
-
-		// Sort enemies by distance from player, start with nearest
-		const sorted = [...this.enemies].sort((a, b) => {
-			const da = (a.x - px) ** 2 + (a.y - py) ** 2;
-			const db = (b.x - px) ** 2 + (b.y - py) ** 2;
-			return da - db;
-		});
-
-		const visited = new Set();
-		let current = sorted[0];
-		let bounceCount = 0;
-		const chainPositions = [{ x: px, y: py }]; // start from player
-
-		while (current && bounceCount < maxBounces) {
-			visited.add(current.id);
-			chainPositions.push({ x: current.x, y: current.y });
-
-			current.takeDamage(damage);
-			bounceCount++;
-			damage *= (1 + amplification);
-
-			// Find nearest unvisited enemy
-			let nearest = null;
-			let nearestDist = Infinity;
-			for (const enemy of this.enemies) {
-				if (visited.has(enemy.id) || enemy.hp <= 0) continue;
-				const dx = enemy.x - current.x;
-				const dy = enemy.y - current.y;
-				const dist = dx * dx + dy * dy;
-				if (dist < nearestDist) {
-					nearestDist = dist;
-					nearest = enemy;
-				}
-			}
-			current = nearest;
-		}
-
-		// Visual: lightning chain effect
-		for (let i = 0; i < chainPositions.length - 1; i++) {
-			const from = chainPositions[i];
-			const to = chainPositions[i + 1];
-			this._createLightningEffect(from, to);
-		}
-
-		this.effectsManager.addScreenShake(12, 500);
-		const { width, height } = this.getLogicalCanvasSize();
-		createFloatingText(`LIGHTNING CASCADE! (${bounceCount} bounces)`, width / 2, height / 2 - 30, 'milestone-major');
-		screenFlash();
-		playSFX('boss_defeat');
-	}
-
-	/**
 	 * Create a visual lightning line effect between two points.
-	 * @private
+	 * Used by LightningCascadePlugin for chain lightning visuals.
+	 * @param {{x: number, y: number}} from
+	 * @param {{x: number, y: number}} to
 	 */
 	_createLightningEffect(from, to) {
 		// Use particles to simulate lightning along the path
@@ -822,22 +655,21 @@ export class Game {
 	}
 
 	/**
-	 * Sync player stats from SkillManager attributes + passive effects.
+	 * Sync player stats from SkillManager attributes + plugin effects + ascension.
 	 * Called after each skill/attribute allocation.
 	 * @private
 	 */
 	_syncPlayerFromSkills() {
 		const attrs = this.skillManager.getComputedAttributes();
-		const passives = this.skillManager.getPassiveEffects();
 		const ascension = this.ascensionSystem.getAggregatedEffects();
+		const context = { attrs, ascension };
 
-		// Gather plugin-based modifiers
-		const pluginMods = this.skillEffectEngine.getAggregatedModifiers({ attrs, ascension });
+		// Gather plugin-based modifiers (declarative stat bonuses from all equipped skills)
+		const pluginMods = this.skillEffectEngine.getAggregatedModifiers(context);
 
-		// Base stats from attributes
+		// ── Base stats from attributes + ascension ──
 		const baseHp = GameConfig.PLAYER.BASE_HP;
 		const newMaxHp = Math.floor((baseHp + attrs.maxHpBonus) * (ascension.maxHpMultiplier || 1));
-		// Preserve HP ratio when max changes
 		const hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
 		this.player.maxHp = newMaxHp;
 		this.player.hp = Math.min(newMaxHp, Math.ceil(newMaxHp * hpRatio));
@@ -853,92 +685,64 @@ export class Game {
 		this.player.hpRegen = attrs.hpRegen + (ascension.hpRegenBonus || 0);
 		this.player.shieldRegen = attrs.shieldCapacity > 0 ? attrs.shieldCapacity * 0.05 : 0;
 
-		// Combat modifiers from attributes + passives + ascension + plugins
-		// Plugin 'damage' modifiers layer on top
-		let baseDamage = attrs.damageMultiplier * (1 + passives.damageBonus) * (ascension.damageMultiplier || 1);
+		// ── Combat stats via plugin modifier pipeline ──
+		const baseDamage = attrs.damageMultiplier * (ascension.damageMultiplier || 1);
 		this.player.damageMod = this.skillEffectEngine.resolveStatValue('damage', baseDamage, pluginMods);
 
-		// Plugin 'fireRate' modifiers replace legacy passives.fireRateBonus for migrated skills
-		let baseFireRate = attrs.fireRateMultiplier * (1 + passives.fireRateBonus);
-		this.player.fireRateMod = this.skillEffectEngine.resolveStatValue('fireRate', baseFireRate, pluginMods);
+		this.player.fireRateMod = this.skillEffectEngine.resolveStatValue('fireRate', attrs.fireRateMultiplier, pluginMods);
+		this.player.rotationSpeedMod = this.skillEffectEngine.resolveStatValue('rotationSpeed', attrs.turnSpeedMultiplier, pluginMods);
 
-		let baseRotation = attrs.turnSpeedMultiplier * (1 + passives.turnSpeedBonus);
-		this.player.rotationSpeedMod = this.skillEffectEngine.resolveStatValue('rotationSpeed', baseRotation, pluginMods);
+		// Pierce and homing from modifiers
+		this.player.piercingLevel = Math.round(this.skillEffectEngine.resolveStatValue('pierceCount', 0, pluginMods));
+		this.player.hasHomingShots = this.skillEffectEngine.resolveStatValue('homingStrength', 0, pluginMods) > 0;
 
-		// Passive skill effects (legacy path — will shrink as plugins are migrated)
-		this.player.piercingLevel = passives.pierceCount;
-		this.player.hasTripleShot = passives.hasTripleShot;
-		this.player.tripleShotSideDamage = passives.tripleShotSideDamage;
-		this.player.explosiveShots = passives.hasExplosiveRounds;
-		if (passives.hasExplosiveRounds) {
-			this.player.explosionRadius = passives.explosionRadius * attrs.aoeRadiusMultiplier;
-			this.player.explosionDamage = GameConfig.PLAYER.BASE_DAMAGE * this.player.damageMod * passives.explosionDamageRatio;
-		}
-		this.player.hasHomingShots = passives.homingStrength > 0;
-
-		// Crit from LUCK attribute + skill passives
-		const totalCrit = Math.min(0.60, attrs.critChance + passives.critChanceBonus);
+		// Crit from LUCK attribute + plugin modifiers (CriticalMasteryPlugin)
+		const critFromPlugins = this.skillEffectEngine.resolveStatValue('critChance', 0, pluginMods);
+		const totalCrit = Math.min(0.60, attrs.critChance + critFromPlugins);
 		if (totalCrit > 0) {
+			const critDmgMult = this.skillEffectEngine.resolveStatValue('critDamageMultiplier', 1.0, pluginMods);
 			this.player.luckyShots = {
 				chance: totalCrit,
 				active: true,
-				critDamageMultiplier: passives.critDamageMultiplier,
+				critDamageMultiplier: critDmgMult,
 			};
 		} else {
 			this.player.luckyShots = null;
 		}
 
-		// Burn aura from Technomancer
-		if (passives.burnDamagePercent > 0) {
-			this.player.immolationAura = {
-				damagePercent: passives.burnDamagePercent,
-				range: passives.burnRange * attrs.aoeRadiusMultiplier,
-				active: true,
-			};
-		} else {
-			this.player.immolationAura = null;
+		// Explosive shots from plugin modifiers (ExplosiveRoundsPlugin + BiggerBoomsPlugin)
+		const explosionRadius = this.skillEffectEngine.resolveStatValue('explosionRadius', 0, pluginMods);
+
+		// ── Reset complex configs before applying plugin configs ──
+		this.player.hasTripleShot = false;
+		this.player.tripleShotSideDamage = 0;
+		this.player.explosiveShots = false;
+		this.player.overchargeBurst = null;
+		this.player.immolationAura = null;
+		this.player.chainHit = null;
+		this.player.volatileKills = null;
+		this.player.elementalSynergy = null;
+		this.player.meltdown = null;
+
+		// Apply complex configs from plugins (TripleShot, Overcharge, Burn, ChainHit, etc.)
+		context.pluginMods = pluginMods;
+		const pluginConfigs = this.skillEffectEngine.getPlayerConfigs(context);
+		for (const { config } of pluginConfigs) {
+			for (const [key, value] of Object.entries(config)) {
+				this.player[key] = value;
+			}
 		}
 
-		// Overcharge burst from Gunner
-		if (passives.overcharge) {
-			this.player.overchargeBurst = {
-				interval: passives.overcharge.shotInterval,
-				multiplier: passives.overcharge.damageMultiplier,
-				shotCount: 0,
-				active: true,
-			};
-		} else {
-			this.player.overchargeBurst = null;
+		// Finalize explosion values after configs set explosiveShots flag
+		if (this.player.explosiveShots && explosionRadius > 0) {
+			this.player.explosionRadius = explosionRadius * attrs.aoeRadiusMultiplier;
+			const explosionDmgRatio = this.skillEffectEngine.resolveStatValue('explosionDamageRatio', 0, pluginMods);
+			this.player.explosionDamage = GameConfig.PLAYER.BASE_DAMAGE * this.player.damageMod * explosionDmgRatio;
 		}
 
-		// Technomancer passives: chain hit, volatile kills (legacy fallback), elemental synergy, meltdown
-		this.player.chainHit = passives.chainChance > 0
-			? { chance: passives.chainChance, range: passives.chainRange, escalation: passives.chainDamageEscalation }
-			: null;
-		// Only set legacy volatileKills if the plugin isn't handling it
-		if (!this.skillEffectEngine.hasPlugin('techno_volatile_kills')) {
-			this.player.volatileKills = passives.hasVolatileKills
-				? { percent: passives.volatileKillPercent, radius: passives.volatileKillRadius }
-				: null;
-		} else {
-			this.player.volatileKills = null; // Plugin handles via event
-		}
-		this.player.elementalSynergy = passives.hasSynergyBonus
-			? { bonus: passives.synergyDamageBonus }
-			: null;
-		this.player.meltdown = passives.hasMeltdown
-			? { chance: passives.meltdownChance, damageRatio: passives.meltdownDamageRatio, radius: passives.meltdownRadius }
-			: null;
-
-		// Life steal from ascension (legacy fallback — skipped if plugin handles it)
-		if (!this.skillEffectEngine.hasPlugin('asc_vampiric')) {
-			this.player.hasLifeSteal = ascension.lifeStealPercent > 0;
-			this.player._ascensionLifeSteal = ascension.lifeStealPercent;
-		} else {
-			// Plugin handles life steal via enemy:killed event
-			this.player.hasLifeSteal = false;
-			this.player._ascensionLifeSteal = 0;
-		}
+		// Life steal handled by LifeStealPlugin via enemy:killed event
+		this.player.hasLifeSteal = false;
+		this.player._ascensionLifeSteal = 0;
 
 		// Store ascension effects on player for runtime access
 		this.player._ascensionEffects = ascension;
@@ -958,7 +762,7 @@ export class Game {
 		}
 
 		// Emit stats:sync event for plugins that need to react to stat changes
-		this.eventBus.emit('stats:sync', { player: this.player, attrs, passives, ascension });
+		this.eventBus.emit('stats:sync', { player: this.player, attrs, ascension });
 	}
 
 	/**

@@ -47,17 +47,12 @@ export class EntityManager {
         // Create visual explosion effect
         this.game.effectsManager.createExplosion(enemy.x, enemy.y, 10);
 
-        // Emit enemy:killed event for skill plugins (before splice so plugins can access enemy list)
+        // Emit enemy:killed event for skill plugins (VolatileKillsPlugin, LifeStealPlugin, etc.)
         this.game.eventBus.emit('enemy:killed', {
             enemy,
             position: { x: enemy.x, y: enemy.y },
             type: enemy.isBoss ? 'boss' : (enemy.isSplitter ? 'splitter' : 'normal'),
         });
-
-        // Apply life steal if player has this upgrade (legacy path — skipped if plugin handles it)
-        if (this.game.player.hasLifeSteal && !this.game.skillEffectEngine.hasPlugin('asc_vampiric')) {
-            this.game.player.onEnemyKill(enemy);
-        }
 
         // Remove enemy and update counters
         this.game.enemies.splice(index, 1);

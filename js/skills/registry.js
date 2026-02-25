@@ -8,17 +8,33 @@
  *  1. Create the plugin class extending BaseSkillPlugin in the appropriate folder
  *  2. Import it here
  *  3. Add the mapping: skillId → PluginClass
- *
- * Skills without a registry entry will fall through to legacy code paths,
- * enabling incremental migration.
  */
 
 // ── Gunner plugins ──
+import { SharpRoundsPlugin } from './gunner/SharpRoundsPlugin.js';
 import { RapidFirePlugin } from './gunner/RapidFirePlugin.js';
+import { FocusedFirePlugin } from './gunner/FocusedFirePlugin.js';
+import { PiercingPlugin } from './gunner/PiercingPlugin.js';
+import { TripleShotPlugin } from './gunner/TripleShotPlugin.js';
+import { QuickAimPlugin } from './gunner/QuickAimPlugin.js';
+import { CriticalMasteryPlugin } from './gunner/CriticalMasteryPlugin.js';
+import { BarragePlugin } from './gunner/BarragePlugin.js';
+import { OverchargePlugin } from './gunner/OverchargePlugin.js';
+import { HomingPlugin } from './gunner/HomingPlugin.js';
+import { AimbotOverdrivePlugin } from './gunner/AimbotOverdrivePlugin.js';
 
 // ── Technomancer plugins ──
-import { VolatileKillsPlugin } from './technomancer/VolatileKillsPlugin.js';
+import { ExplosiveRoundsPlugin } from './technomancer/ExplosiveRoundsPlugin.js';
+import { BiggerBoomsPlugin } from './technomancer/BiggerBoomsPlugin.js';
 import { EmpPulsePlugin } from './technomancer/EmpPulsePlugin.js';
+import { ChainHitPlugin } from './technomancer/ChainHitPlugin.js';
+import { VolatileKillsPlugin } from './technomancer/VolatileKillsPlugin.js';
+import { BurnPlugin } from './technomancer/BurnPlugin.js';
+import { ElementalSynergyPlugin } from './technomancer/ElementalSynergyPlugin.js';
+import { NeonNovaPlugin } from './technomancer/NeonNovaPlugin.js';
+import { MeltdownPlugin } from './technomancer/MeltdownPlugin.js';
+import { ChainMasterPlugin } from './technomancer/ChainMasterPlugin.js';
+import { LightningCascadePlugin } from './technomancer/LightningCascadePlugin.js';
 
 // ── Ascension plugins ──
 import { LifeStealPlugin } from './ascension/LifeStealPlugin.js';
@@ -27,13 +43,32 @@ import { LifeStealPlugin } from './ascension/LifeStealPlugin.js';
  * @type {Map<string, typeof import('./BaseSkillPlugin.js').BaseSkillPlugin>}
  */
 export const SKILL_PLUGIN_REGISTRY = new Map(/** @type {Array<[string, typeof import('./BaseSkillPlugin.js').BaseSkillPlugin]>} */ ([
-	// Gunner
+	// ── Gunner ──
+	['gunner_sharp_rounds', SharpRoundsPlugin],
 	['gunner_rapid_fire', RapidFirePlugin],
+	['gunner_focused_fire', FocusedFirePlugin],
+	['gunner_piercing', PiercingPlugin],
+	['gunner_triple_shot', TripleShotPlugin],
+	['gunner_quick_aim', QuickAimPlugin],
+	['gunner_critical_mastery', CriticalMasteryPlugin],
+	['gunner_barrage', BarragePlugin],
+	['gunner_overcharge', OverchargePlugin],
+	['gunner_homing', HomingPlugin],
+	['gunner_aimbot_overdrive', AimbotOverdrivePlugin],
 
-	// Technomancer
-	['techno_volatile_kills', VolatileKillsPlugin],
+	// ── Technomancer ──
+	['techno_explosive_rounds', ExplosiveRoundsPlugin],
+	['techno_bigger_booms', BiggerBoomsPlugin],
 	['techno_emp_pulse', EmpPulsePlugin],
+	['techno_chain_hit', ChainHitPlugin],
+	['techno_volatile_kills', VolatileKillsPlugin],
+	['techno_burn', BurnPlugin],
+	['techno_elemental_synergy', ElementalSynergyPlugin],
+	['techno_neon_nova', NeonNovaPlugin],
+	['techno_meltdown', MeltdownPlugin],
+	['techno_chain_master', ChainMasterPlugin],
+	['techno_lightning_cascade', LightningCascadePlugin],
 
-	// Ascension modifiers
+	// ── Ascension modifiers ──
 	['asc_vampiric', LifeStealPlugin],
 ]));
