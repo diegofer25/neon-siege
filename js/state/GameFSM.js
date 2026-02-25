@@ -9,7 +9,7 @@
  *   - Transition event emission for devtools and middleware
  *   - Explicit transition table — only declared transitions are allowed
  *
- * State hierarchy for Neon TD:
+ * State hierarchy for Neon Siege:
  *   menu
  *   playing
  *     playing.countdown
@@ -366,7 +366,7 @@ export class GameFSM {
 }
 
 /**
- * Pre-defined state constants for Neon TD.
+ * Pre-defined state constants for Neon Siege.
  */
 GameFSM.STATES = Object.freeze({
 	MENU: 'menu',
@@ -383,7 +383,7 @@ GameFSM.STATES = Object.freeze({
 });
 
 /**
- * Pre-defined transition table for Neon TD.
+ * Pre-defined transition table for Neon Siege.
  * Call GameFSM.applyNeonTDTransitions(fsm) to wire them all up.
  */
 GameFSM.applyNeonTDTransitions = function (fsm) {

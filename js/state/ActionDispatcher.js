@@ -224,7 +224,7 @@ export class ActionDispatcher {
 }
 
 /**
- * Action type constants for Neon TD.
+ * Action type constants for Neon Siege.
  */
 export const ActionTypes = Object.freeze({
 	// ─── Run State ─────────────────────────────────────

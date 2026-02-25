@@ -110,7 +110,7 @@ export class StateDevTools {
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = `neon-td-state-${Date.now()}.json`;
+			a.download = `neon-siege-state-${Date.now()}.json`;
 			a.click();
 			URL.revokeObjectURL(url);
 		});

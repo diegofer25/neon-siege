@@ -5,7 +5,7 @@ import { MathUtils } from './utils/MathUtils.js';
 import { renderPlayer, updatePlayerVisualTimers } from './ui/PlayerRenderer.js';
 
 /**
- * Player character class for the neon tower defense game
+ * Player character class for Neon Siege
  * 
  * Handles all player-related functionality including:
  * - Character state management (health, shields, position)

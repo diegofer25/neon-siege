@@ -1,4 +1,4 @@
-# Neon Tower Defense Shooter - Assets
+# Neon Siege - Assets
 
 This folder stores game audio and visual assets.
 

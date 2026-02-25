@@ -1,7 +1,7 @@
 {
-  "name": "neon-tower-defense-shooter",
+  "name": "neon-siege",
   "version": "1.0.0",
-  "description": "A browser-based 2D tower-defense shooter with infinite wave survival and neon aesthetics",
+  "description": "Neon Siege — a browser-based 2D shooter with infinite wave survival and neon aesthetics",
   "main": "index.html",
   "scripts": {
     "start": "npm run dev",

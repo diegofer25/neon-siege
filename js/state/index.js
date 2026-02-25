@@ -40,7 +40,7 @@ export function createStateSystem(options = {}) {
 	// 1. Create store with all slice definitions
 	const store = new GameStore(ALL_SLICE_DEFINITIONS);
 
-	// 2. Create FSM with all Neon TD states and transitions
+	// 2. Create FSM with all Neon Siege states and transitions
 	const fsm = new GameFSM();
 	GameFSM.applyNeonTDTransitions(fsm);
 

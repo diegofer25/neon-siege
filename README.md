@@ -1,6 +1,6 @@
-# 🎮 Neon Tower Defense Shooter
+# 🎮 Neon Siege
 
-A browser-based 2D tower defense game with infinite wave survival, auto-targeting mechanics, and vibrant neon aesthetics. Built with vanilla JavaScript and HTML5 Canvas for smooth 60fps gameplay.
+A browser-based 2D shooter with infinite wave survival, auto-targeting mechanics, and vibrant neon aesthetics. Built with vanilla JavaScript and HTML5 Canvas for smooth 60fps gameplay.
 
 ## ✨ Features
 

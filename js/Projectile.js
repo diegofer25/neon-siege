@@ -1,5 +1,5 @@
 /**
- * @fileoverview Projectile system for the neon tower defense game.
+ * @fileoverview Projectile system for Neon Siege.
  * Handles different types of projectiles including standard, piercing, and explosive bullets.
  */
 

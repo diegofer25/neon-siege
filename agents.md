@@ -5,7 +5,7 @@ Purpose
 - Focus on environment, core commands, high-level architecture, and project-specific guardrails to avoid breaking the live, no-bundler setup.
 
 Project overview
-- Neon Tower Defense Shooter: browser-based, vanilla JavaScript + HTML5 Canvas.
+- Neon Siege: browser-based, vanilla JavaScript + HTML5 Canvas.
 - Static browser game served by Vite in development.
 
 Environment

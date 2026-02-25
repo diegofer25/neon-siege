@@ -2,7 +2,7 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
-Repository: Neon Tower Defense Shooter (vanilla JS + HTML5 Canvas)
+Repository: Neon Siege (vanilla JS + HTML5 Canvas)
 
 Development commands (npm)
 - Setup: npm install
