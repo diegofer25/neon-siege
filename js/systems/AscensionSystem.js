@@ -102,58 +102,6 @@ export class AscensionSystem {
 	}
 
 	/**
-	 * Get aggregated effects from all active modifiers for runtime consumption.
-	 * @returns {Object}
-	 */
-	getAggregatedEffects() {
-		const agg = {
-			ricochet: false,
-			deathExplosion: 0,
-			cooldownMultiplier: 1,
-			damageTakenMultiplier: 1,
-			damageMultiplier: 1,
-			maxHpMultiplier: 1,
-			lifeStealPercent: 0,
-			globalEnemySlow: 0,
-			xpMultiplier: 1,
-			hpRegenBonus: 0,
-			critBounce: false,
-			critBounceDamage: 0,
-			scoreMultiplier: 1,
-			lootChanceMultiplier: 1,
-			berserkerDamagePerMissingHpPercent: 0,
-			shieldNovaMultiplier: 0,
-			shieldNovaRadius: 0,
-			echoChance: 0,
-			damageReduction: 0,
-		};
-
-		for (const mod of this.activeModifiers) {
-			if (mod.consumeOnPick) continue; // already applied
-			const e = mod.effect;
-			if (e.ricochet) agg.ricochet = true;
-			if (e.deathExplosion) agg.deathExplosion += e.deathExplosion;
-			if (e.cooldownMultiplier) agg.cooldownMultiplier *= e.cooldownMultiplier;
-			if (e.damageTakenMultiplier) agg.damageTakenMultiplier *= e.damageTakenMultiplier;
-			if (e.damageMultiplier) agg.damageMultiplier *= e.damageMultiplier;
-			if (e.maxHpMultiplier) agg.maxHpMultiplier *= e.maxHpMultiplier;
-			if (e.lifeStealPercent) agg.lifeStealPercent += e.lifeStealPercent;
-			if (e.globalEnemySlow) agg.globalEnemySlow = Math.min(0.80, agg.globalEnemySlow + e.globalEnemySlow);
-			if (e.xpMultiplier) agg.xpMultiplier *= e.xpMultiplier;
-			if (e.hpRegenBonus) agg.hpRegenBonus += e.hpRegenBonus;
-			if (e.critBounce) { agg.critBounce = true; agg.critBounceDamage = e.critBounceDamage; }
-			if (e.scoreMultiplier) agg.scoreMultiplier *= e.scoreMultiplier;
-			if (e.lootChanceMultiplier) agg.lootChanceMultiplier *= e.lootChanceMultiplier;
-			if (e.berserkerDamagePerMissingHpPercent) agg.berserkerDamagePerMissingHpPercent += e.berserkerDamagePerMissingHpPercent;
-			if (e.shieldNovaMultiplier) { agg.shieldNovaMultiplier = e.shieldNovaMultiplier; agg.shieldNovaRadius = e.shieldNovaRadius; }
-			if (e.echoChance) agg.echoChance += e.echoChance;
-			if (e.damageReduction) agg.damageReduction = 1 - (1 - agg.damageReduction) * (1 - e.damageReduction);
-		}
-
-		return agg;
-	}
-
-	/**
 	 * Handle instant-effect modifiers (e.g., bonus points).
 	 * @private
 	 */

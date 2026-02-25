@@ -60,6 +60,17 @@ export class Player {
         emergencyHeal: null,
         _ascensionLifeSteal: 0,
         _ascensionEffects: null,
+        // Ascension plugin pipeline fields
+        ricochetEnabled: false,
+        globalEnemySlow: 0,
+        berserker: null,
+        _damageTakenMultiplier: 1,
+        _damageReduction: 0,
+        _cooldownMultiplier: 1,
+        _scoreMultiplier: 1,
+        _lootChanceMultiplier: 1,
+        _xpMultiplier: 1,
+        _shieldJustBroke: false,
         chainHit: null,
         volatileKills: null,
         elementalSynergy: null,
@@ -852,6 +863,12 @@ export class Player {
         }
 		
         this._applyProjectileModifications(projectile);
+
+        // Emit projectile:fired event for ascension plugins (EchoStrikePlugin, etc.)
+        if (game.eventBus && !options.isEcho) {
+            game.eventBus.emit('projectile:fired', { projectile, angle, damage: projectile.damage });
+        }
+
         return projectile;
     }
     
@@ -901,6 +918,11 @@ export class Player {
         // DEX tracer: extend projectile trail glow when DEX is invested
         if (this.visualState.dexLevel > 0) {
             projectile.tracerLevel = this.visualState.dexLevel;
+        }
+
+        // Ricochet: allow projectile to bounce off walls once
+        if (this.ricochetEnabled) {
+            projectile.ricochetBounces = 1;
         }
     }
     
@@ -961,12 +983,26 @@ export class Player {
         if (this.barrierPhaseActive) {
             return; // No damage taken during barrier phase
         }
+
+        // Apply ascension damage modifiers (Overclock: damageTaken multiplier, Resilience: damage reduction)
+        if (this._damageTakenMultiplier && this._damageTakenMultiplier !== 1) {
+            amount *= this._damageTakenMultiplier;
+        }
+        if (this._damageReduction && this._damageReduction > 0) {
+            amount *= (1 - this._damageReduction);
+        }
         
         // Shield absorbs damage first
         if (this.hasShield && this.shieldHp > 0) {
             const shieldDamage = Math.min(amount, this.shieldHp);
+            const shieldHpBefore = this.shieldHp;
             this.shieldHp -= shieldDamage;
             amount -= shieldDamage;
+
+            // Flag shield break for callers to emit shield:broken event
+            if (shieldHpBefore > 0 && this.shieldHp <= 0) {
+                this._shieldJustBroke = true;
+            }
             
             if (amount <= 0) return; // All damage absorbed by shield
         }

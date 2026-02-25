@@ -296,7 +296,7 @@ export class SkillManager {
 		const rank = this.skillRanks[skillId] || 0;
 		if (rank < 1) return false;
 
-		const effectiveCD = this._getEffectiveCooldown(skill);
+		const effectiveCD = this._getEffectiveCooldown(skill, this._ascensionCooldownMultiplier || 1);
 		this.cooldowns[skillId] = effectiveCD;
 		return true;
 	}

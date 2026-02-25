@@ -39,7 +39,8 @@ export class LootSystem {
     rollForDrop(enemy, comboTier = 0) {
         const waveBonus = Math.min(MAX_DROP_CHANCE - BASE_DROP_CHANCE, this.game.wave * WAVE_DROP_BONUS);
         const comboBonus = comboTier * COMBO_TIER_DROP_BONUS;
-        const dropChance = enemy.isBoss ? 1.0 : Math.min(MAX_DROP_CHANCE + comboBonus, BASE_DROP_CHANCE + waveBonus + comboBonus);
+        const ascLootMult = this.game.player?._lootChanceMultiplier || 1;
+        const dropChance = enemy.isBoss ? 1.0 : Math.min(MAX_DROP_CHANCE + comboBonus, (BASE_DROP_CHANCE + waveBonus + comboBonus) * ascLootMult);
 
         if (Math.random() > dropChance) return null;
         return this._weightedRandom(DROP_TABLE);

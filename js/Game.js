@@ -674,10 +674,9 @@ export class Game {
 			},
 		});
 
-		// XP for wave clear (via SkillManager)
+		// XP for wave clear (via SkillManager — xpMultiplier applied inside addXP)
 		const xpAmount = LEVEL_CONFIG.XP_PER_WAVE_CLEAR_BASE + this.wave * LEVEL_CONFIG.XP_PER_WAVE_CLEAR_SCALING;
-		const ascEffects = this.ascensionSystem.getAggregatedEffects();
-		this.addXP(Math.floor(xpAmount * (ascEffects.xpMultiplier || 1)));
+		this.addXP(xpAmount);
 
 		// Milestone celebrations
 		const milestone = getMilestoneForWave(this.wave);
@@ -818,15 +817,16 @@ export class Game {
 	 */
 	_syncPlayerFromSkills() {
 		const attrs = this.skillManager.getComputedAttributes();
-		const ascension = this.ascensionSystem.getAggregatedEffects();
-		const context = { attrs, ascension };
+		const context = { attrs };
 
-		// Gather plugin-based modifiers (declarative stat bonuses from all equipped skills)
+		// Gather plugin-based modifiers (declarative stat bonuses from all equipped skills + ascension)
 		const pluginMods = this.skillEffectEngine.getAggregatedModifiers(context);
 
-		// ── Base stats from attributes + ascension ──
+		// ── Base stats from attributes + plugin pipeline (replaces manual ascension aggregation) ──
 		const baseHp = GameConfig.PLAYER.BASE_HP;
-		const newMaxHp = Math.floor((baseHp + attrs.maxHpBonus) * (ascension.maxHpMultiplier || 1));
+		const newMaxHp = Math.floor(
+			this.skillEffectEngine.resolveStatValue('maxHp', baseHp + attrs.maxHpBonus, pluginMods)
+		);
 		const hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
 		this.player.maxHp = newMaxHp;
 		this.player.hp = Math.min(newMaxHp, Math.ceil(newMaxHp * hpRatio));
@@ -838,12 +838,12 @@ export class Game {
 			this.player.shieldHp = Math.min(this.player.shieldHp, this.player.maxShieldHp);
 		}
 
-		// Regen from attributes + ascension
-		this.player.hpRegen = attrs.hpRegen + (ascension.hpRegenBonus || 0);
+		// Regen from attributes + plugin pipeline
+		this.player.hpRegen = this.skillEffectEngine.resolveStatValue('hpRegen', attrs.hpRegen, pluginMods);
 		this.player.shieldRegen = attrs.shieldCapacity > 0 ? attrs.shieldCapacity * 0.05 : 0;
 
 		// ── Combat stats via plugin modifier pipeline ──
-		const baseDamage = attrs.damageMultiplier * (ascension.damageMultiplier || 1);
+		const baseDamage = attrs.damageMultiplier;
 		this.player.damageMod = this.skillEffectEngine.resolveStatValue('damage', baseDamage, pluginMods);
 
 		this.player.fireRateMod = this.skillEffectEngine.resolveStatValue('fireRate', attrs.fireRateMultiplier, pluginMods);
@@ -880,6 +880,10 @@ export class Game {
 		this.player.volatileKills = null;
 		this.player.elementalSynergy = null;
 		this.player.meltdown = null;
+		// Reset ascension config fields (set by plugins via getPlayerConfig)
+		this.player.ricochetEnabled = false;
+		this.player.globalEnemySlow = 0;
+		this.player.berserker = null;
 
 		// Apply complex configs from plugins (TripleShot, Overcharge, Burn, ChainHit, etc.)
 		context.pluginMods = pluginMods;
@@ -901,8 +905,19 @@ export class Game {
 		this.player.hasLifeSteal = false;
 		this.player._ascensionLifeSteal = 0;
 
-		// Store ascension effects on player for runtime access
-		this.player._ascensionEffects = ascension;
+		// ── Resolve ascension pipeline stats for runtime consumption ──
+		this.player._damageTakenMultiplier = this.skillEffectEngine.resolveStatValue('damageTaken', 1, pluginMods);
+		this.player._damageReduction = this.skillEffectEngine.resolveStatValue('damageReduction', 0, pluginMods);
+		this.player._cooldownMultiplier = this.skillEffectEngine.resolveStatValue('cooldownMultiplier', 1, pluginMods);
+		this.player._scoreMultiplier = this.skillEffectEngine.resolveStatValue('scoreMultiplier', 1, pluginMods);
+		this.player._lootChanceMultiplier = this.skillEffectEngine.resolveStatValue('lootChanceMultiplier', 1, pluginMods);
+		this.player._xpMultiplier = this.skillEffectEngine.resolveStatValue('xpMultiplier', 1, pluginMods);
+
+		// Propagate cooldown multiplier to SkillManager for active skill cooldowns
+		this.skillManager._ascensionCooldownMultiplier = this.player._cooldownMultiplier;
+
+		// Store plugin modifiers on player for systems that read them
+		this.player._ascensionEffects = null;
 
 		// ── Visual state for player auras / VFX ──
 		const rawAttrs = this.skillManager.attributes;
@@ -919,10 +934,10 @@ export class Game {
 		}
 
 		// Emit stats:sync event for plugins that need to react to stat changes
-		this.eventBus.emit('stats:sync', { player: this.player, attrs, ascension });
+		this.eventBus.emit('stats:sync', { player: this.player, attrs });
 
 		// Mirror computed stats to the store (dual-write)
-		syncPlayerStats(this.store, this.dispatcher, this.skillEffectEngine, this.ascensionSystem, this.player);
+		syncPlayerStats(this.store, this.dispatcher, this.skillEffectEngine, this.player);
 	}
 
 	/**
@@ -1016,10 +1031,12 @@ export class Game {
 	}
 
 	addXP(amount) {
-		const levelsGained = this.skillManager.addXP(amount);
+		// Apply ascension XP multiplier to all XP sources
+		const multiplied = Math.floor(amount * (this.player?._xpMultiplier || 1));
+		const levelsGained = this.skillManager.addXP(multiplied);
 
 		// Mirror XP to store
-		this.dispatcher.dispatch({ type: ActionTypes.XP_ADD, payload: { amount } });
+		this.dispatcher.dispatch({ type: ActionTypes.XP_ADD, payload: { amount: multiplied } });
 
 		for (let i = 0; i < levelsGained; i++) {
 			this._onLevelUp();

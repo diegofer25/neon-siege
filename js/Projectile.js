@@ -108,6 +108,12 @@ export class Projectile {
 
         // DEX tracer level (0 = no tracer, higher = longer glow trail)
         this.tracerLevel = 0;
+
+        // Ricochet: number of wall bounces remaining (set by Player._applyProjectileModifications)
+        this.ricochetBounces = 0;
+
+        // Echo flag: prevents recursive echo duplication
+        this._isEcho = false;
     }
     
     /**
@@ -215,15 +221,30 @@ export class Projectile {
     
     /**
      * Checks if the projectile has moved outside the visible game area.
-     * Used for cleanup of projectiles that miss all targets.
+     * If ricochet bounces remain, reflects off screen edges instead of being destroyed.
      * 
      * @param {HTMLCanvasElement} canvas - The game canvas element
-     * @returns {boolean} True if projectile is outside screen bounds
+     * @returns {boolean} True if projectile is outside screen bounds and has no bounces left
      */
     isOffScreen(canvas) {
         const margin = 50; // Extra margin to account for projectile size
         const canvasWidth = canvas.logicalWidth || canvas.width;
         const canvasHeight = canvas.logicalHeight || canvas.height;
+
+        // If ricochet bounces remain, reflect off walls instead of dying
+        if (this.ricochetBounces > 0) {
+            let bounced = false;
+            if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx); bounced = true; }
+            else if (this.x > canvasWidth) { this.x = canvasWidth; this.vx = -Math.abs(this.vx); bounced = true; }
+            if (this.y < 0) { this.y = 0; this.vy = Math.abs(this.vy); bounced = true; }
+            else if (this.y > canvasHeight) { this.y = canvasHeight; this.vy = -Math.abs(this.vy); bounced = true; }
+            if (bounced) {
+                this.ricochetBounces--;
+                this.angle = Math.atan2(this.vy, this.vx);
+                return false;
+            }
+        }
+
         return (
             this.x < -margin ||
             this.x > canvasWidth + margin ||

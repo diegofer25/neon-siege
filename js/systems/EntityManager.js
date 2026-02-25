@@ -62,10 +62,11 @@ export class EntityManager {
         // Combo system
         const comboMultiplier = this.game.comboSystem.onEnemyKilled();
 
-        // Score with combo multiplier and wave scaling
+        // Score with combo multiplier, wave scaling, and ascension score multiplier
         const baseScore = this._getEnemyBaseScore(enemy);
         const waveMultiplier = 1 + (this.game.wave * 0.1);
-        const scoreGain = Math.floor(baseScore * comboMultiplier * waveMultiplier);
+        const ascScoreMult = this.game.player?._scoreMultiplier || 1;
+        const scoreGain = Math.floor(baseScore * comboMultiplier * waveMultiplier * ascScoreMult);
         this.game.score += scoreGain;
 
         // XP per kill

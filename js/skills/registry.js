@@ -38,6 +38,19 @@ import { LightningCascadePlugin } from './technomancer/LightningCascadePlugin.js
 
 // ── Ascension plugins ──
 import { LifeStealPlugin } from './ascension/LifeStealPlugin.js';
+import { GlassCannonPlugin } from './ascension/GlassCannonPlugin.js';
+import { ThickSkinPlugin } from './ascension/ThickSkinPlugin.js';
+import { XpSurgePlugin } from './ascension/XpSurgePlugin.js';
+import { OverclockPlugin } from './ascension/OverclockPlugin.js';
+import { ResiliencePlugin } from './ascension/ResiliencePlugin.js';
+import { TreasureHunterPlugin } from './ascension/TreasureHunterPlugin.js';
+import { BerserkerPlugin } from './ascension/BerserkerPlugin.js';
+import { VolatileDeathPlugin } from './ascension/VolatileDeathPlugin.js';
+import { ChainReactionPlugin } from './ascension/ChainReactionPlugin.js';
+import { ShieldNovaPlugin } from './ascension/ShieldNovaPlugin.js';
+import { EchoStrikePlugin } from './ascension/EchoStrikePlugin.js';
+import { RicochetPlugin } from './ascension/RicochetPlugin.js';
+import { BulletTimePlugin } from './ascension/BulletTimePlugin.js';
 
 /**
  * @type {Map<string, typeof import('./BaseSkillPlugin.js').BaseSkillPlugin>}
@@ -71,4 +84,17 @@ export const SKILL_PLUGIN_REGISTRY = new Map(/** @type {Array<[string, typeof im
 
 	// ── Ascension modifiers ──
 	['asc_vampiric', LifeStealPlugin],
+	['asc_glass_cannon', GlassCannonPlugin],
+	['asc_thick_skin', ThickSkinPlugin],
+	['asc_xp_surge', XpSurgePlugin],
+	['asc_double_cd', OverclockPlugin],
+	['asc_resilience', ResiliencePlugin],
+	['asc_treasure_hunter', TreasureHunterPlugin],
+	['asc_berserker', BerserkerPlugin],
+	['asc_death_explosions', VolatileDeathPlugin],
+	['asc_chain_reaction', ChainReactionPlugin],
+	['asc_shield_nova', ShieldNovaPlugin],
+	['asc_echo', EchoStrikePlugin],
+	['asc_ricochet', RicochetPlugin],
+	['asc_bullet_time', BulletTimePlugin],
 ]));

@@ -105,7 +105,18 @@ export class CollisionSystem {
         }
 
         // Calculate damage based on piercing mechanics
-        const currentDamage = projectile.getCurrentDamage();
+        let currentDamage = projectile.getCurrentDamage();
+
+        // Apply Berserker ascension bonus: +X% damage per 10% HP missing
+        const berserker = this.game.player?.berserker;
+        if (berserker && berserker.damagePerMissingHpPercent > 0) {
+            const hpPct = this.game.player.maxHp > 0 ? this.game.player.hp / this.game.player.maxHp : 1;
+            const missingPct = Math.max(0, 1 - hpPct);
+            // Each 10% missing = one stack
+            const stacks = Math.floor(missingPct * 10);
+            currentDamage *= 1 + stacks * berserker.damagePerMissingHpPercent;
+        }
+
         const enemyHealthBefore = enemy.health;
         this.game.trace('hit.enemy', {
             enemyId: enemy.id,
@@ -176,6 +187,15 @@ export class CollisionSystem {
 
         // Damage player
         this.game.player.takeDamage(enemy.damage);
+
+        // Emit shield:broken event for ascension plugins (ShieldNovaPlugin)
+        if (this.game.player._shieldJustBroke) {
+            this.game.player._shieldJustBroke = false;
+            this.game.eventBus.emit('shield:broken', {
+                player: this.game.player,
+                maxShieldHp: this.game.player.maxShieldHp,
+            });
+        }
 
         // Dispatch to state store
         this.game.dispatcher?.dispatch({
@@ -264,6 +284,15 @@ export class CollisionSystem {
 
         // Damage player
         this.game.player.takeDamage(projectile.damage, 'enemyProjectile');
+
+        // Emit shield:broken event for ascension plugins (ShieldNovaPlugin)
+        if (this.game.player._shieldJustBroke) {
+            this.game.player._shieldJustBroke = false;
+            this.game.eventBus.emit('shield:broken', {
+                player: this.game.player,
+                maxShieldHp: this.game.player.maxShieldHp,
+            });
+        }
 
         // Dispatch to state store
         this.game.dispatcher?.dispatch({
