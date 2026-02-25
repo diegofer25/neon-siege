@@ -210,6 +210,18 @@ export class Player {
         /** @type {?{bonus:number}} */ this.elementalSynergy = d.elementalSynergy;
         /** @type {?Object} */ this.meltdown = d.meltdown;
 
+        // ── Ascension plugin pipeline fields ──
+        /** @type {boolean} */ this.ricochetEnabled = d.ricochetEnabled;
+        /** @type {number} */ this.globalEnemySlow = d.globalEnemySlow;
+        /** @type {?Object} */ this.berserker = d.berserker;
+        /** @type {number} */ this._damageTakenMultiplier = d._damageTakenMultiplier;
+        /** @type {number} */ this._damageReduction = d._damageReduction;
+        /** @type {number} */ this._cooldownMultiplier = d._cooldownMultiplier;
+        /** @type {number} */ this._scoreMultiplier = d._scoreMultiplier;
+        /** @type {number} */ this._lootChanceMultiplier = d._lootChanceMultiplier;
+        /** @type {number} */ this._xpMultiplier = d._xpMultiplier;
+        /** @type {boolean} */ this._shieldJustBroke = d._shieldJustBroke;
+
 		// ── Active skill buff state ──
 		/** @type {Object} Active skill buffs keyed by name, each with its own timer/state */
 		this._skillBuffs = {};

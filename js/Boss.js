@@ -3,6 +3,7 @@ import { GameConfig } from './config/GameConfig.js';
 import { Projectile } from './Projectile.js';
 import { playSFX } from './main.js';
 import { MathUtils } from './utils/MathUtils.js';
+import { createFastEnemy } from './enemies/EnemyFactory.js';
 
 export class Boss extends Enemy {
     constructor(x, y, health, damage, game) {
@@ -153,7 +154,7 @@ export class Boss extends Enemy {
             const angle = Math.random() * Math.PI * 2;
             const spawnX = this.x + Math.cos(angle) * 100;
             const spawnY = this.y + Math.sin(angle) * 100;
-            const minion = Enemy.createFastEnemy(spawnX, spawnY, 1);
+            const minion = createFastEnemy(spawnX, spawnY, 1);
             minion.health *= difficultyPreset.enemyHealthMultiplier;
             minion.maxHealth *= difficultyPreset.enemyHealthMultiplier;
             minion.speed *= difficultyPreset.enemySpeedMultiplier;

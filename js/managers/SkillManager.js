@@ -63,6 +63,9 @@ export class SkillManager {
 		this.unspentSkillPoints = 0;
 		this.unspentAttributePoints = 0;
 
+		/** @type {number} Ascension cooldown multiplier applied to active skills */
+		this._ascensionCooldownMultiplier = 1;
+
 		// Level tracking (authoritative source of truth; Game.js delegates here)
 		this.level = 1;
 		this.xp = 0;

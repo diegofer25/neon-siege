@@ -1,6 +1,6 @@
-import { Enemy } from '../Enemy.js';
 import { createBoss } from '../bosses/BossFactory.js';
 import { GameConfig } from '../config/GameConfig.js';
+import { createBasicEnemy, createFastEnemy, createTankEnemy, createSplitterEnemy } from '../enemies/EnemyFactory.js';
 import { playSFX } from '../main.js';
 import { ActionTypes } from '../state/ActionDispatcher.js';
 
@@ -128,44 +128,44 @@ export class WaveManager {
         
         if (this.currentWave < 6) {
             // Waves 1-5: Only basic enemies
-            enemy = Enemy.createBasicEnemy(x, y, 1);
+            enemy = createBasicEnemy(x, y, 1);
         } else if (this.currentWave < 11) {
             // Waves 6-10: Basic (80%) and Fast (20%) enemies
             if (random < 0.8) {
-                enemy = Enemy.createBasicEnemy(x, y, 1);
+                enemy = createBasicEnemy(x, y, 1);
             } else {
-                enemy = Enemy.createFastEnemy(x, y, 1);
+                enemy = createFastEnemy(x, y, 1);
             }
         } else if (this.currentWave < 16) {
             // Waves 11-15: Basic (65%), Fast (20%), Tank (15%)
             if (random < 0.65) {
-                enemy = Enemy.createBasicEnemy(x, y, 1);
+                enemy = createBasicEnemy(x, y, 1);
             } else if (random < 0.85) {
-                enemy = Enemy.createFastEnemy(x, y, 1);
+                enemy = createFastEnemy(x, y, 1);
             } else {
-                enemy = Enemy.createTankEnemy(x, y, 1);
+                enemy = createTankEnemy(x, y, 1);
             }
         } else if (this.currentWave < 21) {
             // Waves 16-20: Basic (55%), Fast (15%), Tank (15%), Splitter (15%)
             if (random < 0.55) {
-                enemy = Enemy.createBasicEnemy(x, y, 1);
+                enemy = createBasicEnemy(x, y, 1);
             } else if (random < 0.70) {
-                enemy = Enemy.createFastEnemy(x, y, 1);
+                enemy = createFastEnemy(x, y, 1);
             } else if (random < 0.85) {
-                enemy = Enemy.createTankEnemy(x, y, 1);
+                enemy = createTankEnemy(x, y, 1);
             } else {
-                enemy = Enemy.createSplitterEnemy(x, y, 1);
+                enemy = createSplitterEnemy(x, y, 1);
             }
         } else {
             // Waves 21-30+: Basic (45%), Fast (15%), Tank (20%), Splitter (20%)
             if (random < 0.45) {
-                enemy = Enemy.createBasicEnemy(x, y, 1);
+                enemy = createBasicEnemy(x, y, 1);
             } else if (random < 0.60) {
-                enemy = Enemy.createFastEnemy(x, y, 1);
+                enemy = createFastEnemy(x, y, 1);
             } else if (random < 0.80) {
-                enemy = Enemy.createTankEnemy(x, y, 1);
+                enemy = createTankEnemy(x, y, 1);
             } else {
-                enemy = Enemy.createSplitterEnemy(x, y, 1);
+                enemy = createSplitterEnemy(x, y, 1);
             }
         }
         
