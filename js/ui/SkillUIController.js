@@ -251,15 +251,18 @@ class SkillUIController {
         this._updateActionButtons(sm);
         this._treeRenderer.render(sm);
 
-        // Show first-time onboarding banner
+        // Show first-time onboarding banner (stays open until user clicks X)
         const hasSeenSkillTree = localStorage.getItem('neon_seen_skilltree');
         const onboardingEl = document.getElementById('skillTreeOnboarding');
         if (!hasSeenSkillTree && onboardingEl) {
             onboardingEl.classList.add('show');
-            setTimeout(() => {
-                onboardingEl.classList.remove('show');
-                localStorage.setItem('neon_seen_skilltree', '1');
-            }, 5000);
+            const closeBtn = document.getElementById('onboardingCloseBtn');
+            if (closeBtn) {
+                closeBtn.onclick = () => {
+                    onboardingEl.classList.remove('show');
+                    localStorage.setItem('neon_seen_skilltree', '1');
+                };
+            }
         }
     }
 

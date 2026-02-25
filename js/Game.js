@@ -1243,9 +1243,6 @@ export class Game {
 	 * Draw the background neon grid effect.
 	 */
 	drawBackground() {
-		// Skip drawing grid if performance is low
-		if (this.performanceManager.needsOptimization()) return;
-
 		const ctx = this.ctx;
 		const gridSize = GameConfig.VFX.GRID_SIZE;
 

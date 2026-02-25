@@ -108,6 +108,14 @@ export class Player {
         this.radius = this.baseRadius;
         /** @type {number} Current facing angle in radians */
         this.angle = 0;
+
+        // Movement state (for visual feedback in renderer)
+        /** @type {boolean} Whether the player is currently moving via WASD/arrows */
+        this.isMoving = false;
+        /** @type {number} Movement velocity X in px/s (for renderer thruster direction) */
+        this.moveVx = 0;
+        /** @type {number} Movement velocity Y in px/s (for renderer thruster direction) */
+        this.moveVy = 0;
         
         // Rotation system properties
         /** @type {number|null} Target angle the player is rotating towards */
@@ -316,6 +324,10 @@ export class Player {
         this.fireCooldown = 0;
         this.angle = 0;
 
+        this.isMoving = false;
+        this.moveVx = 0;
+        this.moveVy = 0;
+
         this.enemyProjectileIFrames = 0;
         
         // Reset rotation system
@@ -446,7 +458,12 @@ export class Player {
      * @param {import('./Game.js').Game} game
      */
     _updateMovement(delta, input, game) {
-        if (!input?.keys) return;
+        if (!input?.keys) {
+            this.isMoving = false;
+            this.moveVx = 0;
+            this.moveVy = 0;
+            return;
+        }
 
         let dx = 0;
         let dy = 0;
@@ -456,7 +473,12 @@ export class Player {
         if (input.keys['KeyA'] || input.keys['ArrowLeft'])  dx -= 1;
         if (input.keys['KeyD'] || input.keys['ArrowRight']) dx += 1;
 
-        if (dx === 0 && dy === 0) return;
+        if (dx === 0 && dy === 0) {
+            this.isMoving = false;
+            this.moveVx = 0;
+            this.moveVy = 0;
+            return;
+        }
 
         // Normalize diagonal movement
         const len = Math.sqrt(dx * dx + dy * dy);
@@ -466,6 +488,11 @@ export class Player {
         const speed = GameConfig.PLAYER.MOVE_SPEED * (delta / 1000);
         this.x += dx * speed;
         this.y += dy * speed;
+
+        // Store velocity for renderer (px/s, normalized direction × move speed)
+        this.isMoving = true;
+        this.moveVx = dx * GameConfig.PLAYER.MOVE_SPEED;
+        this.moveVy = dy * GameConfig.PLAYER.MOVE_SPEED;
 
         // Clamp to canvas bounds
         const { width: cw, height: ch } = game.getLogicalCanvasSize();

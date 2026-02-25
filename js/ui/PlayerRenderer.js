@@ -209,24 +209,42 @@ export function renderPlayer(ctx, p) {
         ctx.restore();
     }
 
-    // ── BODY: Player triangle + glow ──────────────────────────────────
+    // ── BODY: Exosuit silhouette + fake glow ────────────────────────
+
+    // Fake glow behind body (performance-friendly, no shadowBlur)
+    ctx.save();
+    const glowColor = p.isRotating ? '#ff6d00' : '#ff2dec';
+    const strGlowBoost = vs.strLevel * auraCfg.STR.GLOW_PER_POINT;
+    const glowRadius = p.radius + 8 + strGlowBoost * 0.3;
+    const fakeGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowRadius);
+    fakeGlow.addColorStop(0, glowColor + '44');     // ~27% alpha center
+    fakeGlow.addColorStop(0.5, glowColor + '18');   // ~10% alpha mid
+    fakeGlow.addColorStop(1, glowColor + '00');     // transparent edge
+    ctx.fillStyle = fakeGlow;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.angle);
 
-    const glowColor = p.isRotating ? '#ff6d00' : '#ff2dec';
-    ctx.shadowColor = glowColor;
-    const strGlowBoost = vs.strLevel * auraCfg.STR.GLOW_PER_POINT;
-    ctx.shadowBlur = 15 + strGlowBoost;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+    // Idle breathing or movement tilt
+    const bodyCfg = auraCfg.BODY;
+    if (p.isMoving) {
+        // Slight squish in facing direction to suggest forward lean
+        ctx.scale(1, bodyCfg.MOVE_TILT_SQUISH);
+    } else if (!p.isRotating) {
+        // Idle breathing — gentle scale pulse
+        const breathe = 1 + bodyCfg.IDLE_BREATHE_SCALE * Math.sin(now * bodyCfg.IDLE_BREATHE_SPEED);
+        ctx.scale(breathe, breathe);
+    }
 
     let bodyColor = p.isRotating ? '#ff6d00' : '#ff2dec';
     if (vs.flashTimer > 0) {
         const flashT = vs.flashTimer / auraCfg.PURCHASE.FLASH_DURATION;
         bodyColor = flashT > 0.5 ? '#ffffff' : bodyColor;
-        ctx.shadowBlur = 15 + strGlowBoost + 20 * flashT;
     }
 
     // Volatile Kills shimmer
@@ -235,31 +253,103 @@ export function renderPlayer(ctx, p) {
         ctx.globalAlpha = shimmer;
     }
 
-    // Elemental Synergy — glow alternates orange/cyan
+    // Elemental Synergy — glow alternates orange/cyan (applied to stroke/shadow)
+    let synergyColor = null;
     if (vs.learnedSkills.has('techno_elemental_synergy')) {
         const cycle = Math.floor(now / auraCfg.SKILL_VFX.SYNERGY_SWAP_INTERVAL) % 2;
-        ctx.shadowColor = cycle === 0 ? '#ff8c00' : '#00e5ff';
+        synergyColor = cycle === 0 ? '#ff8c00' : '#00e5ff';
     }
 
+    const r = p.radius;
+
+    // ── Exosuit body path ──────────────────────────────────────────
+    // Chevron-shaped torso: wider shoulders tapering to rear
     ctx.fillStyle = bodyColor;
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = synergyColor || '#fff';
     ctx.lineWidth = 2;
 
     ctx.beginPath();
-    ctx.moveTo(p.radius, 0);
-    ctx.lineTo(-p.radius * 0.7, -p.radius * 0.5);
-    ctx.lineTo(-p.radius * 0.7, p.radius * 0.5);
+    // Nose tip (front center)
+    ctx.moveTo(r * 0.85, 0);
+    // Upper shoulder
+    ctx.lineTo(r * 0.1, -r * 0.6);
+    // Upper arm notch
+    ctx.lineTo(-r * 0.15, -r * 0.55);
+    // Upper back
+    ctx.lineTo(-r * 0.55, -r * 0.4);
+    // Rear indent (jetpack bay)
+    ctx.lineTo(-r * 0.45, -r * 0.12);
+    ctx.lineTo(-r * 0.6, 0);
+    ctx.lineTo(-r * 0.45, r * 0.12);
+    // Lower back
+    ctx.lineTo(-r * 0.55, r * 0.4);
+    // Lower arm notch
+    ctx.lineTo(-r * 0.15, r * 0.55);
+    // Lower shoulder
+    ctx.lineTo(r * 0.1, r * 0.6);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // ── GUN BARREL with skill-specific visual overlays ─────────────────
+    // ── Inner armor detail lines ───────────────────────────────────
+    ctx.save();
+    ctx.strokeStyle = bodyColor === '#ffffff' ? '#cccccc' : '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.3;
+    // Chest chevron
+    ctx.beginPath();
+    ctx.moveTo(r * 0.5, 0);
+    ctx.lineTo(r * 0.05, -r * 0.35);
+    ctx.moveTo(r * 0.5, 0);
+    ctx.lineTo(r * 0.05, r * 0.35);
+    ctx.stroke();
+    // Spine line
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.1, 0);
+    ctx.lineTo(-r * 0.5, 0);
+    ctx.stroke();
+    ctx.restore();
+
+    // ── Visor (head/face read) ─────────────────────────────────────
+    ctx.save();
+    ctx.strokeStyle = bodyCfg.VISOR_COLOR;
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = 0.8 + 0.2 * Math.sin(now / 600);
+    // Small arc at the front as a "visor"
+    ctx.beginPath();
+    ctx.arc(r * 0.45, 0, r * 0.22, -0.7, 0.7);
+    ctx.stroke();
+    // Visor fake glow
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = bodyCfg.VISOR_COLOR;
+    ctx.beginPath();
+    ctx.arc(r * 0.45, 0, r * 0.3, -0.8, 0.8);
+    ctx.fill();
+    ctx.restore();
+
+    // ── GUN BARREL — dual-rail weapon mount ────────────────────────
+
+    const barrelStart = r * 0.85;
+    const barrelEnd = barrelStart + 15;
+    const barrelSpread = 2.5;
 
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
+    // Upper rail
     ctx.beginPath();
-    ctx.moveTo(p.radius, 0);
-    ctx.lineTo(p.radius + 15, 0);
+    ctx.moveTo(barrelStart, -barrelSpread);
+    ctx.lineTo(barrelEnd, -barrelSpread * 0.6);
+    ctx.stroke();
+    // Lower rail
+    ctx.beginPath();
+    ctx.moveTo(barrelStart, barrelSpread);
+    ctx.lineTo(barrelEnd, barrelSpread * 0.6);
+    ctx.stroke();
+    // Muzzle bridge
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(barrelEnd, -barrelSpread * 0.6);
+    ctx.lineTo(barrelEnd, barrelSpread * 0.6);
     ctx.stroke();
 
     // Sharp Rounds
@@ -267,12 +357,13 @@ export function renderPlayer(ctx, p) {
         ctx.save();
         ctx.strokeStyle = '#ff4444';
         ctx.lineWidth = 2;
-        ctx.shadowColor = '#ff4444';
-        ctx.shadowBlur = 8;
         ctx.globalAlpha = 0.7;
+        // Red glow on both rails
         ctx.beginPath();
-        ctx.moveTo(p.radius, 0);
-        ctx.lineTo(p.radius + 15, 0);
+        ctx.moveTo(barrelStart, -barrelSpread);
+        ctx.lineTo(barrelEnd, -barrelSpread * 0.6);
+        ctx.moveTo(barrelStart, barrelSpread);
+        ctx.lineTo(barrelEnd, barrelSpread * 0.6);
         ctx.stroke();
         ctx.restore();
     }
@@ -282,20 +373,19 @@ export function renderPlayer(ctx, p) {
         ctx.save();
         ctx.strokeStyle = '#ff8c00';
         ctx.lineWidth = 2;
-        ctx.shadowColor = '#ff8c00';
-        ctx.shadowBlur = 10;
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.moveTo(p.radius + 2, 0);
-        ctx.lineTo(p.radius + 15, 0);
+        ctx.moveTo(barrelStart + 2, -barrelSpread);
+        ctx.lineTo(barrelEnd, -barrelSpread * 0.6);
+        ctx.moveTo(barrelStart + 2, barrelSpread);
+        ctx.lineTo(barrelEnd, barrelSpread * 0.6);
         ctx.stroke();
         if (vs.learnedSkills.has('techno_bigger_booms')) {
             ctx.globalAlpha = 0.9;
-            ctx.shadowBlur = 14;
             const emberY = Math.sin(now / 150) * 3;
             ctx.fillStyle = '#ff8c00';
             ctx.beginPath();
-            ctx.arc(p.radius + 12, emberY, 1.5, 0, Math.PI * 2);
+            ctx.arc(barrelEnd - 3, emberY, 1.5, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.restore();
@@ -306,12 +396,11 @@ export function renderPlayer(ctx, p) {
         ctx.save();
         ctx.strokeStyle = '#88ccff';
         ctx.lineWidth = 1.5;
-        ctx.shadowColor = '#88ccff';
-        ctx.shadowBlur = 6;
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.moveTo(p.radius + 15, 0);
-        ctx.lineTo(p.radius + 28, 0);
+        ctx.moveTo(barrelEnd, -barrelSpread * 0.4);
+        ctx.lineTo(barrelEnd + 13, 0);
+        ctx.lineTo(barrelEnd, barrelSpread * 0.4);
         ctx.stroke();
         ctx.restore();
     }
@@ -320,10 +409,8 @@ export function renderPlayer(ctx, p) {
     if (vs.learnedSkills.has('gunner_triple_shot')) {
         ctx.save();
         ctx.fillStyle = '#fff';
-        ctx.shadowColor = '#fff';
-        ctx.shadowBlur = 4;
         ctx.globalAlpha = 0.6;
-        const tipX = p.radius + 18;
+        const tipX = barrelEnd + 3;
         for (const spreadAngle of [-0.25, 0, 0.25]) {
             ctx.beginPath();
             ctx.arc(tipX * Math.cos(spreadAngle), tipX * Math.sin(spreadAngle), 1.5, 0, Math.PI * 2);
@@ -337,16 +424,15 @@ export function renderPlayer(ctx, p) {
         ctx.save();
         ctx.strokeStyle = '#ff2dec';
         ctx.lineWidth = 1;
-        ctx.shadowColor = '#ff2dec';
-        ctx.shadowBlur = 6;
         ctx.globalAlpha = 0.5 + 0.2 * Math.sin(now / 300);
+        const reticleX = barrelEnd + 5;
         ctx.beginPath();
-        ctx.arc(p.radius + 20, 0, 5, 0, Math.PI * 2);
+        ctx.arc(reticleX, 0, 5, 0, Math.PI * 2);
         ctx.stroke();
         for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
             ctx.beginPath();
-            ctx.moveTo(p.radius + 20 + Math.cos(a) * 3, Math.sin(a) * 3);
-            ctx.lineTo(p.radius + 20 + Math.cos(a) * 7, Math.sin(a) * 7);
+            ctx.moveTo(reticleX + Math.cos(a) * 3, Math.sin(a) * 3);
+            ctx.lineTo(reticleX + Math.cos(a) * 7, Math.sin(a) * 7);
             ctx.stroke();
         }
         ctx.restore();

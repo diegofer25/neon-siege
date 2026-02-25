@@ -609,6 +609,34 @@ export const GameConfig = {
                 FLASH_DURATION: 300,
             },
 
+            /** Movement thruster visual */
+            THRUSTER: {
+                /** Thruster glow color */
+                COLOR: '#00e5ff',
+                /** Secondary thruster color */
+                COLOR_ALT: '#ff2dec',
+                /** Number of thruster dots */
+                PARTICLES: 3,
+                /** Maximum alpha */
+                MAX_ALPHA: 0.6,
+                /** Dot radius (px) */
+                SIZE: 4,
+                /** Thruster offset from body rear (px) */
+                OFFSET: 6,
+            },
+
+            /** Idle breathing and movement body modifiers */
+            BODY: {
+                /** Idle breathing oscillation speed (for sin) */
+                IDLE_BREATHE_SPEED: 0.00125,
+                /** Idle breathing scale amplitude (±) */
+                IDLE_BREATHE_SCALE: 0.02,
+                /** Squish factor when moving (1 = none, 0.92 = 8% squish) */
+                MOVE_TILT_SQUISH: 0.92,
+                /** Visor arc glow color */
+                VISOR_COLOR: '#00ffff',
+            },
+
             /** Skill-specific VFX timing */
             SKILL_VFX: {
                 /** Critical Mastery spark interval (ms) */
