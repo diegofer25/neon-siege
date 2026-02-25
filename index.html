@@ -139,7 +139,7 @@
         <div id="startScreen" class="overlay">
             <img class="start-logo" src="assets/images/start_screen_logo.png" alt="Neon Defender emblem">
             <h1>NEON DEFENDER</h1>
-            <p>Survive infinite waves of enemies</p>
+            <p>Conquer 30 waves and defeat 6 unique bosses</p>
             <p>Auto-targeting turret defense game</p>
             <p>Level up and unlock skills between waves!</p>
             <div class="start-difficulty-row" aria-label="Difficulty">
@@ -152,6 +152,10 @@
             </div>
             <button id="startBtn">CLICK TO START</button>
             <button id="loadSaveBtn" style="display: none;">LOAD LAST SAVE</button>
+            <div id="lastRunStats" class="last-run-stats" style="display: none;">
+                <div class="last-run-row"><span>Last Run</span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
+                <div class="last-run-row best"><span>Best</span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>
+            </div>
         </div>
 
         <!-- Settings Screen -->
@@ -258,6 +262,22 @@
                     <!-- Dynamically populated -->
                 </div>
             </div>
+        </div>
+
+        <!-- Victory Screen (wave 30 completion) -->
+        <div id="victoryScreen" class="overlay">
+            <h1 class="victory-title">VICTORY!</h1>
+            <p class="victory-subtitle">You conquered all 30 waves!</p>
+            <div id="victoryNewRecord" class="new-record" style="display: none;">NEW PERSONAL BEST!</div>
+            <div class="game-over-stats victory-stats">
+                <div class="go-stat-row"><span>Waves Cleared</span><span id="victoryWave">30</span></div>
+                <div class="go-stat-row"><span>Final Score</span><span id="victoryScore">0</span></div>
+                <div class="go-stat-row"><span>Best Combo</span><span id="victoryCombo">0</span></div>
+                <div class="go-stat-row"><span>Level Reached</span><span id="victoryLevel">1</span></div>
+                <div class="go-stat-row"><span>Enemies Defeated</span><span id="victoryKills">0</span></div>
+            </div>
+            <button id="continueEndlessBtn" class="primary">CONTINUE TO ENDLESS</button>
+            <button id="victoryRestartBtn">RETURN TO MENU</button>
         </div>
 
         <!-- Game Over Screen -->

@@ -379,6 +379,7 @@ GameFSM.STATES = Object.freeze({
 	BETWEEN_WAVES_ASCENSION: 'between_waves.ascension',
 	BETWEEN_WAVES_POWERUP: 'between_waves.powerup',
 	GAMEOVER: 'gameover',
+	VICTORY: 'victory',
 });
 
 /**
@@ -415,6 +416,15 @@ GameFSM.applyNeonTDTransitions = function (fsm) {
 		// Game over → Menu / Restart
 		[S.GAMEOVER, S.MENU],
 		[S.GAMEOVER, S.PLAYING_COUNTDOWN],
+
+		// Victory → Menu / Endless (continue playing)
+		[S.VICTORY, S.MENU],
+		[S.VICTORY, S.PLAYING_COUNTDOWN],
+
+		// Ascension/Powerup → Victory (wave 30 completion)
+		[S.BETWEEN_WAVES_ASCENSION, S.VICTORY],
+		[S.BETWEEN_WAVES_POWERUP, S.VICTORY],
+		[S.PLAYING_ACTIVE, S.VICTORY],
 
 		// Save/Load can jump to playing
 		[S.MENU, S.PLAYING_ACTIVE],

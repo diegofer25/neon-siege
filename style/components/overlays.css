@@ -577,3 +577,100 @@
   from { opacity: 0.6; }
   to { opacity: 1; }
 }
+
+/* ============================================================================
+   VICTORY SCREEN
+   ============================================================================ */
+
+#victoryScreen::before {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 204, 0, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 30% 70%, rgba(0, 255, 102, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 70% 20%, rgba(153, 0, 255, 0.1) 0%, transparent 50%);
+  animation: screenOverlay 8s ease-in-out infinite alternate;
+}
+
+.victory-title {
+  color: #ffcc00 !important;
+  text-shadow:
+    0 0 8px #ffcc00,
+    0 0 20px #ffcc00,
+    0 0 40px rgba(255, 204, 0, 0.5) !important;
+  animation: victoryGlow 1.5s ease-in-out infinite alternate !important;
+  font-size: 56px !important;
+}
+
+.victory-subtitle {
+  color: #fff;
+  font-size: 18px;
+  margin-bottom: var(--spacing-lg);
+  text-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+}
+
+.victory-stats {
+  border-color: rgba(255, 204, 0, 0.4) !important;
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.15) !important;
+}
+
+.victory-stats .go-stat-row {
+  border-color: rgba(255, 204, 0, 0.25);
+}
+
+.victory-stats .go-stat-row span:last-child {
+  color: #ffcc00;
+  text-shadow: 0 0 4px #ffcc00;
+}
+
+@keyframes victoryGlow {
+  from {
+    text-shadow:
+      0 0 8px #ffcc00,
+      0 0 20px #ffcc00,
+      0 0 40px rgba(255, 204, 0, 0.5);
+  }
+  to {
+    text-shadow:
+      0 0 12px #ffcc00,
+      0 0 30px #ffcc00,
+      0 0 60px rgba(255, 204, 0, 0.7),
+      0 0 80px rgba(255, 204, 0, 0.3);
+  }
+}
+
+/* ============================================================================
+   LAST RUN STATS (START SCREEN)
+   ============================================================================ */
+
+.last-run-stats {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.4);
+  min-width: 280px;
+}
+
+.last-run-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-xs) 0;
+  font-size: 14px;
+  color: #aaa;
+}
+
+.last-run-row span:last-child {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--color-primary-neon);
+  text-shadow: 0 0 4px var(--color-primary-neon);
+}
+
+.last-run-row.best span:first-child {
+  color: #ffcc00;
+}
+
+.last-run-row.best span:last-child {
+  color: #ffcc00;
+  text-shadow: 0 0 4px #ffcc00;
+}

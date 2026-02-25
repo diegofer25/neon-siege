@@ -351,12 +351,15 @@ function init() {
     document.getElementById('clearSaveBtn').addEventListener('click', clearSavedGame);
     document.getElementById('resetSettingsBtn').addEventListener('click', resetSettingsToDefaults);
     document.getElementById('loadAfterGameOverBtn').addEventListener('click', () => loadGameFromSave('game_over'));
+    document.getElementById('continueEndlessBtn').addEventListener('click', continueToEndless);
+    document.getElementById('victoryRestartBtn').addEventListener('click', restartFromVictory);
 
     setupSettingsControls();
     setupStartDifficultyControls();
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
     syncSaveButtons();
+    populateLastRunStats();
 }
 
 /**
@@ -571,6 +574,7 @@ export function startGame() {
  */
 function restartGame() {
     document.getElementById('gameOver').classList.remove('show');
+    document.getElementById('victoryScreen').classList.remove('show');
     document.getElementById('startScreen').classList.remove('show');
     playSFX('ui_restart_game');
 
@@ -663,6 +667,8 @@ function gameLoop(timestamp = 0) {
         animationFrameId = null;
         if (game.gameState === 'gameover') {
             showGameOver();
+        } else if (game.gameState === 'victory') {
+            showVictoryScreen();
         }
     }
 }
@@ -715,6 +721,98 @@ function showGameOver() {
     });
 
     syncMusicTrack({ restart: true });
+}
+
+/**
+ * Display victory screen after completing wave 30.
+ * Shows final statistics and options to continue to endless or return to menu.
+ */
+function showVictoryScreen() {
+    document.getElementById('victoryWave').textContent = game.wave.toString();
+    document.getElementById('victoryScore').textContent = game.score.toLocaleString();
+    document.getElementById('victoryCombo').textContent = (game.comboSystem.maxStreakThisRun || 0).toString();
+    document.getElementById('victoryLevel').textContent = game.level.toString();
+    document.getElementById('victoryKills').textContent = (game.achievementSystem.killsThisRun || 0).toString();
+
+    const runResult = game._lastRunResult;
+    const isNewBest = !!(runResult && (runResult.isNewBestScore || runResult.isNewBestWave));
+    const newRecordBanner = document.getElementById('victoryNewRecord');
+    if (newRecordBanner) {
+        newRecordBanner.style.display = isNewBest ? 'block' : 'none';
+    }
+
+    document.getElementById('victoryScreen').classList.add('show');
+
+    playSFX('boss_defeat');
+
+    telemetry.endSession('victory', {
+        finalWave: game.wave,
+        finalScore: game.score,
+        finalLevel: game.level,
+    });
+
+    syncMusicTrack({ restart: true });
+}
+
+/**
+ * Continue to endless mode after victory.
+ */
+function continueToEndless() {
+    document.getElementById('victoryScreen').classList.remove('show');
+    playSFX('ui_restart_game');
+
+    game.continueToEndless();
+    syncMusicTrack({ restart: true });
+
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+/**
+ * Return to menu from victory screen.
+ */
+function restartFromVictory() {
+    document.getElementById('victoryScreen').classList.remove('show');
+    populateLastRunStats();
+    document.getElementById('startScreen').classList.add('show');
+    playSFX('ui_restart_game');
+
+    syncMusicTrack({ restart: true });
+    syncStartDifficultyUI(game.getRunDifficulty());
+    syncSaveButtons();
+}
+
+/**
+ * Populate last run stats on the start screen from progression data.
+ */
+function populateLastRunStats() {
+    const container = document.getElementById('lastRunStats');
+    if (!container || !game?.progressionManager) return;
+
+    const snap = game.progressionManager.getSnapshot();
+    const history = snap.runHistory || [];
+
+    if (history.length === 0 && !snap.bestScore) {
+        container.style.display = 'none';
+        return;
+    }
+
+    // Last run
+    if (history.length > 0) {
+        const last = history[history.length - 1];
+        document.getElementById('lastRunWave').textContent = last.wave.toString();
+        document.getElementById('lastRunScore').textContent = (last.score || 0).toLocaleString();
+    }
+
+    // Best ever
+    document.getElementById('bestWave').textContent = (snap.bestWave || 0).toString();
+    document.getElementById('bestScore').textContent = (snap.bestScore || 0).toLocaleString();
+
+    container.style.display = 'block';
 }
 
 function applySettings(settings) {

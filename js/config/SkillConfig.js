@@ -601,4 +601,4 @@ export const ASCENSION_POOL = [
 export const ASCENSION_PICKS = 3;
 
 /** Waves at which Ascension events trigger */
-export const ASCENSION_WAVES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+export const ASCENSION_WAVES = [5, 10, 15, 20, 25, 30];

@@ -207,6 +207,12 @@ export const GameConfig = {
         /** @type {number} Base projectile speed for boss attacks */
         PROJECTILE_SPEED: 200,
 
+        /** @type {number} How often boss waves appear (every N waves) */
+        WAVE_INTERVAL: 5,
+
+        /** @type {number} Final wave of the main campaign (victory condition) */
+        MAX_WAVE: 30,
+
         /**
          * Shield Boss tuning values
          */
@@ -223,6 +229,70 @@ export const GameConfig = {
             MAX_SHIELD_REACTIVATIONS: 0,
             /** @type {number} Cooldown between shield burst attacks */
             SHIELD_BURST_COOLDOWN: 9500
+        },
+
+        /**
+         * Teleporter Boss tuning values
+         */
+        TELEPORTER_BOSS: {
+            /** @type {number} Time between teleports in ms */
+            TELEPORT_COOLDOWN: 3000,
+            /** @type {number} Number of aimed projectiles fired after teleport */
+            SALVO_COUNT: 5,
+            /** @type {number} Duration a toxic pool persists in ms */
+            POOL_DURATION: 4000,
+            /** @type {number} Damage per second from toxic pool */
+            POOL_DPS: 8,
+            /** @type {number} Radius of toxic pools */
+            POOL_RADIUS: 60
+        },
+
+        /**
+         * Splitter Boss tuning values
+         */
+        SPLITTER_BOSS: {
+            /** @type {number} HP fraction that triggers a split */
+            SPLIT_THRESHOLD: 0.5,
+            /** @type {number} Number of copies produced per split */
+            SPLIT_COUNT: 2,
+            /** @type {number} Scale factor applied to radius on each split */
+            SPLIT_SCALE: 0.65,
+            /** @type {number} Max number of active split copies to prevent runaway */
+            MAX_COPIES: 4
+        },
+
+        /**
+         * Vortex Boss tuning values
+         */
+        VORTEX_BOSS: {
+            /** @type {number} Gravity pull strength (px/s²) applied to the player */
+            PULL_STRENGTH: 40,
+            /** @type {number} Max range for gravity pull */
+            PULL_RANGE: 400,
+            /** @type {number} Cooldown between mine spawns in ms */
+            MINE_COOLDOWN: 4000,
+            /** @type {number} Number of orbiting mines */
+            MINE_COUNT: 3,
+            /** @type {number} Shockwave expansion speed (px/s) */
+            SHOCKWAVE_SPEED: 250,
+            /** @type {number} Cooldown between shockwave attacks in ms */
+            SHOCKWAVE_COOLDOWN: 6000
+        },
+
+        /**
+         * Chrono Boss tuning values (final boss)
+         */
+        CHRONO_BOSS: {
+            /** @type {number} Duration of the speed-burst phase in ms */
+            SPEED_PHASE_DURATION: 4000,
+            /** @type {number} Duration of the slow-field phase in ms */
+            SLOW_PHASE_DURATION: 5000,
+            /** @type {number} Player speed multiplier during slow phase */
+            SLOW_FIELD_FACTOR: 0.5,
+            /** @type {number} Boss speed multiplier during speed phase */
+            SPEED_BURST_FACTOR: 2.5,
+            /** @type {number} Projectile count in combined burst pattern */
+            COMBO_BURST_COUNT: 24
         }
     },
 
@@ -247,14 +317,14 @@ export const GameConfig = {
          * Values > 1.0 increase difficulty, < 1.0 would decrease it.
          */
         SCALING_FACTORS: {
-            /** @type {number} Health multiplier per wave (9% increase) */
-            HEALTH: 1.09,
+            /** @type {number} Health multiplier per wave (12% increase — compressed 30-wave curve) */
+            HEALTH: 1.12,
             
-            /** @type {number} Speed multiplier per wave (3% increase) */
-            SPEED: 1.03,
+            /** @type {number} Speed multiplier per wave (4% increase) */
+            SPEED: 1.04,
             
-            /** @type {number} Damage multiplier per wave (6% increase) */
-            DAMAGE: 1.06
+            /** @type {number} Damage multiplier per wave (8% increase) */
+            DAMAGE: 1.08
         },
         
         // Enemy spawn timing controls

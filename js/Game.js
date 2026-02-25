@@ -61,6 +61,7 @@ export class Game {
 		LEVELUP: "levelup",        // mid-wave brief pause for skill pick
 		ASCENSION: "ascension",    // Ascension pick event (every 10 waves)
 		GAMEOVER: "gameover",
+		VICTORY: "victory",        // Player completed wave 30
 	};
 
 	// ── FSM ↔ Legacy bridge ─────────────────────────────────────────────────
@@ -76,6 +77,7 @@ export class Game {
 		levelup: GameFSM.STATES.PLAYING_MIDWAVE_LEVELUP,
 		ascension: GameFSM.STATES.BETWEEN_WAVES_ASCENSION,
 		gameover: GameFSM.STATES.GAMEOVER,
+		victory: GameFSM.STATES.VICTORY,
 	};
 
 	/** @type {Object<string, string>} FSM state → Legacy state name */
@@ -90,6 +92,7 @@ export class Game {
 		[GameFSM.STATES.BETWEEN_WAVES_ASCENSION]: 'ascension',
 		[GameFSM.STATES.BETWEEN_WAVES_POWERUP]: 'powerup',
 		[GameFSM.STATES.GAMEOVER]: 'gameover',
+		[GameFSM.STATES.VICTORY]: 'victory',
 	};
 
 	/**
@@ -417,6 +420,7 @@ export class Game {
 		this.particles = [];
 		this._gameOverTracked = false;
 		this._lastRunResult = null;
+		this._endlessMode = false;
 
 		this.player.reset();
 		this.skillManager.reset();
@@ -469,6 +473,78 @@ export class Game {
 	restart() {
 		this.init();
 		this.start();
+	}
+
+	/**
+	 * Trigger victory after completing the max wave.
+	 * Records the run and transitions to the victory state.
+	 */
+	_triggerVictory() {
+		this.gameState = Game.STATES.VICTORY;
+		this.trace('victory', {
+			wave: this.wave,
+			score: this.score,
+			level: this.skillManager.level,
+		});
+
+		if (!this._gameOverTracked) {
+			this._gameOverTracked = true;
+			this._lastRunResult = this.progressionManager.recordRunEnd(
+				this.wave,
+				this.score,
+				this.comboSystem.maxStreakThisRun,
+				this.achievementSystem.killsThisRun
+			);
+
+			this.dispatcher.dispatch({
+				type: ActionTypes.PROGRESSION_RUN_END,
+				payload: {
+					wave: this.wave,
+					score: this.score,
+					maxCombo: this.comboSystem.maxStreakThisRun,
+					totalKills: this.achievementSystem.killsThisRun,
+					result: this._lastRunResult,
+					victory: true,
+				},
+			});
+
+			telemetry.track('victory', {
+				wave: this.wave,
+				score: this.score,
+				level: this.skillManager.level,
+			});
+		}
+	}
+
+	/**
+	 * Continue to endless mode after victory.
+	 * Resets the victory-tracked flag and resumes wave progression.
+	 */
+	continueToEndless() {
+		this._endlessMode = true;
+		this._gameOverTracked = false;
+		this.wave++;
+		this.gameState = 'playing';
+
+		telemetry.track('endless_start', {
+			wave: this.wave,
+			score: this.score,
+		});
+
+		this._runWaveCountdown(() => {
+			this._waveStartTime = performance.now();
+			this.challengeSystem.onWaveStart();
+			this.waveManager.startWave(this.wave);
+
+			this.dispatcher.dispatch({
+				type: ActionTypes.WAVE_START,
+				payload: {
+					wave: this.wave,
+					enemiesToSpawn: this.waveManager.enemiesToSpawn,
+					isBoss: this.waveManager.isBossWave,
+				},
+			});
+		});
 	}
 
 	setRunDifficulty(difficulty = DEFAULT_RUN_DIFFICULTY) {
@@ -746,6 +822,13 @@ export class Game {
 		closeAllSkillOverlays();
 		// Sync player stats from skill tree before next wave
 		this._syncPlayerFromSkills();
+
+		// Victory condition: if we just completed the max wave, show victory screen
+		const maxWave = GameConfig.BOSS.MAX_WAVE;
+		if (this.wave >= maxWave && !this._endlessMode) {
+			this._triggerVictory();
+			return;
+		}
 
 		this.wave++;
 		this.gameState = "playing";
