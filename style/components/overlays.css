@@ -659,6 +659,10 @@
   color: #aaa;
 }
 
+#lastRunStats div > span:first-child {
+  margin-right: var(--spacing-lg);
+}
+
 .last-run-row span:last-child {
   font-family: var(--font-pixel);
   font-size: 11px;

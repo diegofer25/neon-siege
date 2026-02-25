@@ -1291,20 +1291,6 @@ export class Game {
 		);
 
 		ctx.setLineDash([]); // Reset line dash
-
-		// Draw enemy count text
-		ctx.fillStyle = "#ff0";
-		ctx.font = '16px "Press Start 2P", monospace';
-		ctx.textAlign = "center";
-		ctx.shadowColor = "#ff0";
-		ctx.shadowBlur = 10;
-
-		const text = `Incoming: ${this.waveManager.enemiesToSpawn}`;
-		ctx.fillText(text, canvasWidth / 2, 40);
-
-		// Reset text properties
-		ctx.textAlign = "left";
-		ctx.shadowBlur = 0;
 	}
 
 	/**
