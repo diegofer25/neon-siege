@@ -445,6 +445,9 @@ export class Game {
 	 * Main game update loop - now delegates to specialized systems.
 	 */
 	update(delta, input) {
+		// Always update effects manager for visual feedback (e.g. screen shake during level up)
+		this.effectsManager.update(delta);
+
 		if (this.gameState !== "playing") return;
 		this._traceFrame += 1;
 
@@ -459,7 +462,6 @@ export class Game {
 		this.skillManager.updateCooldowns(delta);
 
 		// Update all game systems
-		this.effectsManager.update(delta);
 		this.waveManager.update(delta);
 		this.entityManager.updateAll(delta, input);
 		this.comboSystem.update(delta);
@@ -832,6 +834,7 @@ export class Game {
 		// Passive skill effects
 		this.player.piercingLevel = passives.pierceCount;
 		this.player.hasTripleShot = passives.hasTripleShot;
+		this.player.tripleShotSideDamage = passives.tripleShotSideDamage;
 		this.player.explosiveShots = passives.hasExplosiveRounds;
 		if (passives.hasExplosiveRounds) {
 			this.player.explosionRadius = passives.explosionRadius * attrs.aoeRadiusMultiplier;

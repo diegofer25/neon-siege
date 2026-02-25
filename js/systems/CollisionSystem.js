@@ -181,7 +181,7 @@ export class CollisionSystem {
         }
 
         // Piercing projectiles are consumed once their hit budget is exhausted
-        if (projectile.enemiesHit >= projectile.piercingCount) {
+        if (projectile.enemiesHit > projectile.piercingCount) {
             this._removeProjectileAt(projectileIndex);
             return true;
         }

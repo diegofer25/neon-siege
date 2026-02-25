@@ -784,8 +784,8 @@ export class Player {
     _fireTripleShot(game, damage, centerAngle) {
         const spreadAngle = Math.PI / 12; // 15 degrees spread
 
-        // Side projectile damage (75% of main)
-        const damageModifier = 0.75;
+        // Side projectile damage
+        const damageModifier = this.tripleShotSideDamage || 0.75;
 
         // Main projectile (center)
         this._fireSingleShot(game, damage, centerAngle);

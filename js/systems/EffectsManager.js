@@ -36,8 +36,8 @@ export class EffectsManager {
         // Always update screen shake for visual feedback even when paused
         this.updateScreenShake(delta);
         
-        // Only update particles when game is playing
-        if (this.game.gameState === 'playing') {
+        // Only update particles when game is active or in UI overlays
+        if (this.game.gameState === 'playing' || this.game.gameState === 'powerup' || this.game.gameState === 'levelup' || this.game.gameState === 'ascension') {
             this.updateParticles(delta);
         }
     }
@@ -92,16 +92,17 @@ export class EffectsManager {
         }
         
         // Update remaining particles
-        this.game.particles.forEach((particle, index) => {
+        for (let i = this.game.particles.length - 1; i >= 0; i--) {
+            const particle = this.game.particles[i];
             particle.update(delta);
             
             if (particle.isDead()) {
-                this.game.particles.splice(index, 1);
+                this.game.particles.splice(i, 1);
                 if (particle._fromPool) {
                     this.game.particlePool.release(particle);
                 }
             }
-        });
+        }
     }
 
     /**

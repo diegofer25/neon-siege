@@ -810,8 +810,8 @@ function gameLoop(timestamp = 0) {
     game.performanceManager?.update(delta, game.gameState);
     syncMusicTrack();
     
-    // Only update and render when game is in active states
-    if (game.gameState === 'playing' || game.gameState === 'powerup') {
+    // Only update and render when game is in active states or UI overlays
+    if (game.gameState === 'playing' || game.gameState === 'powerup' || game.gameState === 'levelup' || game.gameState === 'ascension') {
         // Update game logic
         game.update(delta, input);
         
@@ -823,7 +823,7 @@ function gameLoop(timestamp = 0) {
     }
     
     // Continue loop based on game state
-    if (game.gameState === 'playing' || game.gameState === 'powerup') {
+    if (game.gameState === 'playing' || game.gameState === 'powerup' || game.gameState === 'levelup' || game.gameState === 'ascension') {
         animationFrameId = requestAnimationFrame(gameLoop);
     } else {
         animationFrameId = null;
