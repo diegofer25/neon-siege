@@ -160,8 +160,7 @@ export class ChallengeSystem {
         // Dispatch score to state store
         this.game.dispatcher?.dispatch({
             type: ActionTypes.SCORE_ADD,
-            amount: (challenge.reward.coins || 0) * 10,
-            source: 'challenge_complete',
+            payload: { amount: (challenge.reward.coins || 0) * 10, source: 'challenge_complete' },
         });
 
         if (challenge.reward.tokens > 0) {
@@ -171,9 +170,11 @@ export class ChallengeSystem {
             // Dispatch currency to state store
             this.game.dispatcher?.dispatch({
                 type: ActionTypes.CURRENCY_ADD,
-                currency: 'LEGACY_TOKENS',
-                amount: challenge.reward.tokens,
-                source: 'challenge_reward',
+                payload: {
+                    currency: 'LEGACY_TOKENS',
+                    amount: challenge.reward.tokens,
+                    source: 'challenge_reward',
+                },
             });
         }
 

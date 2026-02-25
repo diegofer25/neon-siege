@@ -65,7 +65,7 @@ export class AscensionSystem {
 		// Dispatch to state store
 		this.game.dispatcher?.dispatch({
 			type: ActionTypes.ASCENSION_OFFER,
-			options: options.map(o => ({ id: o.id, name: o.name })),
+			payload: { options: options.map(o => ({ id: o.id, name: o.name })) },
 		});
 
 		return options;

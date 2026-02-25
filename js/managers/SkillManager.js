@@ -114,10 +114,12 @@ export class SkillManager {
 		// Dispatch to state store
 		this._dispatcher?.dispatch({
 			type: ActionTypes.ATTR_ALLOCATE,
-			attrKey,
-			amount,
-			newValue: this.attributes[attrKey],
-			unspentAttributePoints: this.unspentAttributePoints,
+			payload: {
+				attrKey,
+				amount,
+				newValue: this.attributes[attrKey],
+				unspentAttributePoints: this.unspentAttributePoints,
+			},
 		});
 
 		return true;
@@ -254,11 +256,13 @@ export class SkillManager {
 		// Dispatch to state store
 		this._dispatcher?.dispatch({
 			type: ActionTypes.SKILL_LEARN,
-			skillId,
-			rank: this.skillRanks[skillId],
-			archetypeKey,
-			skillType: skill.type,
-			unspentSkillPoints: this.unspentSkillPoints,
+			payload: {
+				skillId,
+				rank: this.skillRanks[skillId],
+				archetypeKey,
+				skillType: skill.type,
+				unspentSkillPoints: this.unspentSkillPoints,
+			},
 		});
 
 		return true;

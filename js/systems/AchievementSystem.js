@@ -157,8 +157,7 @@ export class AchievementSystem {
         // Dispatch to state store
         this.game.dispatcher?.dispatch({
             type: ActionTypes.ACHIEVEMENT_UNLOCK,
-            achievementId: achievement.id,
-            name: achievement.name,
+            payload: { achievementId: achievement.id, name: achievement.name },
         });
 
         if (this._toastActive) {

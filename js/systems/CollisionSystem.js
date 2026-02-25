@@ -180,10 +180,12 @@ export class CollisionSystem {
         // Dispatch to state store
         this.game.dispatcher?.dispatch({
             type: ActionTypes.PLAYER_DAMAGE,
-            damage: enemy.damage,
-            source: 'enemy',
-            currentHp: this.game.player.hp,
-            maxHp: this.game.player.maxHp,
+            payload: {
+                damage: enemy.damage,
+                source: 'enemy',
+                currentHp: this.game.player.hp,
+                maxHp: this.game.player.maxHp,
+            },
         });
 
         // Emit player:damaged event for skill plugins
@@ -266,10 +268,12 @@ export class CollisionSystem {
         // Dispatch to state store
         this.game.dispatcher?.dispatch({
             type: ActionTypes.PLAYER_DAMAGE,
-            damage: projectile.damage,
-            source: 'enemyProjectile',
-            currentHp: this.game.player.hp,
-            maxHp: this.game.player.maxHp,
+            payload: {
+                damage: projectile.damage,
+                source: 'enemyProjectile',
+                currentHp: this.game.player.hp,
+                maxHp: this.game.player.maxHp,
+            },
         });
 
         // Emit player:damaged event for skill plugins

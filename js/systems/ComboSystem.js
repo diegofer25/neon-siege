@@ -117,8 +117,7 @@ export class ComboSystem {
         // Dispatch to state store
         this.game.dispatcher?.dispatch({
             type: ActionTypes.SCORE_ADD,
-            amount: tier.bonusScore,
-            source: 'combo_tier',
+            payload: { amount: tier.bonusScore, source: 'combo_tier' },
         });
 
         const { x: sx, y: sy } = this._getPlayerTextScreenPosition(38);
