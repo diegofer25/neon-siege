@@ -6,7 +6,10 @@
  */
 
 import { ASCENSION_POOL, ASCENSION_PICKS, ASCENSION_WAVES } from '../config/SkillConfig.js';
-import { playSFX, createFloatingText, screenFlash } from '../main.js';
+import { playSFX } from '../main.js';
+import { vfxHelper } from '../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
 export class AscensionSystem {
 	/**

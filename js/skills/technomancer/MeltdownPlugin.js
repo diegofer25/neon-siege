@@ -7,6 +7,7 @@
  */
 
 import { BaseSkillPlugin } from '../BaseSkillPlugin.js';
+import { dealAreaDamage } from '../../utils/AOEUtils.js';
 
 export class MeltdownPlugin extends BaseSkillPlugin {
 	getEventListeners() {
@@ -29,15 +30,11 @@ export class MeltdownPlugin extends BaseSkillPlugin {
 		const meltdownDmg = damage * effect.meltdownDamageRatio;
 		const radius = effect.meltdownRadius;
 
-		for (const e of this.game.enemies) {
-			if (e === enemy || e.dying || e.health <= 0) continue;
-			const dx = e.x - enemy.x;
-			const dy = e.y - enemy.y;
-			const distSq = dx * dx + dy * dy;
-			if (distSq <= radius * radius) {
-				e.takeDamage(meltdownDmg * (1 - Math.sqrt(distSq) / radius));
-			}
-		}
+		dealAreaDamage(this.game.enemies, enemy.x, enemy.y, radius, {
+			damage: meltdownDmg,
+			falloff: true,
+			excludeEnemy: enemy,
+		});
 
 		this.game.createExplosion(enemy.x, enemy.y, 6);
 		this.game.createExplosionRing(enemy.x, enemy.y, radius);

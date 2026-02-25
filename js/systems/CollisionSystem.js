@@ -1,6 +1,9 @@
 import { MathUtils } from '../utils/MathUtils.js';
 import { GameConfig } from '../config/GameConfig.js';
-import { createFloatingText, playSFX, screenFlash } from './../main.js';
+import { playSFX } from './../main.js';
+import { vfxHelper } from './../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
 /**
  * Handles all collision detection and resolution in the game.
@@ -209,15 +212,8 @@ export class CollisionSystem {
      * @param {number} damage - Amount of damage dealt
      */
     _showDamageText(enemy, damage) {
-        const rect = this.game.canvas.getBoundingClientRect();
-        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
-        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
-       createFloatingText(
-            `-${damage.toFixed(1)}`,
-            enemy.x * (rect.width / canvasWidth) + rect.left,
-            enemy.y * (rect.height / canvasHeight) + rect.top,
-            'damage'
-        );
+        const screen = MathUtils.canvasToScreen(this.game.canvas, enemy.x, enemy.y);
+        createFloatingText(`-${damage.toFixed(1)}`, screen.x, screen.y, 'damage');
     }
 
     /**
@@ -226,15 +222,8 @@ export class CollisionSystem {
      * @param {number} damage - Amount of damage taken
      */
     _showPlayerDamageText(damage) {
-        const rect = this.game.canvas.getBoundingClientRect();
-        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
-        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
-        createFloatingText(
-            `-${damage.toFixed(1)}`,
-            this.game.player.x * (rect.width / canvasWidth) + rect.left,
-            this.game.player.y * (rect.height / canvasHeight) + rect.top,
-            'player-damage'
-        );
+        const screen = MathUtils.canvasToScreen(this.game.canvas, this.game.player.x, this.game.player.y);
+        createFloatingText(`-${damage.toFixed(1)}`, screen.x, screen.y, 'player-damage');
     }
     
     /**

@@ -4,7 +4,10 @@
  */
 
 import { BaseSkillPlugin } from '../BaseSkillPlugin.js';
-import { createFloatingText, playSFX, screenFlash } from '../../main.js';
+import { playSFX } from '../../main.js';
+import { vfxHelper } from '../../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
 export class LightningCascadePlugin extends BaseSkillPlugin {
 	/**

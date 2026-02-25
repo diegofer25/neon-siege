@@ -2,6 +2,7 @@ import { Enemy } from './Enemy.js';
 import { GameConfig } from './config/GameConfig.js';
 import { Projectile } from './Projectile.js';
 import { playSFX } from './main.js';
+import { MathUtils } from './utils/MathUtils.js';
 
 export class Boss extends Enemy {
     constructor(x, y, health, damage, game) {
@@ -38,7 +39,7 @@ export class Boss extends Enemy {
         // Override basic enemy movement
         const dx = player.x - this.x;
         const dy = player.y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = MathUtils.distance(this.x, this.y, player.x, player.y);
 
         const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
             ? this.game.modifierState.enemySpeedMultiplier
@@ -134,7 +135,7 @@ export class Boss extends Enemy {
         const chargeSpeed = this.speed * 3 * arenaScale * speedMultiplier;
         const dx = player.x - this.x;
         const dy = player.y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = MathUtils.distance(this.x, this.y, player.x, player.y);
         if (distance > 0) {
             this.vx = (dx / distance) * chargeSpeed;
             this.vy = (dy / distance) * chargeSpeed;

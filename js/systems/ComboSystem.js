@@ -1,4 +1,7 @@
-import { playSFX, createFloatingText } from '../main.js';
+import { playSFX } from '../main.js';
+import { vfxHelper } from '../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+import { MathUtils } from '../utils/MathUtils.js';
 
 const COMBO_TIERS = [
     { kills: 5,  label: 'COMBO x5',       multiplier: 1.25, bonusScore: 50,   color: '#fff' },
@@ -131,12 +134,7 @@ export class ComboSystem {
             return { x: width / 2, y: height / 2 };
         }
 
-        const rect = canvas.getBoundingClientRect();
-        const canvasWidth = canvas.logicalWidth || canvas.width;
-        const canvasHeight = canvas.logicalHeight || canvas.height;
-        return {
-            x: player.x * (rect.width / canvasWidth) + rect.left,
-            y: (player.y - offsetY) * (rect.height / canvasHeight) + rect.top,
-        };
+        const screen = MathUtils.canvasToScreen(canvas, player.x, player.y - offsetY);
+        return { x: screen.x, y: screen.y };
     }
 }

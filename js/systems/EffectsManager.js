@@ -16,6 +16,18 @@ export class EffectsManager {
     }
 
     /**
+     * Whether particle counts should be halved for performance.
+     * Combines the PerformanceManager's dynamic flag with the user's
+     * explicit performance-mode toggle so every call site doesn't have
+     * to repeat the same two-part check.
+     * @type {boolean}
+     */
+    get shouldReduceParticles() {
+        return this.game.performanceManager.reduceParticleCount ||
+               this.game?.runtimeSettings?.performanceModeEnabled === true;
+    }
+
+    /**
      * Initialize screen shake system.
      * @private
      */
@@ -77,9 +89,7 @@ export class EffectsManager {
      * @param {number} delta - Time elapsed since last frame
      */
     updateParticles(delta) {
-        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
-        const shouldReduceParticles = this.game.performanceManager.reduceParticleCount || performanceModeEnabled;
-        const particleLimit = shouldReduceParticles ? 
+        const particleLimit = this.shouldReduceParticles ? 
             GameConfig.VFX.PARTICLE_LIMITS.MAX_PARTICLES / 2 : 
             GameConfig.VFX.PARTICLE_LIMITS.MAX_PARTICLES;
             
@@ -112,9 +122,7 @@ export class EffectsManager {
      * @param {number} [particleCount=8] - Number of particles to create
      */
     createExplosion(x, y, particleCount = 8) {
-        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
-        const shouldReduceParticles = this.game.performanceManager.reduceParticleCount || performanceModeEnabled;
-        const actualCount = shouldReduceParticles ? 
+        const actualCount = this.shouldReduceParticles ? 
             Math.floor(particleCount / 2) : particleCount;
             
         for (let i = 0; i < actualCount; i++) {
@@ -155,8 +163,7 @@ export class EffectsManager {
      * @param {number} y - Hit location Y coordinate
      */
     createHitEffect(x, y) {
-        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
-        const particleCount = (this.game.performanceManager.reduceParticleCount || performanceModeEnabled) ? 2 : 4;
+        const particleCount = this.shouldReduceParticles ? 2 : 4;
         
         for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -182,9 +189,7 @@ export class EffectsManager {
      * @param {number} coinAmount - Amount of coins (affects particle count)
      */
     createCoinBurst(x, y, coinAmount) {
-        const performanceModeEnabled = this.game?.runtimeSettings?.performanceModeEnabled === true;
-        const shouldReduce = this.game.performanceManager.reduceParticleCount || performanceModeEnabled;
-        const count = shouldReduce
+        const count = this.shouldReduceParticles
             ? Math.min(4, Math.max(1, Math.floor(coinAmount / 3)))
             : Math.min(10, Math.max(2, Math.floor(coinAmount / 2)));
 
@@ -217,12 +222,10 @@ export class EffectsManager {
         ring.className = 'explosion-ring';
         
         // Convert canvas coordinates to screen coordinates
-        const rect = this.game.canvas.getBoundingClientRect();
-        const canvasWidth = this.game.canvas.logicalWidth || this.game.canvas.width;
-        const canvasHeight = this.game.canvas.logicalHeight || this.game.canvas.height;
-        const screenX = (x / canvasWidth) * rect.width + rect.left;
-        const screenY = (y / canvasHeight) * rect.height + rect.top;
-        const screenRadius = (radius / canvasWidth) * rect.width;
+        const screen = MathUtils.canvasToScreen(this.game.canvas, x, y);
+        const screenX = screen.x;
+        const screenY = screen.y;
+        const screenRadius = radius * screen.scaleX;
         
         // Position and size the ring
         const ringSize = screenRadius * 2;

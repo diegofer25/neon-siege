@@ -2,6 +2,7 @@ import { Projectile } from './Projectile.js';
 import { GameConfig } from './config/GameConfig.js';
 import { playSFX } from './main.js';
 import { MathUtils } from './utils/MathUtils.js';
+import { renderPlayer, updatePlayerVisualTimers } from './ui/PlayerRenderer.js';
 
 /**
  * Player character class for the neon tower defense game
@@ -16,6 +17,54 @@ import { MathUtils } from './utils/MathUtils.js';
  * @class Player
  */
 export class Player {
+    /**
+     * Default values for all combat flags and ability properties.
+     * Shared by _initializeCombatFlags() and reset() to avoid drift.
+     * @type {Object}
+     */
+    static _COMBAT_DEFAULTS = Object.freeze({
+        piercingLevel: 0,
+        hasTripleShot: false,
+        tripleShotSideDamage: 1.0,
+        hasLifeSteal: false,
+        hasSlowField: false,
+        hasShield: false,
+        explosiveShots: false,
+        shieldHp: 0,
+        maxShieldHp: 0,
+        hpRegen: 0,
+        shieldRegen: 0,
+        explosionRadius: 50,
+        explosionDamage: 20,
+        luckyShots: null,
+        slowFieldRadius: GameConfig.PLAYER.SLOW_FIELD_BASE_RADIUS,
+        slowFieldStrength: 0,
+        maxSlowFieldStacks: GameConfig.PLAYER.MAX_SLOW_FIELD_STACKS,
+        slowFieldBonus: 0,
+        immolationAura: null,
+        immolationAuraBonus: 0,
+        hasShieldBreaker: false,
+        shieldBreakerDamage: 1.0,
+        shieldRegenDelay: 0,
+        shieldBreakerStacks: 0,
+        hasAdaptiveTargeting: false,
+        targetingRange: 200,
+        hasHomingShots: false,
+        hasBarrierPhase: false,
+        barrierPhaseCooldown: 0,
+        barrierPhaseMaxCooldown: 60000,
+        barrierPhaseDuration: 3000,
+        barrierPhaseActive: false,
+        barrierPhaseThreshold: 0.25,
+        overchargeBurst: null,
+        emergencyHeal: null,
+        _ascensionLifeSteal: 0,
+        _ascensionEffects: null,
+        chainHit: null,
+        volatileKills: null,
+        elementalSynergy: null,
+        meltdown: null,
+    });
     /**
      * Creates a new player instance with default stats and power-ups
      * 
@@ -105,110 +154,54 @@ export class Player {
      * @private
      */
     _initializeCombatFlags() {
-        // Boolean power-up flags
-		/** @type {number} The number of enemies projectiles can pierce. 0 = no piercing. */
-		this.piercingLevel = 0;
-		/** @type {boolean} Whether player fires three projectiles per shot */
-		this.hasTripleShot = false;
-		/** @type {number} Damage multiplier for side projectiles in triple shot */
-		this.tripleShotSideDamage = 1.0;
-		/** @type {boolean} Whether player heals when killing enemies */
-		this.hasLifeSteal = false;
-		/** @type {boolean} Whether slow field is active */
-		this.hasSlowField = false;
-		/** @type {boolean} Whether shield protection is active */
-		this.hasShield = false;
-		/** @type {boolean} Whether projectiles explode on impact */
-		this.explosiveShots = false;
-		
-		// Numeric power-up properties
-		/** @type {number} Current shield health points */
-		this.shieldHp = 0;
-		/** @type {number} Maximum shield health points */
-		this.maxShieldHp = 0;
-		/** @type {number} Health regeneration per second */
-		this.hpRegen = 0;
-		/** @type {number} Shield regeneration per second */
-		this.shieldRegen = 0;
-		/** @type {number} Explosion radius for explosive shots */
-		this.explosionRadius = 50;
-		/** @type {number} Explosion damage for explosive shots */
-		this.explosionDamage = 20;
-		// Lucky Shots configuration
-		/** @type {Object|null} Lucky shots configuration object */
-		this.luckyShots = null;
-		
-		// Slow field configuration
-		/** @type {number} Radius of slow field effect */
-		this.slowFieldRadius = GameConfig.PLAYER.SLOW_FIELD_BASE_RADIUS;
-		/** @type {number} Current slow field strength (stack count) */
-		this.slowFieldStrength = 0;
-		/** @type {number} Maximum allowed slow field stacks */
-		this.maxSlowFieldStacks = GameConfig.PLAYER.MAX_SLOW_FIELD_STACKS;
-        /** @type {number} Additional slow strength bonus from synergies */
-        this.slowFieldBonus = 0;
-		
-		// Immolation Aura configuration
-		/** @type {Object|null} Immolation Aura configuration object */
-		this.immolationAura = null;
-        /** @type {number} Additional aura damage bonus from synergies */
-        this.immolationAuraBonus = 0;
-		
-		// Shield Boss Counter Power-ups
-		/** @type {boolean} Whether Shield Breaker is active */
-		this.hasShieldBreaker = false;
-		/** @type {number} Shield damage multiplier */
-		this.shieldBreakerDamage = 1.0;
-		/** @type {number} Shield regeneration delay */
-		this.shieldRegenDelay = 0;
-		/** @type {number} Shield breaker stack count */
-		this.shieldBreakerStacks = 0;
-		
-		/** @type {boolean} Whether Adaptive Targeting is active */
-		this.hasAdaptiveTargeting = false;
-		/** @type {number} Extended targeting range */
-		this.targetingRange = 200;
-		/** @type {boolean} Whether projectiles have homing ability */
-		this.hasHomingShots = false;
-		
-		/** @type {boolean} Whether Barrier Phase is active */
-		this.hasBarrierPhase = false;
-		/** @type {number} Barrier Phase cooldown timer */
-		this.barrierPhaseCooldown = 0;
-		/** @type {number} Maximum cooldown for Barrier Phase */
-		this.barrierPhaseMaxCooldown = 60000;
-		/** @type {number} Duration of invulnerability */
-		this.barrierPhaseDuration = 3000;
-		/** @type {boolean} Whether currently invulnerable */
-		this.barrierPhaseActive = false;
-		/** @type {number} Health threshold to trigger barrier */
-		this.barrierPhaseThreshold = 0.25;
-		
-		/** @type {Object|null} Overcharge Burst configuration */
-		this.overchargeBurst = null;
-		
-		/** @type {Object|null} Emergency Heal configuration */
-		this.emergencyHeal = null;
+        const d = Player._COMBAT_DEFAULTS;
 
-        /** @type {number} Additional life steal provided by ascension modifiers */
-        this._ascensionLifeSteal = 0;
-
-        /** @type {Object|null} Aggregated ascension effects cache */
-        this._ascensionEffects = null;
+        // ── Combat abilities (set externally by Game._syncPlayerFromSkills) ──
+        /** @type {number} */ this.piercingLevel = d.piercingLevel;
+        /** @type {boolean} */ this.hasTripleShot = d.hasTripleShot;
+        /** @type {number} */ this.tripleShotSideDamage = d.tripleShotSideDamage;
+        /** @type {boolean} */ this.hasLifeSteal = d.hasLifeSteal;
+        /** @type {boolean} */ this.hasSlowField = d.hasSlowField;
+        /** @type {boolean} */ this.hasShield = d.hasShield;
+        /** @type {boolean} */ this.explosiveShots = d.explosiveShots;
+        /** @type {number} */ this.shieldHp = d.shieldHp;
+        /** @type {number} */ this.maxShieldHp = d.maxShieldHp;
+        /** @type {number} */ this.hpRegen = d.hpRegen;
+        /** @type {number} */ this.shieldRegen = d.shieldRegen;
+        /** @type {number} */ this.explosionRadius = d.explosionRadius;
+        /** @type {number} */ this.explosionDamage = d.explosionDamage;
+        /** @type {?{chance:number, active:boolean, critDamageMultiplier?:number}} */ this.luckyShots = d.luckyShots;
+        /** @type {number} */ this.slowFieldRadius = d.slowFieldRadius;
+        /** @type {number} */ this.slowFieldStrength = d.slowFieldStrength;
+        /** @type {number} */ this.maxSlowFieldStacks = d.maxSlowFieldStacks;
+        /** @type {number} */ this.slowFieldBonus = d.slowFieldBonus;
+        /** @type {?{active:boolean, range:number, damagePercent:number}} */ this.immolationAura = d.immolationAura;
+        /** @type {number} */ this.immolationAuraBonus = d.immolationAuraBonus;
+        /** @type {boolean} */ this.hasShieldBreaker = d.hasShieldBreaker;
+        /** @type {number} */ this.shieldBreakerDamage = d.shieldBreakerDamage;
+        /** @type {number} */ this.shieldRegenDelay = d.shieldRegenDelay;
+        /** @type {number} */ this.shieldBreakerStacks = d.shieldBreakerStacks;
+        /** @type {boolean} */ this.hasAdaptiveTargeting = d.hasAdaptiveTargeting;
+        /** @type {number} */ this.targetingRange = d.targetingRange;
+        /** @type {boolean} */ this.hasHomingShots = d.hasHomingShots;
+        /** @type {boolean} */ this.hasBarrierPhase = d.hasBarrierPhase;
+        /** @type {number} */ this.barrierPhaseCooldown = d.barrierPhaseCooldown;
+        /** @type {number} */ this.barrierPhaseMaxCooldown = d.barrierPhaseMaxCooldown;
+        /** @type {number} */ this.barrierPhaseDuration = d.barrierPhaseDuration;
+        /** @type {boolean} */ this.barrierPhaseActive = d.barrierPhaseActive;
+        /** @type {number} */ this.barrierPhaseThreshold = d.barrierPhaseThreshold;
+        /** @type {?{active:boolean, interval:number, multiplier:number, shotCount:number, shotCounter?:number, burstInterval?:number, burstDamageMultiplier?:number, ignoresShields?:boolean}} */ this.overchargeBurst = d.overchargeBurst;
+        /** @type {?{active:boolean, healThreshold:number, healTarget:number, cooldown:number, maxCooldown:number}} */ this.emergencyHeal = d.emergencyHeal;
+        /** @type {number} */ this._ascensionLifeSteal = d._ascensionLifeSteal;
+        /** @type {?Object} */ this._ascensionEffects = d._ascensionEffects;
+        /** @type {?{chance:number, range:number, escalation:number}} */ this.chainHit = d.chainHit;
+        /** @type {?Object} */ this.volatileKills = d.volatileKills;
+        /** @type {?{bonus:number}} */ this.elementalSynergy = d.elementalSynergy;
+        /** @type {?Object} */ this.meltdown = d.meltdown;
 
 		// ── Active skill buff state ──
 		/** @type {Object} Active skill buffs keyed by name, each with its own timer/state */
 		this._skillBuffs = {};
-
-		// ── Technomancer passive effect slots (set by Game._syncPlayerFromSkills) ──
-		/** @type {Object|null} Chain Hit config: {chance, range, escalation} */
-		this.chainHit = null;
-		/** @type {Object|null} Volatile Kills config: {percent, radius} */
-		this.volatileKills = null;
-		/** @type {Object|null} Elemental Synergy config: {bonus} */
-		this.elementalSynergy = null;
-		/** @type {Object|null} Meltdown config: {chance, damageRatio, radius} */
-		this.meltdown = null;
 
 		// ── Visual state (driven by _syncPlayerFromSkills, read in draw) ──
 		/** @type {{strLevel:number, dexLevel:number, vitLevel:number, intLevel:number, luckLevel:number, learnedSkills:Set<string>, flashTimer:number, flashColor:string}} */
@@ -313,58 +306,13 @@ export class Player {
         this.fireRateMod = 1;
         this.projectileSpeedMod = 1;
         this.rotationSpeedMod = 1;
-        
-        this.piercingLevel = 0;
-        this.hasTripleShot = false;
-        this.hasLifeSteal = false;
-        this.hasSlowField = false;
-        this.hasShield = false;
-        this.shieldHp = 0;
-        this.maxShieldHp = 0;
-        this.hpRegen = 0;
-        this.shieldRegen = 0;
-        this.explosiveShots = false;
         this.persistentCritBonus = 0;
-        
-        // Reset slow field properties
-        this.slowFieldRadius = GameConfig.PLAYER.SLOW_FIELD_BASE_RADIUS;
-        this.slowFieldStrength = 0;
-        this.maxSlowFieldStacks = GameConfig.PLAYER.MAX_SLOW_FIELD_STACKS;
-        this.slowFieldBonus = 0;
-        
-        // Reset Lucky Shots
-        this.luckyShots = null;
-        
-        // Reset Immolation Aura
-        this.immolationAura = null;
-        this.immolationAuraBonus = 0;
-        
-        // Reset Shield Boss Counter Power-ups
-        this.hasShieldBreaker = false;
-        this.shieldBreakerDamage = 1.0;
-        this.shieldRegenDelay = 0;
-        this.shieldBreakerStacks = 0;
-        
-        this.hasAdaptiveTargeting = false;
-        this.targetingRange = 200;
-        this.hasHomingShots = false;
-        
-        this.hasBarrierPhase = false;
-        this.barrierPhaseCooldown = 0;
-        this.barrierPhaseMaxCooldown = 60000;
-        this.barrierPhaseDuration = 3000;
-        this.barrierPhaseActive = false;
-        this.barrierPhaseThreshold = 0.25;
-        
-        this.overchargeBurst = null;
-        this.emergencyHeal = null;
 
-        // Reset skill buffs and Technomancer passives
+        // Apply shared combat defaults (keeps init and reset in sync)
+        Object.assign(this, Player._COMBAT_DEFAULTS);
+
+        // Reset skill buffs
         this._skillBuffs = {};
-        this.chainHit = null;
-        this.volatileKills = null;
-        this.elementalSynergy = null;
-        this.meltdown = null;
     }
 
     /**
@@ -686,9 +634,7 @@ export class Player {
      * @returns {number} Distance to entity in pixels
      */
     _calculateDistanceTo(entity) {
-        const dx = entity.x - this.x;
-        const dy = entity.y - this.y;
-        return Math.sqrt(dx * dx + dy * dy);
+        return MathUtils.distance(this.x, this.y, entity.x, entity.y);
     }
     
     /**
@@ -1071,9 +1017,7 @@ export class Player {
         const slowFactor = Math.max(0.1, 1 - slowPercent);
         
         enemies.forEach(enemy => {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = MathUtils.distance(this.x, this.y, enemy.x, enemy.y);
             
             if (distance <= this.slowFieldRadius) {
                 enemy.slowFactor = slowFactor;
@@ -1100,9 +1044,7 @@ export class Player {
         enemies.forEach(enemy => {
             if (enemy.dying) return; // Skip dying enemies
             
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = MathUtils.distance(this.x, this.y, enemy.x, enemy.y);
             
             if (distance <= range) {
                 // Apply burn damage as percentage of enemy's max health
@@ -1157,598 +1099,20 @@ export class Player {
     }
 
     /**
-     * Render the player and all associated visual effects
-     * Draws player body, gun barrel, shield, slow field, immolation aura, and rotation indicators
-     * Also renders attribute auras and skill-specific VFX based on visualState.
-     * 
-     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * Render the player and all associated visual effects.
+     * Delegates to the standalone PlayerRenderer module.
+     * @param {CanvasRenderingContext2D} ctx
      */
     draw(ctx) {
-        const vs = this.visualState;
-        const auraCfg = GameConfig.VFX.PLAYER_AURAS;
-        const now = Date.now();
-
-        // ── PRE-BODY: Attribute auras drawn behind the player ──
-
-        // STR radial gradient glow (behind body)
-        if (vs.strLevel >= auraCfg.STR.GRADIENT_THRESHOLD) {
-            ctx.save();
-            const strT = Math.min(vs.strLevel / 50, 1);
-            const gradRadius = this.radius + 10 + strT * 18;
-            const pulse = 0.5 + 0.5 * Math.sin(now / 400);
-            const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, gradRadius);
-            gradient.addColorStop(0, `rgba(255, 69, 0, ${0.15 * strT * pulse})`);
-            gradient.addColorStop(0.6, `rgba(255, 140, 0, ${0.08 * strT * pulse})`);
-            gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, gradRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
-
-        // VIT heartbeat pulse ring
-        if (vs.vitLevel > 0) {
-            ctx.save();
-            const vitT = Math.min(vs.vitLevel / 50, 1);
-            const cfg = auraCfg.VIT;
-            const pulseFreq = cfg.BASE_PULSE_SPEED + vs.vitLevel * cfg.PULSE_SPEED_PER_POINT;
-            const pulse = 0.5 + 0.5 * Math.sin(now * pulseFreq);
-            const ringRadius = this.radius + cfg.RING_OFFSET + pulse * 4;
-            const thickness = cfg.MIN_THICKNESS + vitT * (cfg.MAX_THICKNESS - cfg.MIN_THICKNESS);
-            const alpha = cfg.MIN_ALPHA + vitT * (cfg.MAX_ALPHA - cfg.MIN_ALPHA);
-            ctx.strokeStyle = cfg.color;
-            ctx.lineWidth = thickness;
-            ctx.globalAlpha = alpha * pulse;
-            ctx.shadowColor = cfg.color;
-            ctx.shadowBlur = 6 * vitT;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, ringRadius, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        // INT orbiting sparks
-        if (vs.intLevel >= auraCfg.INT.POINTS_PER_SPARK) {
-            ctx.save();
-            const cfg = auraCfg.INT;
-            const sparkCount = Math.min(cfg.MAX_SPARKS, Math.floor(vs.intLevel / cfg.POINTS_PER_SPARK));
-            const orbitR = this.radius + cfg.ORBIT_RADIUS;
-            const hasTrail = vs.intLevel >= cfg.TRAIL_THRESHOLD;
-            for (let i = 0; i < sparkCount; i++) {
-                const baseAngle = this._auraOrbitAngle + (Math.PI * 2 / sparkCount) * i;
-                const sx = this.x + Math.cos(baseAngle) * orbitR;
-                const sy = this.y + Math.sin(baseAngle) * orbitR;
-                const color = cfg.colors[i % cfg.colors.length];
-                // Trail afterglow
-                if (hasTrail) {
-                    const trailAngle = baseAngle - 0.3;
-                    const tx = this.x + Math.cos(trailAngle) * orbitR;
-                    const ty = this.y + Math.sin(trailAngle) * orbitR;
-                    ctx.globalAlpha = 0.25;
-                    ctx.fillStyle = color;
-                    ctx.shadowColor = color;
-                    ctx.shadowBlur = 4;
-                    ctx.beginPath();
-                    ctx.arc(tx, ty, 2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.globalAlpha = 0.8;
-                ctx.fillStyle = color;
-                ctx.shadowColor = color;
-                ctx.shadowBlur = 8;
-                ctx.beginPath();
-                ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // LUCK golden sparkles
-        if (this._luckSparkles.length > 0) {
-            ctx.save();
-            const cfg = auraCfg.LUCK;
-            for (const sp of this._luckSparkles) {
-                const t = 1 - sp.life / sp.maxLife;
-                const scale = 1 - t * 0.5;
-                ctx.globalAlpha = 1 - t;
-                ctx.fillStyle = cfg.color;
-                ctx.shadowColor = cfg.color;
-                ctx.shadowBlur = 6;
-                ctx.beginPath();
-                ctx.arc(sp.x, sp.y, cfg.SPARKLE_RADIUS * scale, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // ── BODY: Player triangle + glow ──
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle);
-        
-        // Set glow effect - change color when rotating; STR amplifies glow
-        const glowColor = this.isRotating ? '#ff6d00' : '#ff2dec';
-        ctx.shadowColor = glowColor;
-        const strGlowBoost = vs.strLevel * auraCfg.STR.GLOW_PER_POINT;
-        ctx.shadowBlur = 15 + strGlowBoost;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        
-        // Flash pulse overlay when skill/attr purchased
-        let bodyColor = this.isRotating ? '#ff6d00' : '#ff2dec';
-        if (vs.flashTimer > 0) {
-            const flashT = vs.flashTimer / auraCfg.PURCHASE.FLASH_DURATION;
-            bodyColor = flashT > 0.5 ? '#ffffff' : bodyColor;
-            ctx.shadowBlur = 15 + strGlowBoost + 20 * flashT;
-        }
-
-        // Volatile Kills shimmer — body alpha oscillates
-        if (vs.learnedSkills.has('techno_volatile_kills')) {
-            const shimmer = 0.9 + 0.1 * Math.sin(now / 1000 * Math.PI * 2 * auraCfg.SKILL_VFX.VOLATILE_SHIMMER_HZ);
-            ctx.globalAlpha = shimmer;
-        }
-
-        // Elemental Synergy — glow alternates orange/cyan
-        if (vs.learnedSkills.has('techno_elemental_synergy')) {
-            const cycle = Math.floor(now / auraCfg.SKILL_VFX.SYNERGY_SWAP_INTERVAL) % 2;
-            ctx.shadowColor = cycle === 0 ? '#ff8c00' : '#00e5ff';
-        }
-
-        ctx.fillStyle = bodyColor;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        
-        ctx.beginPath();
-        ctx.moveTo(this.radius, 0);
-        ctx.lineTo(-this.radius * 0.7, -this.radius * 0.5);
-        ctx.lineTo(-this.radius * 0.7, this.radius * 0.5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // ── GUN BARREL with skill-specific visual overlays ──
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(this.radius, 0);
-        ctx.lineTo(this.radius + 15, 0);
-        ctx.stroke();
-
-        // Gunner Sharp Rounds — red edge glow on barrel
-        if (vs.learnedSkills.has('gunner_sharp_rounds')) {
-            ctx.save();
-            ctx.strokeStyle = '#ff4444';
-            ctx.lineWidth = 2;
-            ctx.shadowColor = '#ff4444';
-            ctx.shadowBlur = 8;
-            ctx.globalAlpha = 0.7;
-            ctx.beginPath();
-            ctx.moveTo(this.radius, 0);
-            ctx.lineTo(this.radius + 15, 0);
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        // Explosive Rounds — warm orange glow on barrel
-        if (vs.learnedSkills.has('techno_explosive_rounds')) {
-            ctx.save();
-            ctx.strokeStyle = '#ff8c00';
-            ctx.lineWidth = 2;
-            ctx.shadowColor = '#ff8c00';
-            ctx.shadowBlur = 10;
-            ctx.globalAlpha = 0.6;
-            ctx.beginPath();
-            ctx.moveTo(this.radius + 2, 0);
-            ctx.lineTo(this.radius + 15, 0);
-            ctx.stroke();
-            // Bigger Booms — intensify + ember dots
-            if (vs.learnedSkills.has('techno_bigger_booms')) {
-                ctx.globalAlpha = 0.9;
-                ctx.shadowBlur = 14;
-                const emberY = Math.sin(now / 150) * 3;
-                ctx.fillStyle = '#ff8c00';
-                ctx.beginPath();
-                ctx.arc(this.radius + 12, emberY, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // Piercing Shots — through-line extending past barrel
-        if (vs.learnedSkills.has('gunner_piercing')) {
-            ctx.save();
-            ctx.strokeStyle = '#88ccff';
-            ctx.lineWidth = 1.5;
-            ctx.shadowColor = '#88ccff';
-            ctx.shadowBlur = 6;
-            ctx.globalAlpha = 0.6;
-            ctx.beginPath();
-            ctx.moveTo(this.radius + 15, 0);
-            ctx.lineTo(this.radius + 28, 0);
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        // Triple Shot — three fan dots
-        if (vs.learnedSkills.has('gunner_triple_shot')) {
-            ctx.save();
-            ctx.fillStyle = '#fff';
-            ctx.shadowColor = '#fff';
-            ctx.shadowBlur = 4;
-            ctx.globalAlpha = 0.6;
-            const tipX = this.radius + 18;
-            for (const spreadAngle of [-0.25, 0, 0.25]) {
-                ctx.beginPath();
-                ctx.arc(tipX * Math.cos(spreadAngle), tipX * Math.sin(spreadAngle), 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // Homing Rounds — crosshair ring at barrel tip
-        if (vs.learnedSkills.has('gunner_homing')) {
-            ctx.save();
-            ctx.strokeStyle = '#ff2dec';
-            ctx.lineWidth = 1;
-            ctx.shadowColor = '#ff2dec';
-            ctx.shadowBlur = 6;
-            ctx.globalAlpha = 0.5 + 0.2 * Math.sin(now / 300);
-            ctx.beginPath();
-            ctx.arc(this.radius + 20, 0, 5, 0, Math.PI * 2);
-            ctx.stroke();
-            // Crosshair lines
-            for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
-                ctx.beginPath();
-                ctx.moveTo(this.radius + 20 + Math.cos(a) * 3, Math.sin(a) * 3);
-                ctx.lineTo(this.radius + 20 + Math.cos(a) * 7, Math.sin(a) * 7);
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        ctx.restore(); // End body+barrel local transform
-        
-        // ── POST-BODY: Attribute auras and skill effects in world space ──
-
-        // STR fire wisps (orbiting)
-        if (vs.strLevel >= auraCfg.STR.WISP_THRESHOLD) {
-            ctx.save();
-            const cfg = auraCfg.STR;
-            const wispCount = Math.min(cfg.MAX_WISPS, 1 + Math.floor((vs.strLevel - cfg.WISP_THRESHOLD) / 10));
-            const orbitR = this.radius + cfg.ORBIT_RADIUS;
-            for (let i = 0; i < wispCount; i++) {
-                const wAngle = this._auraOrbitAngle * 0.7 + (Math.PI * 2 / wispCount) * i;
-                const wx = this.x + Math.cos(wAngle) * orbitR;
-                const wy = this.y + Math.sin(wAngle) * orbitR;
-                ctx.globalAlpha = 0.6 + 0.3 * Math.sin(now / 200 + i);
-                ctx.fillStyle = i % 2 === 0 ? cfg.color : cfg.colorAlt;
-                ctx.shadowColor = cfg.color;
-                ctx.shadowBlur = 8;
-                ctx.beginPath();
-                ctx.arc(wx, wy, 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // DEX speed lines when rotating
-        if (vs.dexLevel > 0 && this.isRotating) {
-            ctx.save();
-            const cfg = auraCfg.DEX;
-            const lineCount = Math.min(cfg.SPEED_LINES, Math.max(1, Math.floor(vs.dexLevel / 10)));
-            const streakLen = 5 + vs.dexLevel * cfg.STREAK_LEN_PER_POINT;
-            ctx.strokeStyle = cfg.color;
-            ctx.lineWidth = 1.5;
-            ctx.shadowColor = cfg.color;
-            ctx.shadowBlur = 4;
-            const rotDir = this._getRotationDirection();
-            for (let i = 0; i < lineCount; i++) {
-                const offset = (Math.PI * 2 / lineCount) * i;
-                const startAngle = this.angle + Math.PI + offset + rotDir * 0.3;
-                const arcR = this.radius + 8 + i * 2;
-                ctx.globalAlpha = 0.3 + 0.3 * (1 - i / lineCount);
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, arcR, startAngle, startAngle + rotDir * streakLen / arcR);
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        // DEX target sweep arc
-        if (vs.dexLevel > 0 && this._sweepTimer > 0) {
-            ctx.save();
-            const cfg = auraCfg.DEX;
-            const t = this._sweepTimer / cfg.SWEEP_DURATION;
-            ctx.strokeStyle = cfg.color;
-            ctx.lineWidth = 2;
-            ctx.globalAlpha = 0.5 * t;
-            ctx.shadowColor = cfg.color;
-            ctx.shadowBlur = 6;
-            const sweepR = this.radius + 15;
-            const fromAngle = this._lastTargetAngle;
-            const toAngle = this.angle;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, sweepR, Math.min(fromAngle, toAngle), Math.max(fromAngle, toAngle));
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        // Critical Mastery — periodic red spark flash
-        if (vs.learnedSkills.has('gunner_critical_mastery') && this._critSparkTimer <= auraCfg.SKILL_VFX.CRIT_SPARK_DURATION) {
-            ctx.save();
-            const sparkT = this._critSparkTimer / auraCfg.SKILL_VFX.CRIT_SPARK_DURATION;
-            ctx.fillStyle = '#ff4444';
-            ctx.shadowColor = '#ff4444';
-            ctx.shadowBlur = 15;
-            ctx.globalAlpha = 1 - sparkT;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, 4 + 6 * sparkT, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
-
-        // Chain Hit — intermittent lightning arcs around player
-        if ((vs.learnedSkills.has('techno_chain_hit') || vs.learnedSkills.has('techno_chain_master')) && this._chainFlickerOn) {
-            ctx.save();
-            const isChainMaster = vs.learnedSkills.has('techno_chain_master');
-            ctx.strokeStyle = isChainMaster ? '#aa44ff' : '#6666ff';
-            ctx.lineWidth = isChainMaster ? 2 : 1.5;
-            ctx.shadowColor = ctx.strokeStyle;
-            ctx.shadowBlur = isChainMaster ? 10 : 6;
-            ctx.globalAlpha = 0.7;
-            // Draw 2-3 jagged arcs
-            const arcCount = isChainMaster ? 3 : 2;
-            for (let a = 0; a < arcCount; a++) {
-                const baseA = (Math.PI * 2 / arcCount) * a + now * 0.001;
-                ctx.beginPath();
-                const r1 = this.radius + 6;
-                ctx.moveTo(this.x + Math.cos(baseA) * r1, this.y + Math.sin(baseA) * r1);
-                for (let seg = 1; seg <= 3; seg++) {
-                    const segA = baseA + seg * 0.15;
-                    const segR = r1 + seg * (isChainMaster ? 7 : 5) + (Math.random() - 0.5) * 4;
-                    ctx.lineTo(this.x + Math.cos(segA) * segR, this.y + Math.sin(segA) * segR);
-                }
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        // Meltdown — heat haze ring (concentric arc segments)
-        if (vs.learnedSkills.has('techno_meltdown')) {
-            ctx.save();
-            ctx.strokeStyle = '#ff4500';
-            ctx.lineWidth = 1;
-            ctx.shadowColor = '#ff4500';
-            ctx.shadowBlur = 4;
-            ctx.globalAlpha = 0.25 + 0.15 * Math.sin(now / 200);
-            const hazeR = this.radius + 25;
-            for (let s = 0; s < 6; s++) {
-                const sAngle = (Math.PI * 2 / 6) * s + now * 0.0008;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, hazeR + Math.sin(now / 150 + s) * 3, sAngle, sAngle + 0.4);
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        // Overcharge Burst — charging energy ring pulsing as cooldown refills
-        if (vs.learnedSkills.has('gunner_overcharge') && this.overchargeBurst?.active) {
-            ctx.save();
-            const chargeT = 0.5 + 0.5 * Math.sin(now / 250);
-            ctx.strokeStyle = '#ffff00';
-            ctx.lineWidth = 1.5;
-            ctx.shadowColor = '#ffaa00';
-            ctx.shadowBlur = 8 * chargeT;
-            ctx.globalAlpha = 0.3 + 0.3 * chargeT;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius + 14, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        // ── Targeting indicator when rotating ──
-        if (this.isRotating && this.targetAngle !== null && this.currentTarget) {
-            ctx.save();
-            ctx.strokeStyle = '#ff6d00';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.globalAlpha = 0.7;
-            
-            ctx.beginPath();
-            ctx.moveTo(this.x, this.y);
-            ctx.lineTo(this.currentTarget.x, this.currentTarget.y);
-            ctx.stroke();
-            
-            ctx.strokeStyle = '#ff6d00';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([]);
-            ctx.globalAlpha = 0.5;
-            
-            const indicatorLength = this.radius + 25;
-            const targetX = this.x + Math.cos(this.targetAngle) * indicatorLength;
-            const targetY = this.y + Math.sin(this.targetAngle) * indicatorLength;
-            
-            ctx.beginPath();
-            ctx.moveTo(this.x + Math.cos(this.targetAngle) * this.radius, 
-                      this.y + Math.sin(this.targetAngle) * this.radius);
-            ctx.lineTo(targetX, targetY);
-            ctx.stroke();
-            
-            ctx.restore();
-        }
-        
-        // ── Shield ──
-        if (this.hasShield && this.shieldHp > 0) {
-            ctx.save();
-            ctx.strokeStyle = '#0ff';
-            ctx.lineWidth = 3;
-            ctx.shadowColor = '#0ff';
-            ctx.shadowBlur = 10;
-            
-            const shieldRadius = this.radius + 10;
-            const shieldAlpha = this.shieldHp / this.maxShieldHp;
-            ctx.globalAlpha = shieldAlpha * 0.7;
-            
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, shieldRadius, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            ctx.restore();
-        }
-        
-        // ── Slow field ──
-        if (this.hasSlowField && this.slowFieldStrength > 0) {
-            ctx.save();
-            ctx.strokeStyle = '#8f00ff';
-            ctx.lineWidth = Math.max(2, this.slowFieldStrength);
-            ctx.shadowColor = '#8f00ff';
-            ctx.shadowBlur = 5 + this.slowFieldStrength;
-            ctx.globalAlpha = 0.2 + (this.slowFieldStrength * 0.05);
-            
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.slowFieldRadius, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            ctx.restore();
-        }
-        
-        // ── Immolation Aura ──
-        if (this.immolationAura && this.immolationAura.active) {
-            ctx.save();
-            
-            const pulseIntensity = 0.5 + 0.5 * Math.sin(now / 300);
-            
-            const gradient = ctx.createRadialGradient(
-                this.x, this.y, 0,
-                this.x, this.y, this.immolationAura.range
-            );
-            gradient.addColorStop(0, `rgba(255, 69, 0, ${0.3 * pulseIntensity})`);
-            gradient.addColorStop(0.5, `rgba(255, 140, 0, ${0.2 * pulseIntensity})`);
-            gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
-            
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.immolationAura.range, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.strokeStyle = `rgba(255, 69, 0, ${pulseIntensity * 0.8})`;
-            ctx.lineWidth = 2;
-            ctx.shadowColor = '#ff4500';
-            ctx.shadowBlur = 12;
-            
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.immolationAura.range, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            ctx.restore();
-        }
-        
-        // ── Barrier Phase ──
-        if (this.barrierPhaseActive) {
-            ctx.save();
-            
-            const shimmerIntensity = 0.7 + 0.3 * Math.sin(now / 100);
-            const barrierRadius = this.radius + 25;
-            
-            ctx.strokeStyle = `rgba(255, 255, 255, ${shimmerIntensity})`;
-            ctx.lineWidth = 4;
-            ctx.shadowColor = '#ffffff';
-            ctx.shadowBlur = 20;
-            
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, barrierRadius, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            ctx.strokeStyle = `rgba(200, 200, 255, ${shimmerIntensity * 0.6})`;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10;
-            
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, barrierRadius - 8, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            ctx.restore();
-        }
+        renderPlayer(ctx, this);
     }
 
     /**
      * Update visual effect timers each frame.
-     * @private
+     * Delegates to the standalone PlayerRenderer module.
      * @param {number} delta - ms since last frame
      */
     _updateVisualTimers(delta) {
-        const vs = this.visualState;
-        const auraCfg = GameConfig.VFX.PLAYER_AURAS;
-
-        // Orbit angle for INT sparks and STR wisps
-        this._auraOrbitAngle += (auraCfg.INT.ORBIT_SPEED * delta) / 1000;
-
-        // Flash pulse decay
-        if (vs.flashTimer > 0) {
-            vs.flashTimer = Math.max(0, vs.flashTimer - delta);
-        }
-
-        // DEX sweep decay
-        if (this._sweepTimer > 0) {
-            this._sweepTimer = Math.max(0, this._sweepTimer - delta);
-        }
-
-        // Critical Mastery spark timer
-        if (vs.learnedSkills.has('gunner_critical_mastery')) {
-            this._critSparkTimer += delta;
-            if (this._critSparkTimer > auraCfg.SKILL_VFX.CRIT_SPARK_INTERVAL) {
-                this._critSparkTimer = 0;
-            }
-        }
-
-        // Chain Hit lightning flicker
-        if (vs.learnedSkills.has('techno_chain_hit') || vs.learnedSkills.has('techno_chain_master')) {
-            this._chainFlickerTimer += delta;
-            if (this._chainFlickerTimer >= this._chainFlickerNext) {
-                this._chainFlickerOn = !this._chainFlickerOn;
-                this._chainFlickerTimer = 0;
-                const cfg = auraCfg.SKILL_VFX;
-                this._chainFlickerNext = this._chainFlickerOn
-                    ? 80 + Math.random() * 120 // on duration: short
-                    : cfg.CHAIN_FLICKER_MIN + Math.random() * (cfg.CHAIN_FLICKER_MAX - cfg.CHAIN_FLICKER_MIN);
-            }
-        }
-
-        // LUCK sparkle spawning & lifecycle
-        if (vs.luckLevel > 0) {
-            const cfg = auraCfg.LUCK;
-            if (this._luckSparkles.length < cfg.MAX_SPARKLES && Math.random() < vs.luckLevel * cfg.CHANCE_PER_POINT) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = Math.random() * cfg.SPAWN_RADIUS;
-                const life = cfg.MIN_LIFE + Math.random() * (cfg.MAX_LIFE - cfg.MIN_LIFE);
-                this._luckSparkles.push({
-                    x: this.x + Math.cos(angle) * dist,
-                    y: this.y + Math.sin(angle) * dist,
-                    life,
-                    maxLife: life,
-                });
-            }
-            for (let i = this._luckSparkles.length - 1; i >= 0; i--) {
-                this._luckSparkles[i].life -= delta;
-                if (this._luckSparkles[i].life <= 0) {
-                    this._luckSparkles.splice(i, 1);
-                }
-            }
-        }
-    }
-
-    /**
-     * Get the current rotation direction (+1 = CCW, -1 = CW).
-     * @private
-     * @returns {number}
-     */
-    _getRotationDirection() {
-        if (this.targetAngle === null) return 1;
-        let diff = this.targetAngle - this.angle;
-        // Normalize to [-PI, PI]
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        return diff >= 0 ? 1 : -1;
+        updatePlayerVisualTimers(this, delta);
     }
 }

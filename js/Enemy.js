@@ -1,5 +1,6 @@
 import { GameConfig } from "./config/GameConfig.js";
 import { playSFX } from './main.js';
+import { MathUtils } from './utils/MathUtils.js';
 
 /**
  * Represents an enemy unit in the tower defense game.
@@ -82,7 +83,7 @@ export class Enemy {
         // Find direction vector towards player
         const dx = player.x - this.x;
         const dy = player.y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = MathUtils.distance(this.x, this.y, player.x, player.y);
         
         // Move towards player using normalized direction vector
         if (distance > 0) {

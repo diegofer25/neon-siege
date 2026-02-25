@@ -19,9 +19,17 @@ import { LEVEL_CONFIG } from "./config/SkillConfig.js";
 import { GameEventBus } from "./skills/GameEventBus.js";
 import { SkillEffectEngine } from "./skills/SkillEffectEngine.js";
 import { SKILL_PLUGIN_REGISTRY } from "./skills/registry.js";
-import { playSFX, createFloatingText, screenFlash, showLevelUpPanel, showAscensionPanel, closeAllSkillOverlays } from "./main.js";
+import { playSFX } from "./main.js";
+import { vfxHelper } from "./managers/VFXHelper.js";
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
+import { skillUI } from "./ui/SkillUIController.js";
+const showLevelUpPanel = () => skillUI.showLevelUpPanel();
+const showAscensionPanel = () => skillUI.showAscensionPanel();
+const closeAllSkillOverlays = () => skillUI.closeAll();
 import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
+import { MathUtils } from "./utils/MathUtils.js";
 
 const DEFAULT_RUNTIME_SETTINGS = {
 	screenShakeEnabled: true,
@@ -429,14 +437,12 @@ export class Game {
 			enemy.x = (enemy.x / prevWidth) * logicalWidth;
 			enemy.y = (enemy.y / prevHeight) * logicalHeight;
 
-			const dx = enemy.x - centerX;
-			const dy = enemy.y - centerY;
-			const distance = Math.sqrt(dx * dx + dy * dy);
+			const distance = MathUtils.distance(enemy.x, enemy.y, centerX, centerY);
 			const maxDistance =
 				Math.max(logicalWidth, logicalHeight) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
 
 			if (distance > maxDistance) {
-				const angle = Math.atan2(dy, dx);
+				const angle = MathUtils.angleBetween(centerX, centerY, enemy.x, enemy.y);
 				enemy.x = centerX + Math.cos(angle) * maxDistance;
 				enemy.y = centerY + Math.sin(angle) * maxDistance;
 			}

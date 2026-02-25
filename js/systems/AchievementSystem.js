@@ -1,4 +1,7 @@
-import { playSFX, createFloatingText } from '../main.js';
+import { playSFX } from '../main.js';
+import { vfxHelper } from '../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+import { MathUtils } from '../utils/MathUtils.js';
 
 const ACHIEVEMENTS = [
     // Kill-based
@@ -164,12 +167,8 @@ export class AchievementSystem {
         const player = this.game?.player;
         const canvas = this.game?.canvas;
         if (player && canvas) {
-            const rect = canvas.getBoundingClientRect();
-            const canvasWidth = canvas.logicalWidth || canvas.width;
-            const canvasHeight = canvas.logicalHeight || canvas.height;
-            const textX = player.x * (rect.width / canvasWidth) + rect.left;
-            const textY = (player.y - 90) * (rect.height / canvasHeight) + rect.top;
-            createFloatingText(`🏆 ${achievement.name}`, textX, textY, 'achievement-unlock');
+            const screen = MathUtils.canvasToScreen(canvas, player.x, player.y - 90);
+            createFloatingText(`🏆 ${achievement.name}`, screen.x, screen.y, 'achievement-unlock');
         }
 
         const toast = document.getElementById('achievementToast');

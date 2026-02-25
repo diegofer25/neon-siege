@@ -456,4 +456,39 @@ export class MathUtils {
         const difference = Math.abs(this.angleDifference(currentAngle, targetAngle));
         return difference <= tolerance;
     }
+
+    // Canvas ↔ Screen coordinate conversion
+
+    /**
+     * Convert canvas-space coordinates to DOM screen-space coordinates.
+     *
+     * Every system that displays floating text or DOM overlays above
+     * game entities needs to turn logical canvas pixels into the CSS
+     * pixel position of the element on screen.  This centralises the
+     * three repeated lines (getBoundingClientRect, logicalWidth, scale)
+     * into one call.
+     *
+     * @param {HTMLCanvasElement} canvas - The game canvas element
+     * @param {number} x - X position in canvas logical coordinates
+     * @param {number} y - Y position in canvas logical coordinates
+     * @returns {{x: number, y: number, scaleX: number, scaleY: number}}
+     *          Screen-space position and per-axis scale factors
+     *
+     * @example
+     * const screen = MathUtils.canvasToScreen(game.canvas, enemy.x, enemy.y);
+     * createFloatingText('-10', screen.x, screen.y, 'damage');
+     */
+    static canvasToScreen(canvas, x, y) {
+        const rect = canvas.getBoundingClientRect();
+        const cw = canvas.logicalWidth || canvas.width;
+        const ch = canvas.logicalHeight || canvas.height;
+        const scaleX = rect.width / cw;
+        const scaleY = rect.height / ch;
+        return {
+            x: x * scaleX + rect.left,
+            y: y * scaleY + rect.top,
+            scaleX,
+            scaleY,
+        };
+    }
 }

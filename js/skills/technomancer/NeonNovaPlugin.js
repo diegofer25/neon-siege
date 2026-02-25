@@ -4,7 +4,11 @@
  */
 
 import { BaseSkillPlugin } from '../BaseSkillPlugin.js';
-import { createFloatingText, playSFX, screenFlash } from '../../main.js';
+import { dealAreaDamage } from '../../utils/AOEUtils.js';
+import { playSFX } from '../../main.js';
+import { vfxHelper } from '../../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
 export class NeonNovaPlugin extends BaseSkillPlugin {
 	/**
@@ -17,16 +21,10 @@ export class NeonNovaPlugin extends BaseSkillPlugin {
 		const radius = effect.radius + effect.radiusPerRank * (rank - 1);
 		const px = game.player.x;
 		const py = game.player.y;
-		let hitCount = 0;
-
-		for (const enemy of game.enemies) {
-			const dx = enemy.x - px;
-			const dy = enemy.y - py;
-			if (dx * dx + dy * dy <= radius * radius) {
-				enemy.takeDamage(enemy.maxHealth * effect.damagePercent);
-				hitCount++;
-			}
-		}
+		const hits = dealAreaDamage(game.enemies, px, py, radius, {
+			calcDamage: (e) => e.maxHealth * effect.damagePercent,
+		});
+		const hitCount = hits.length;
 
 		game.createExplosion(px, py, 60);
 		game.createExplosionRing(px, py, radius);

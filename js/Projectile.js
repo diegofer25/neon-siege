@@ -3,7 +3,11 @@
  * Handles different types of projectiles including standard, piercing, and explosive bullets.
  */
 
-import { createFloatingText, game } from './main.js';
+import { game } from './main.js';
+import { vfxHelper } from './managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+import { MathUtils } from './utils/MathUtils.js';
+import { dealAreaDamage } from './utils/AOEUtils.js';
 
 /**
  * Represents a projectile fired by towers in the game.
@@ -175,9 +179,7 @@ export class Projectile {
         enemies.forEach(enemy => {
             if (enemy.dying) return; // Skip dying enemies
             
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = MathUtils.distance(this.x, this.y, enemy.x, enemy.y);
             
             if (distance < nearestDistance) {
                 nearestDistance = distance;
@@ -189,7 +191,7 @@ export class Projectile {
             // Calculate desired direction to target
             const dx = nearestEnemy.x - this.x;
             const dy = nearestEnemy.y - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = MathUtils.distance(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
             
             if (distance > 0) {
                 // Normalize desired direction
@@ -202,7 +204,7 @@ export class Projectile {
                 this.vy = this.vy * (1 - strength) + desiredVy * strength;
                 
                 // Maintain original speed
-                const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                const currentSpeed = MathUtils.distance(0, 0, this.vx, this.vy);
                 if (currentSpeed > 0) {
                     this.vx = (this.vx / currentSpeed) * this.speed;
                     this.vy = (this.vy / currentSpeed) * this.speed;
@@ -254,64 +256,22 @@ export class Projectile {
         // Create visual explosion ring to show blast radius
         game.createExplosionRing(this.x, this.y, this.explosionRadius);
         
-        // Track enemies hit for chain explosion logic
-        const hitEnemies = [];
-
         // Apply area damage to all enemies within explosion radius
-        game.enemies.forEach(enemy => {
-            if (excludedEnemyId !== null && enemy.id === excludedEnemyId) {
-                game.trace('explosion.skip.excludedEnemy', { enemyId: enemy.id });
-                return;
-            }
-            if (enemy.dying || enemy.health <= 0) {
-                game.trace('explosion.skip.deadEnemy', {
-                    enemyId: enemy.id,
-                    enemyHealth: enemy.health,
-                    enemyDying: enemy.dying
-                });
-                return;
-            }
-
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance <= this.explosionRadius) {
-                // Calculate damage falloff based on distance from explosion center
-                let damage = this.explosionDamage * (1 - distance / this.explosionRadius);
-
-                // Elemental Synergy: bonus damage on burning enemies
-                const synergy = game.player?.elementalSynergy;
-                if (synergy && enemy.isBurning) {
-                    damage *= (1 + synergy.bonus);
-                }
-
-                game.trace('explosion.hit', {
-                    enemyId: enemy.id,
-                    damage,
-                    enemyHealthBefore: enemy.health,
-                    distance
-                });
-                enemy.takeDamage(damage);
-                hitEnemies.push(enemy);
-
-                // Display damage number floating text
-                const rect = game.canvas.getBoundingClientRect();
-                const canvasWidth = game.canvas.logicalWidth || game.canvas.width;
-                const canvasHeight = game.canvas.logicalHeight || game.canvas.height;
-                createFloatingText(
-                    `-${damage.toFixed(1)}`,
-                    enemy.x * (rect.width / canvasWidth) + rect.left,
-                    enemy.y * (rect.height / canvasHeight) + rect.top,
-                    'damage'
-                );
-                game.trace('explosion.hit.applied', {
-                    enemyId: enemy.id,
-                    enemyHealthAfter: enemy.health,
-                    enemyDying: enemy.dying
-                });
-            }
+        const synergy = game.player?.elementalSynergy;
+        const hitEnemies = dealAreaDamage(game.enemies, this.x, this.y, this.explosionRadius, {
+            excludeId: excludedEnemyId,
+            calcDamage: (enemy, dist) => {
+                let dmg = this.explosionDamage * (1 - dist / this.explosionRadius);
+                if (synergy && enemy.isBurning) dmg *= (1 + synergy.bonus);
+                return dmg;
+            },
         });
+
+        // Floating text for each hit
+        for (const hit of hitEnemies) {
+            const screen = MathUtils.canvasToScreen(game.canvas, hit.enemy.x, hit.enemy.y);
+            createFloatingText(`-${hit.damage.toFixed(1)}`, screen.x, screen.y, 'damage');
+        }
 
         // Chain Hit: chance to chain explosion to a nearby enemy
         const chainHit = game.player?.chainHit;
@@ -319,7 +279,7 @@ export class Projectile {
             const chainChance = chainHit.chance;
             if (Math.random() < chainChance) {
                 // Find nearest enemy NOT already hit by this explosion
-                const hitIds = new Set(hitEnemies.map(e => e.id));
+                const hitIds = new Set(hitEnemies.map(h => h.enemy.id));
                 if (excludedEnemyId !== null) hitIds.add(excludedEnemyId);
                 let nearest = null;
                 let nearestDist = Infinity;

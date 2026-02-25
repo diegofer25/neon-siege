@@ -11,6 +11,7 @@
  */
 
 import { BaseSkillPlugin } from '../BaseSkillPlugin.js';
+import { dealAreaDamage } from '../../utils/AOEUtils.js';
 
 export class VolatileKillsPlugin extends BaseSkillPlugin {
 	getEventListeners() {
@@ -32,14 +33,10 @@ export class VolatileKillsPlugin extends BaseSkillPlugin {
 		const deathDmg = enemy.maxHealth * percent;
 
 		// AoE damage to nearby enemies
-		for (const e of this.game.enemies) {
-			if (e === enemy || e.dying || e.health <= 0) continue;
-			const dx = e.x - position.x;
-			const dy = e.y - position.y;
-			if (dx * dx + dy * dy <= radius * radius) {
-				e.takeDamage(deathDmg);
-			}
-		}
+		dealAreaDamage(this.game.enemies, position.x, position.y, radius, {
+			damage: deathDmg,
+			excludeEnemy: enemy,
+		});
 
 		// Visual: explosion + ring
 		this.game.createExplosion(position.x, position.y, 10);

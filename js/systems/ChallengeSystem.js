@@ -1,4 +1,7 @@
-import { playSFX, createFloatingText } from '../main.js';
+import { playSFX } from '../main.js';
+import { vfxHelper } from '../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
+import { MathUtils } from '../utils/MathUtils.js';
 
 const CHALLENGE_POOL = [
     { id: 'speed_demon',   desc: 'Clear 3 waves in under 20s each',   icon: '⏱️', target: 3,  reward: { coins: 30, tokens: 2 } },
@@ -137,11 +140,9 @@ export class ChallengeSystem {
         let textX;
         let textY;
         if (player && canvas) {
-            const rect = canvas.getBoundingClientRect();
-            const canvasWidth = canvas.logicalWidth || canvas.width;
-            const canvasHeight = canvas.logicalHeight || canvas.height;
-            textX = player.x * (rect.width / canvasWidth) + rect.left;
-            textY = (player.y - 72) * (rect.height / canvasHeight) + rect.top;
+            const screen = MathUtils.canvasToScreen(canvas, player.x, player.y - 72);
+            textX = screen.x;
+            textY = screen.y;
         } else {
             const { width, height } = this.game.getLogicalCanvasSize();
             textX = width / 2;

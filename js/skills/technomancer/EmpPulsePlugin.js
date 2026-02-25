@@ -9,7 +9,9 @@
  */
 
 import { BaseSkillPlugin } from '../BaseSkillPlugin.js';
-import { createFloatingText, playSFX } from '../../main.js';
+import { playSFX } from '../../main.js';
+import { vfxHelper } from '../../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 
 export class EmpPulsePlugin extends BaseSkillPlugin {
 	/**

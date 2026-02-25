@@ -9,16 +9,10 @@ import { GameConfig } from './config/GameConfig.js';
 import { telemetry } from './managers/TelemetryManager.js';
 import { settingsManager } from './managers/SettingsManager.js';
 import { saveStateManager } from './managers/SaveStateManager.js';
-import { SOUND_EFFECT_MANIFEST } from '../scripts/sfx-manifest.mjs';
-
-/** Attribute-to-color mapping for purchase burst particles */
-const ATTR_COLORS = {
-    STR: '#ff4500',
-    DEX: '#00e5ff',
-    VIT: '#00ff88',
-    INT: '#aa44ff',
-    LUCK: '#ffd700',
-};
+import { audioManager } from './managers/AudioManager.js';
+import { vfxHelper } from './managers/VFXHelper.js';
+import { hudManager } from './managers/HUDManager.js';
+import { skillUI } from './ui/SkillUIController.js';
 
 //=============================================================================
 // GLOBAL STATE AND CONFIGURATION
@@ -88,157 +82,20 @@ function shouldSkipTransientMobileResize(nextViewport) {
 }
 
 /**
- * Audio system configuration and state
- * @type {Object}
- * @property {HTMLAudioElement|null} bgm - Background music element
- * @property {Object} sfx - Sound effect audio elements
- * @property {number} soundVolume - Sound effects volume (0.0 to 1.0)
- * @property {number} musicVolume - Music volume (0.0 to 1.0)
+ * Audio system is now managed by AudioManager singleton.
+ * @see ./managers/AudioManager.js
  */
-const audio = {
-    bgm: null,
-    currentMusicKey: null,
-    sfx: {},
-    soundVolume: GameConfig.AUDIO.SFX_VOLUME,
-    musicVolume: GameConfig.AUDIO.BGM_VOLUME
-};
-
-const SFX_VARIANTS = 1;
-
-const SFX_ALIASES = {
-    shoot: 'player_shoot_basic',
-    explode: 'enemy_death',
-    hurt: 'player_hurt',
-    powerup: 'ui_purchase_success',
-    click: 'ui_click'
-};
-
-const MUSIC_TRACKS = {
-    music_menu_main: { src: 'assets/audio/music/music_menu_main.mp3', loop: true },
-    music_menu_settings: { src: 'assets/audio/music/music_menu_settings.mp3', loop: true },
-    music_menu_consent: { src: 'assets/audio/music/music_menu_consent.mp3', loop: true },
-    music_run_wave_early: { src: 'assets/audio/music/music_run_wave_early.mp3', loop: true },
-    music_run_wave_mid: { src: 'assets/audio/music/music_run_wave_mid.mp3', loop: true },
-    music_run_wave_late: { src: 'assets/audio/music/music_run_wave_late.mp3', loop: true },
-    music_wave_countdown_stinger: { src: 'assets/audio/music/music_wave_countdown_stinger.mp3', loop: false },
-    music_shop_between_waves: { src: 'assets/audio/music/music_shop_between_waves.mp3', loop: true },
-    music_boss_classic: { src: 'assets/audio/music/music_boss_classic.mp3', loop: true },
-    music_boss_shield: { src: 'assets/audio/music/music_boss_shield.mp3', loop: true },
-    music_pause_overlay: { src: 'assets/audio/music/music_pause_overlay.mp3', loop: true },
-    music_gameover_defeat: { src: 'assets/audio/music/music_gameover_defeat.mp3', loop: false },
-    music_restore_resume_stinger: { src: 'assets/audio/music/music_restore_resume_stinger.mp3', loop: false },
-    music_run_resume_stinger: { src: 'assets/audio/music/music_run_resume_stinger.mp3', loop: false }
-};
-let lastMenuScrollSfxAt = 0;
-let lastSettingsPanelScrollTop = null;
-
-function playMenuScrollSfx(scrollTop) {
-    if (lastSettingsPanelScrollTop === null) {
-        lastSettingsPanelScrollTop = scrollTop;
-        return;
-    }
-
-    if (Math.abs(scrollTop - lastSettingsPanelScrollTop) < 1) {
-        return;
-    }
-
-    lastSettingsPanelScrollTop = scrollTop;
-    const now = performance.now();
-    if (now - lastMenuScrollSfxAt < 70) {
-        return;
-    }
-
-    lastMenuScrollSfxAt = now;
-    playSFX('ui_menu_scroll');
-}
 
 function setupMenuScrollSoundHooks() {
-    const settingsPanel = document.querySelector('.settings-panel');
-    if (!settingsPanel) return;
-
-    lastSettingsPanelScrollTop = settingsPanel.scrollTop;
-    settingsPanel.addEventListener('scroll', () => {
-        playMenuScrollSfx(settingsPanel.scrollTop);
-    }, { passive: true });
+    audioManager.setupMenuScrollSoundHooks();
 }
 
-function getWaveMusicKey(wave = 1) {
-    if (wave >= 31) return 'music_run_wave_late';
-    if (wave >= 11) return 'music_run_wave_mid';
-    return 'music_run_wave_early';
-}
-
-function resolveMusicKeyForState() {
-    if (!game) return 'music_menu_main';
-
-    if (game.gameState === 'gameover') return 'music_gameover_defeat';
-    if (game.gameState === 'paused') return 'music_pause_overlay';
-    if (game.gameState === 'powerup') return 'music_shop_between_waves';
-
-    if (game.gameState === 'playing') {
-        if (game.waveManager?.isBossWave) {
-            return game.wave % 20 === 0 ? 'music_boss_shield' : 'music_boss_classic';
-        }
-        return getWaveMusicKey(game.wave);
-    }
-
-    return 'music_menu_main';
-}
-
-function shouldPlayMusicForState() {
-    if (!game) return false;
-    return ['menu', 'playing', 'powerup', 'paused', 'gameover'].includes(game.gameState);
-}
-
-function syncMusicTrack({ restart = false } = {}) {
-    const desiredKey = resolveMusicKeyForState();
-    const nextTrack = MUSIC_TRACKS[desiredKey];
-    if (!nextTrack) {
-        return;
-    }
-
-    if (!audio.bgm) {
-        return;
-    }
-
-    if (audio.currentMusicKey === desiredKey) {
-        if (restart) {
-            audio.bgm.currentTime = 0;
-        }
-        if (audio.musicVolume > 0 && shouldPlayMusicForState() && audio.bgm.paused) {
-            audio.bgm.play().catch(() => {});
-        }
-        return;
-    }
-
-    audio.bgm.pause();
-    audio.bgm.currentTime = 0;
-
-    audio.currentMusicKey = desiredKey;
-    audio.bgm.src = nextTrack.src;
-    audio.bgm.loop = nextTrack.loop;
-
-    if (restart) {
-        audio.bgm.currentTime = 0;
-    }
-
-    audio.bgm.volume = Math.max(0, Math.min(1, audio.musicVolume));
-
-    if (audio.musicVolume > 0 && shouldPlayMusicForState()) {
-        audio.bgm.play().catch(() => {});
-    }
+function syncMusicTrack(opts) {
+    audioManager.syncMusicTrack(opts);
 }
 
 function setupAudioUnlockHooks() {
-    const unlockAudio = () => {
-        if (audio.musicVolume <= 0) {
-            return;
-        }
-        syncMusicTrack();
-    };
-
-    document.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
-    document.addEventListener('keydown', unlockAudio, { once: true });
+    audioManager.setupAudioUnlockHooks();
 }
 
 /**
@@ -272,10 +129,6 @@ function clampSettingVolume(value, fallback = 0) {
     }
 
     return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-function sliderValueToUnit(value, fallback = 0) {
-    return clampSettingVolume(value, Math.round(fallback * 100)) / 100;
 }
 
 function updateVolumeValueLabel(labelId, value) {
@@ -435,10 +288,13 @@ function init() {
     
     // Initialize core game instance
     game = new Game(canvas, ctx);
+    audioManager.game = game;
+    hudManager.game = game;
+    skillUI.game = game;
     
     // Configure all input event listeners
     setupInputHandlers();
-    _setupHudTooltips();
+    hudManager.setupTooltips();
     
     // Handle dynamic window resizing
     window.addEventListener('resize', handleResize);
@@ -640,47 +496,16 @@ function setupInputHandlers() {
  * Sets up background music and sound effect audio elements
  */
 function loadAudio() {
-    // Background music setup
-    audio.bgm = new Audio(MUSIC_TRACKS.music_menu_main.src);
-    audio.bgm.preload = 'auto';
-    audio.bgm.loop = MUSIC_TRACKS.music_menu_main.loop;
-    audio.bgm.volume = Math.max(0, Math.min(1, audio.musicVolume));
-    audio.currentMusicKey = 'music_menu_main';
-
-    // Initialize sound effect audio variants from manifest-generated files
-    audio.sfx = {};
-    SOUND_EFFECT_MANIFEST.forEach(({ key }) => {
-        const variants = [];
-        for (let variant = 1; variant <= SFX_VARIANTS; variant += 1) {
-            const sound = new Audio(`assets/audio/sfx/${key}_v${variant}.mp3`);
-            sound.preload = 'auto';
-            sound.volume = audio.soundVolume;
-            variants.push(sound);
-        }
-        audio.sfx[key] = variants;
-    });
+    audioManager.loadAudio();
 }
 
 /**
- * Play a sound effect by name
+ * Play a sound effect by name.
+ * Bridge export — delegates to AudioManager singleton.
  * @param {string} soundName - Name of the sound effect to play
  */
 export function playSFX(soundName) {
-    if (audio.soundVolume <= 0) return;
-
-    const canonicalName = SFX_ALIASES[soundName] || soundName;
-    const pool = audio.sfx[canonicalName];
-    if (!pool || pool.length === 0) return;
-    
-    try {
-        const source = pool[0];
-        // Clone audio node to allow overlapping sounds
-        const sound = source.cloneNode();
-        sound.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.SFX_VOLUME * audio.soundVolume));
-        sound.play().catch(e => console.log('Audio play failed:', e));
-    } catch (e) {
-        console.log('Audio error:', e);
-    }
+    audioManager.playSFX(soundName);
 }
 
 /**
@@ -688,7 +513,7 @@ export function playSFX(soundName) {
  * Internally updates the settings manager
  */
 export function toggleMute() {
-    const hasAnyAudio = audio.soundVolume > 0 || audio.musicVolume > 0;
+    const hasAnyAudio = audioManager.soundVolume > 0 || audioManager.musicVolume > 0;
     settingsManager.update({
         soundVolume: hasAnyAudio ? 0 : 30,
         musicVolume: hasAnyAudio ? 0 : 20
@@ -819,7 +644,7 @@ function gameLoop(timestamp = 0) {
         game.render();
         
         // Update user interface elements
-        updateHUD();
+        hudManager.update();
     }
     
     // Continue loop based on game state
@@ -830,259 +655,6 @@ function gameLoop(timestamp = 0) {
         if (game.gameState === 'gameover') {
             showGameOver();
         }
-    }
-}
-
-//=============================================================================
-// USER INTERFACE UPDATES
-//=============================================================================
-
-/**
- * Update all HUD (Heads-Up Display) elements
- * Refreshes health, coins, wave progress, and player stats
- */
-function updateHUD() {
-    // Update health bar visualization
-    const healthPercentage = Math.max(0, (game.player.hp / game.player.maxHp) * 100);
-    document.getElementById('healthFill').style.width = healthPercentage.toFixed(1) + '%';
-    document.getElementById('healthText').textContent = `${Math.max(0, Math.floor(game.player.hp))}/${game.player.maxHp}`;
-    
-    // Show/hide defense bar based on shield status
-    const defenseBarElement = document.getElementById('defenseBar');
-    
-    if (game.player.hasShield) {
-        // Player has shield - show defense bar
-        defenseBarElement.style.display = 'block';
-        
-        // Update defense bar visualization
-        const currentDefense = game.player.shieldHp;
-        const maxDefense = game.player.maxShieldHp;
-        const defensePercentage = maxDefense > 0 ? Math.max(0, (currentDefense / maxDefense) * 100) : 0;
-        document.getElementById('defenseFill').style.width = defensePercentage.toFixed(1) + '%';
-        document.getElementById('defenseText').textContent = `${Math.max(0, Math.floor(currentDefense))}/${Math.floor(maxDefense)}`;
-    } else {
-        // Player doesn't have shield - hide defense bar
-        defenseBarElement.style.display = 'none';
-    }
-    
-    // Update wave progress with enemy count using wave manager data
-    const waveProgress = game.getWaveProgress();
-    const remainingEnemies = game.enemies.length + waveProgress.enemiesToSpawn;
-    document.getElementById('wave').textContent = `Wave: ${game.wave} (${remainingEnemies}/${waveProgress.totalEnemies})`;
-    
-    // Refresh player statistics display
-    updateStatsDisplay();
-
-    // Update score display
-    const scoreValueEl = document.getElementById('scoreValue');
-    if (scoreValueEl) scoreValueEl.textContent = game.score.toLocaleString();
-    const scoreMultiplierEl = document.getElementById('scoreMultiplier');
-    if (scoreMultiplierEl) {
-        const mult = game.comboSystem.getScoreMultiplier();
-        if (mult > 1) {
-            scoreMultiplierEl.style.display = 'inline';
-            scoreMultiplierEl.textContent = `x${mult.toFixed(1)}`;
-        } else {
-            scoreMultiplierEl.style.display = 'none';
-        }
-    }
-
-    // Update XP bar (delegated to SkillManager)
-    const xpFill = document.getElementById('xpFill');
-    const xpLevel = document.getElementById('xpLevel');
-    if (xpFill && game.skillManager) xpFill.style.width = ((game.skillManager.xp / game.skillManager.xpToNextLevel) * 100).toFixed(1) + '%';
-    if (xpLevel && game.skillManager) xpLevel.textContent = `Lv.${game.skillManager.level}`;
-
-    // Update combo counter
-    const comboCounter = document.getElementById('comboCounter');
-    if (comboCounter) {
-        const tierInfo = game.comboSystem.getCurrentTierInfo();
-        if (tierInfo && game.comboSystem.currentStreak >= 5) {
-            comboCounter.style.display = 'flex';
-            document.getElementById('comboLabel').textContent = tierInfo.label;
-            document.getElementById('comboCount').textContent = game.comboSystem.currentStreak.toString();
-            document.getElementById('comboTimerFill').style.width = (game.comboSystem.getTimerProgress() * 100) + '%';
-            comboCounter.style.borderColor = tierInfo.color;
-            document.getElementById('comboLabel').style.color = tierInfo.color;
-            document.getElementById('comboCount').style.color = tierInfo.color;
-            document.getElementById('comboTimerFill').style.background = tierInfo.color;
-        } else {
-            comboCounter.style.display = 'none';
-        }
-    }
-
-    // Update challenge display
-    const challengeDisplay = document.getElementById('challengeDisplay');
-    if (challengeDisplay && game.challengeSystem.activeChallenges.length > 0) {
-        challengeDisplay.style.display = 'block';
-        challengeDisplay.innerHTML = game.challengeSystem.activeChallenges.map(c => {
-            const cls = c.completed ? 'challenge-item completed' : 'challenge-item';
-            return `<div class="${cls}"><span class="challenge-icon">${c.icon}</span><span class="challenge-progress">${c.progress}/${c.target}</span></div>`;
-        }).join('');
-    }
-
-    // Update QWER skill slot bar
-    if (game.skillManager) {
-        const slots = game.skillManager.getKeybindSlots();
-        for (let i = 0; i < 4; i++) {
-            const nameEl = document.getElementById(`skillName${i}`);
-            const cdEl = document.getElementById(`skillCd${i}`);
-            const slotEl = nameEl?.closest('.skill-slot');
-            const slot = slots[i];
-            if (!nameEl || !cdEl) continue;
-            if (slot?.skillId && slot.skill) {
-                nameEl.textContent = slot.skill.name.substring(0, 8);
-                const cd = game.skillManager.cooldowns[slot.skillId];
-                if (cd && cd > 0) {
-                    const maxCd = game.skillManager.getCooldownInfo(slot.skillId).total;
-                    cdEl.style.height = ((cd / maxCd) * 100).toFixed(0) + '%';
-                    slotEl?.classList.add('on-cooldown');
-                } else {
-                    cdEl.style.height = '0%';
-                    slotEl?.classList.remove('on-cooldown');
-                }
-            } else {
-                nameEl.textContent = i === 3 ? '🔒' : '—';
-                cdEl.style.height = '0%';
-            }
-        }
-
-        for (let i = 0; i < SKILL_SLOTS.PASSIVE_MAX; i++) {
-            const nameEl = document.getElementById(`passiveName${i}`);
-            const slotEl = nameEl?.closest('.passive-slot');
-            if (!nameEl || !slotEl) continue;
-
-            const skillId = game.skillManager.equippedPassives[i] || null;
-            if (!skillId) {
-                nameEl.textContent = '—';
-                slotEl.classList.remove('filled');
-                continue;
-            }
-
-            const skill = game.skillManager.getSkillDef(skillId);
-            const rank = game.skillManager.getSkillRank(skillId);
-            if (!skill) {
-                nameEl.textContent = '—';
-                slotEl.classList.remove('filled');
-                continue;
-            }
-
-            nameEl.textContent = `${skill.icon || '✨'} ${rank}`;
-            slotEl.classList.add('filled');
-        }
-    }
-
-    // Update ascension modifier badges
-    if (game.ascensionSystem) {
-        const ascContainer = document.getElementById('ascensionSlots');
-        if (ascContainer) {
-            const mods = game.ascensionSystem.activeModifiers;
-            if (ascContainer.dataset.modCount !== String(mods.length)) {
-                ascContainer.dataset.modCount = String(mods.length);
-                ascContainer.innerHTML = mods.map(m =>
-                    `<div class="ascension-badge" data-tooltip-type="ascension" data-mod-id="${m.id}" title="">${m.icon}</div>`
-                ).join('');
-            }
-        }
-    }
-
-    // Update performance statistics if enabled
-    if (showPerformanceStats && game) {
-        updatePerformanceStats();
-    }
-}
-
-/**
- * Update player statistics display with current values
- * Shows attack damage, defense (HP + shield), attack speed, and rotation status
- */
-function updateStatsDisplay() {
-    // Calculate current attack damage with modifiers
-    const baseDamage = 10;
-    const currentAttack = baseDamage * game.player.damageMod;
-    updateStatValue('attackValue', currentAttack.toFixed(1));
-    
-    // Display attack speed multiplier with rotation status (formatted to 1 decimal)
-    const currentSpeed = game.player.fireRateMod.toFixed(1);
-    updateStatValue('speedValue', `${currentSpeed}x`);
-
-    // Update health regeneration rate (formatted to 1 decimal)
-    const regenRate = game.player.hpRegen.toFixed(1);
-    updateStatValue('regenValue', regenRate);
-
-    // Update health per second (HPS) value
-    const hpsValue = game.player.hpRegen;
-    updateStatValue('hpsValue', hpsValue.toFixed(1));
-}
-
-/**
- * Update individual stat value with highlight animation on change
- * @param {string} elementId - DOM element ID to update
- * @param {string|number} newValue - New value to display
- */
-function updateStatValue(elementId, newValue) {
-    const element = document.getElementById(elementId);
-    const oldValue = element.textContent;
-    
-    // Only animate if value actually changed
-    if (oldValue !== newValue.toString()) {
-        element.textContent = newValue.toString();
-        
-        // Apply highlight effect for stat increases
-        element.style.color = '#0f0';
-        element.style.textShadow = '0 0 10px #0f0';
-        element.style.transform = 'scale(1.1)';
-        
-        // Remove highlight after brief animation
-        setTimeout(() => {
-            element.style.color = '#fff';
-            element.style.textShadow = '0 0 3px #fff';
-            element.style.transform = 'scale(1)';
-        }, 500);
-    }
-}
-
-/**
- * Update performance statistics display with current values
- * Shows FPS, frame time, average FPS, and optimization status
- */
-function updatePerformanceStats() {
-    if (!game.performanceManager) return;
-    
-    const stats = game.performanceManager.getStats();
-    
-    // Update FPS with color coding (rounded to whole number)
-    const fpsElement = document.getElementById('fpsValue');
-    fpsElement.textContent = Math.round(stats.currentFps).toString();
-    fpsElement.className = 'perf-value';
-    if (stats.currentFps < 30) {
-        fpsElement.className += ' warning';
-    }
-    if (stats.currentFps < 15) {
-        fpsElement.className += ' critical';
-    }
-    
-    // Update frame time (formatted to 1 decimal)
-    document.getElementById('frameTimeValue').textContent = `${stats.frameTime.toFixed(1)}ms`;
-    
-    // Update average FPS (rounded to whole number)
-    const avgFpsElement = document.getElementById('avgFpsValue');
-    avgFpsElement.textContent = Math.round(stats.averageFps).toString();
-    avgFpsElement.className = 'perf-value';
-    if (stats.averageFps < 30) {
-        avgFpsElement.className += ' warning';
-    }
-    if (stats.averageFps < 15) {
-        avgFpsElement.className += ' critical';
-    }
-    
-    // Update optimization status
-    const optimizedElement = document.getElementById('optimizedValue');
-    const isOptimized = game.performanceManager.needsOptimization();
-    optimizedElement.textContent = isOptimized ? 'Yes' : 'No';
-    optimizedElement.className = 'perf-value';
-    if (isOptimized) {
-        optimizedElement.className += ' warning';
     }
 }
 
@@ -1137,24 +709,11 @@ function showGameOver() {
 }
 
 function applySettings(settings) {
-    const soundSliderValue = clampSettingVolume(settings.soundVolume, 30);
-    const musicSliderValue = clampSettingVolume(settings.musicVolume, 20);
-    audio.soundVolume = sliderValueToUnit(soundSliderValue, GameConfig.AUDIO.SFX_VOLUME);
-    audio.musicVolume = sliderValueToUnit(musicSliderValue, GameConfig.AUDIO.BGM_VOLUME);
-
-    if (audio.bgm) {
-        audio.bgm.volume = Math.max(0, Math.min(1, audio.musicVolume));
-        if (audio.musicVolume > 0) {
-            if (shouldPlayMusicForState() && audio.bgm.paused) {
-                audio.bgm.play().catch(() => {});
-            }
-        } else {
-            audio.bgm.pause();
-        }
-    }
+    // Delegate audio volume handling to AudioManager
+    audioManager.applySettings(settings);
 
     showPerformanceStats = settings.showPerformanceStats;
-    document.getElementById('performanceStats').style.display = showPerformanceStats ? 'flex' : 'none';
+    hudManager.setPerformanceStatsVisible(showPerformanceStats);
 
     document.getElementById('keybindHintsText').style.display = settings.showKeybindHints ? 'block' : 'none';
 
@@ -1354,434 +913,24 @@ function resetSettingsToDefaults() {
     applySettings(defaults);
 }
 
-//=============================================================================
-// VISUAL EFFECTS
-//=============================================================================
-
-/**
- * Spawn a colored particle burst at a location (used for purchase juice).
- * @param {number} x
- * @param {number} y
- * @param {number} count
- * @param {string} color
- */
-function _createColoredBurst(x, y, count, color) {
-    if (!game) return;
-    const em = game.effectsManager;
-    if (!em) return;
-    for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
-        const speed = 40 + Math.random() * 80;
-        const life = 300 + Math.random() * 400;
-        const particle = game.particlePool.get(
-            x, y,
-            Math.cos(angle) * speed,
-            Math.sin(angle) * speed,
-            life,
-            color
-        );
-        game.particles.push(particle);
-    }
-}
-
-/**
- * Create floating text animation effect
- * @param {string} text - Text to display
- * @param {number} x - X coordinate for text position
- * @param {number} y - Y coordinate for text position
- * @param {string} className - CSS class for styling (default: 'damage')
- */
+/** @deprecated Import from managers/VFXHelper.js instead */
 export function createFloatingText(text, x, y, className = 'damage') {
-    if (window.__NEON_TRACE_ENABLED__) {
-        const stack = new Error().stack?.split('\n').slice(2, 6).map(line => line.trim());
-        console.log('[TRACE floatingText.create]', {
-            text,
-            className,
-            x: Math.round(x),
-            y: Math.round(y),
-            stack
-        });
-    }
-
-    const textElement = document.createElement('div');
-    textElement.className = `floating-text ${className}`;
-    textElement.textContent = text;
-    textElement.style.left = x + 'px';
-    textElement.style.top = y + 'px';
-    
-    document.getElementById('floatingTexts').appendChild(textElement);
-    
-    // Auto-remove after animation completes
-    setTimeout(() => {
-        if (textElement.parentNode) {
-            textElement.parentNode.removeChild(textElement);
-        }
-    }, 1000);
+    vfxHelper.createFloatingText(text, x, y, className);
 }
 
-/**
- * Create screen flash effect for dramatic moments
- * Adds a brief white flash overlay to the game container
- */
+/** @deprecated Import from managers/VFXHelper.js instead */
 export function screenFlash() {
-    const flash = document.createElement('div');
-    flash.className = 'screen-flash';
-    document.getElementById('gameContainer').appendChild(flash);
-    
-    // Remove flash element after animation
-    setTimeout(() => {
-        if (flash.parentNode) {
-            flash.parentNode.removeChild(flash);
-        }
-    }, 200);
+    vfxHelper.screenFlash();
 }
 
-//=============================================================================
-// SKILL UI RENDERING
-//=============================================================================
-import { SKILL_SLOTS } from './config/SkillConfig.js';
-import { SkillTreeRenderer } from './ui/SkillTreeRenderer.js';
+/** @deprecated Import from ui/SkillUIController.js instead */
+export function showLevelUpPanel() { skillUI.showLevelUpPanel(); }
 
-/** @type {SkillTreeRenderer|null} */
-let treeRenderer = null;
-/** @type {ReturnType<import('./managers/SkillManager.js').SkillManager['getSaveState']>|null} */
-let levelUpPanelSnapshot = null;
+/** @deprecated Import from ui/SkillUIController.js instead */
+export function showAscensionPanel() { skillUI.showAscensionPanel(); }
 
-function _areArraysEqual(a = [], b = []) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) return false;
-    }
-    return true;
-}
-
-function _isObjectShallowEqual(a = {}, b = {}) {
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) return false;
-    for (const key of keysA) {
-        if (a[key] !== b[key]) return false;
-    }
-    return true;
-}
-
-function _hasLevelUpSelectionChanges(sm) {
-    if (!levelUpPanelSnapshot) return false;
-
-    return !(
-        _isObjectShallowEqual(sm.attributes, levelUpPanelSnapshot.attributes) &&
-        _isObjectShallowEqual(sm.skillRanks, levelUpPanelSnapshot.skillRanks) &&
-        _isObjectShallowEqual(sm.treeInvestment, levelUpPanelSnapshot.treeInvestment) &&
-        _areArraysEqual(sm.equippedPassives, levelUpPanelSnapshot.equippedPassives) &&
-        _areArraysEqual(sm.equippedActives, levelUpPanelSnapshot.equippedActives) &&
-        sm.equippedUltimate === levelUpPanelSnapshot.equippedUltimate &&
-        sm.unspentSkillPoints === levelUpPanelSnapshot.unspentSkillPoints &&
-        sm.unspentAttributePoints === levelUpPanelSnapshot.unspentAttributePoints
-    );
-}
-
-function _updateLevelUpActionButtons(sm) {
-    /** @type {HTMLButtonElement | null} */
-    const resetBtn = document.querySelector('button#levelUpResetBtn');
-    /** @type {HTMLButtonElement | null} */
-    const confirmBtn = document.querySelector('button#levelUpConfirmBtn');
-    if (!resetBtn || !confirmBtn) return;
-
-    const hasChanges = _hasLevelUpSelectionChanges(sm);
-    const hasUnspentPoints = sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0;
-    const mustSpendPoints = game?.gameState === 'levelup';
-
-    resetBtn.disabled = !hasChanges;
-    confirmBtn.disabled = mustSpendPoints && hasUnspentPoints;
-    
-    if (!confirmBtn.disabled && !hasUnspentPoints) {
-        confirmBtn.classList.add('ready-to-confirm');
-    } else {
-        confirmBtn.classList.remove('ready-to-confirm');
-    }
-}
-
-/**
- * Show level-up panel (between waves or mid-wave).
- * Renders the full PoE-style skill tree.
- */
-export function showLevelUpPanel() {
-    if (!game || !game.skillManager) return;
-    const sm = game.skillManager;
-    const panel = document.getElementById('levelUpPanel');
-    const titleEl = document.getElementById('levelUpTitle');
-    levelUpPanelSnapshot = sm.getSaveState();
-    titleEl.textContent = `LEVEL ${sm.level}!`;
-
-    // Update point badges
-    document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
-    document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
-    
-    const attrBadge = document.getElementById('attrBadge');
-    const skillBadge = document.getElementById('skillBadge');
-    const hintEl = document.getElementById('levelUpHint');
-    
-    if (attrBadge) attrBadge.classList.toggle('has-points', sm.unspentAttributePoints > 0);
-    if (skillBadge) skillBadge.classList.toggle('has-points', sm.unspentSkillPoints > 0);
-    if (hintEl) hintEl.style.display = (sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0) ? 'block' : 'none';
-
-    // Render the skill tree
-    const viewport = document.getElementById('skillTreeViewport');
-    if (!treeRenderer) {
-        treeRenderer = new SkillTreeRenderer(viewport);
-    }
-    treeRenderer.setCallbacks(
-        (skillId) => {
-            sm.learnSkill(skillId);
-            _refreshTree(sm);
-            playSFX('ui_purchase_success');
-            // Purchase juice: burst + shake + flash + floating text
-            if (game?.player && game.effectsManager) {
-                const p = game.player;
-                const cfg = GameConfig.VFX.PLAYER_AURAS.PURCHASE;
-                game.effectsManager.addScreenShake(cfg.SKILL_SHAKE_INTENSITY, cfg.SKILL_SHAKE_DURATION);
-                _createColoredBurst(p.x, p.y, cfg.SKILL_BURST_COUNT, '#ff2dec');
-                p.visualState.flashTimer = cfg.FLASH_DURATION;
-                p.visualState.flashColor = '#ff2dec';
-                const skillDef = sm.getSkillDef(skillId);
-                if (skillDef) {
-                    createFloatingText(skillDef.label, p.x, p.y - 40, 'skill-acquired');
-                }
-            }
-        },
-        (attrKey) => {
-            if (sm.allocateAttribute(attrKey)) {
-                _refreshTree(sm);
-                // Attribute purchase juice: small colored burst + flash
-                if (game?.player && game.effectsManager) {
-                    const p = game.player;
-                    const cfg = GameConfig.VFX.PLAYER_AURAS.PURCHASE;
-                    const color = ATTR_COLORS[attrKey] || '#fff';
-                    _createColoredBurst(p.x, p.y, cfg.ATTR_BURST_COUNT, color);
-                    p.visualState.flashTimer = cfg.FLASH_DURATION * 0.5;
-                    p.visualState.flashColor = color;
-                }
-            }
-        },
-    );
-    /** @type {HTMLButtonElement | null} */
-    const resetBtn = document.querySelector('button#levelUpResetBtn');
-    /** @type {HTMLButtonElement | null} */
-    const confirmBtn = document.querySelector('button#levelUpConfirmBtn');
-    if (resetBtn) {
-        resetBtn.onclick = () => {
-            if (!levelUpPanelSnapshot) return;
-            sm.restoreFromSave(levelUpPanelSnapshot);
-            _refreshTree(sm);
-            playSFX('ui_click');
-        };
-    }
-    if (confirmBtn) {
-        confirmBtn.onclick = () => {
-            if (confirmBtn.disabled) return;
-            levelUpPanelSnapshot = null;
-            panel.classList.remove('show');
-            if (game.gameState === 'levelup') {
-                game.completeMidWaveLevelUp();
-            } else {
-                game.continueToNextWave();
-            }
-        };
-    }
-
-    // Show panel BEFORE rendering so viewport has real dimensions for centering
-    panel.classList.add('show');
-    _updateLevelUpActionButtons(sm);
-    treeRenderer.render(sm);
-
-    // Show first-time onboarding banner  
-    const hasSeenSkillTree = localStorage.getItem('neon_seen_skilltree');
-    const onboardingEl = document.getElementById('skillTreeOnboarding');
-    if (!hasSeenSkillTree && onboardingEl) {
-        onboardingEl.classList.add('show');
-        setTimeout(() => {
-            onboardingEl.classList.remove('show');
-            localStorage.setItem('neon_seen_skilltree', '1');
-        }, 5000);
-    }
-}
-
-/** Refresh tree + point badges after spending a point. */
-function _refreshTree(sm) {
-    document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
-    document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
-    
-    const attrBadge = document.getElementById('attrBadge');
-    const skillBadge = document.getElementById('skillBadge');
-    const hintEl = document.getElementById('levelUpHint');
-    
-    if (attrBadge) attrBadge.classList.toggle('has-points', sm.unspentAttributePoints > 0);
-    if (skillBadge) skillBadge.classList.toggle('has-points', sm.unspentSkillPoints > 0);
-    if (hintEl) hintEl.style.display = (sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0) ? 'block' : 'none';
-
-    if (treeRenderer) treeRenderer.update(sm);
-    _updateLevelUpActionButtons(sm);
-}
-
-/**
- * Show ascension pick panel (every 10 waves).
- */
-export function showAscensionPanel() {
-    if (!game || !game.ascensionSystem) return;
-    const options = game.ascensionSystem.generateOptions();
-    const container = document.getElementById('ascensionOptions');
-    container.innerHTML = '';
-
-    for (const mod of options) {
-        const card = document.createElement('div');
-        card.className = 'ascension-card';
-        card.innerHTML = `
-            <div class="ascension-icon">${mod.icon || '✨'}</div>
-            <div class="ascension-name">${mod.name}</div>
-            <div class="ascension-desc">${mod.description}</div>
-        `;
-        card.onclick = () => {
-            game.selectAscension(mod.id);
-            document.getElementById('ascensionPanel').classList.remove('show');
-            playSFX('ui_purchase_success');
-        };
-        container.appendChild(card);
-    }
-
-    document.getElementById('ascensionPanel').classList.add('show');
-}
-
-/**
- * Close all skill-related overlays
- */
-export function closeAllSkillOverlays() {
-    document.getElementById('levelUpPanel')?.classList.remove('show');
-    document.getElementById('ascensionPanel')?.classList.remove('show');
-}
-
-// ─── HUD TOOLTIP SYSTEM ──────────────────────────────────────────────────────
-
-/** @type {HTMLElement|null} */
-let _hudTooltipEl = null;
-
-function _setupHudTooltips() {
-    _hudTooltipEl = document.getElementById('hudTooltip');
-    if (!_hudTooltipEl) return;
-
-    document.addEventListener('mouseover', (e) => {
-        if (!game) return;
-        const target = /** @type {Element} */(e.target);
-        const skillSlot = /** @type {HTMLElement|null} */(target.closest('.skill-slot[data-tooltip-type]'));
-        const passiveSlot = /** @type {HTMLElement|null} */(target.closest('.passive-slot[data-tooltip-type]'));
-        const ascBadge = /** @type {HTMLElement|null} */(target.closest('.ascension-badge[data-mod-id]'));
-
-        if (skillSlot) {
-            const slotIdx = parseInt(skillSlot.dataset.slot, 10);
-            const slots = game.skillManager?.getKeybindSlots?.();
-            const slot = slots?.[slotIdx];
-            if (slot?.skill) {
-                const rank = game.skillManager.getSkillRank(slot.skillId);
-                const cdInfo = game.skillManager.getCooldownInfo(slot.skillId);
-                const cdSec = (cdInfo.total / 1000).toFixed(1);
-                const typeLabel = /** @type {any} */(slot)?.isUltimate ? 'Ultimate' : 'Active';
-                _showHudTooltip({
-                    icon: slot.skill.icon || '⚡',
-                    name: slot.skill.name,
-                    meta: `${typeLabel} · Tier ${slot.skill.tier} · Rank ${rank}/${slot.skill.maxRank}`,
-                    desc: slot.skill.description,
-                    cd: `Cooldown: ${cdSec}s`,
-                    type: 'active',
-                }, skillSlot);
-            } else {
-                _hideHudTooltip();
-            }
-            return;
-        }
-
-        if (passiveSlot) {
-            const slotIdx = parseInt(passiveSlot.dataset.passiveSlot, 10);
-            const skillId = game.skillManager?.equippedPassives?.[slotIdx];
-            if (skillId) {
-                const skill = game.skillManager.getSkillDef(skillId);
-                const rank = game.skillManager.getSkillRank(skillId);
-                if (skill) {
-                    _showHudTooltip({
-                        icon: skill.icon || '✨',
-                        name: skill.name,
-                        meta: `Passive · Tier ${skill.tier} · Rank ${rank}/${skill.maxRank}`,
-                        desc: skill.description,
-                        cd: undefined,
-                        type: 'passive',
-                    }, passiveSlot);
-                    return;
-                }
-            }
-            _hideHudTooltip();
-            return;
-        }
-
-        if (ascBadge) {
-            const modId = ascBadge.dataset.modId;
-            const mod = game.ascensionSystem?.activeModifiers?.find(m => m.id === modId);
-            if (mod) {
-                _showHudTooltip({
-                    icon: mod.icon || '✨',
-                    name: mod.name,
-                    meta: 'Ascension Modifier',
-                    desc: mod.description,
-                    cd: undefined,
-                    type: 'ascension',
-                }, ascBadge);
-                return;
-            }
-        }
-
-        if (!target.closest('.hud-tooltip')) {
-            _hideHudTooltip();
-        }
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (_hudTooltipEl && _hudTooltipEl.style.display !== 'none') {
-            _positionHudTooltip(e.clientX, e.clientY);
-        }
-    });
-}
-
-function _showHudTooltip({ icon, name, meta, desc, cd, type }, anchorEl) {
-    if (!_hudTooltipEl) return;
-    _hudTooltipEl.className = `hud-tooltip${type === 'ascension' ? ' hud-tooltip--ascension' : ''}`;
-    _hudTooltipEl.innerHTML = `
-        <div class="hud-tooltip__header">
-            <span class="hud-tooltip__icon">${icon}</span>
-            <span class="hud-tooltip__name">${name}</span>
-        </div>
-        <div class="hud-tooltip__meta">${meta}</div>
-        <div class="hud-tooltip__desc">${desc}</div>
-        ${cd ? `<div class="hud-tooltip__cd">${cd}</div>` : ''}
-    `;
-    _hudTooltipEl.style.display = 'block';
-    const rect = anchorEl.getBoundingClientRect();
-    _positionHudTooltip(rect.left + rect.width / 2, rect.top);
-}
-
-function _hideHudTooltip() {
-    if (_hudTooltipEl) _hudTooltipEl.style.display = 'none';
-}
-
-function _positionHudTooltip(cx, cy) {
-    if (!_hudTooltipEl) return;
-    const tw = _hudTooltipEl.offsetWidth;
-    const th = _hudTooltipEl.offsetHeight;
-    const margin = 10;
-    let x = cx - tw / 2;
-    let y = cy - th - 12;
-    // Clamp to viewport
-    x = Math.max(margin, Math.min(window.innerWidth - tw - margin, x));
-    if (y < margin) y = cy + 20; // flip below if too high
-    _hudTooltipEl.style.left = x + 'px';
-    _hudTooltipEl.style.top = y + 'px';
-}
+/** @deprecated Import from ui/SkillUIController.js instead */
+export function closeAllSkillOverlays() { skillUI.closeAll(); }
 
 // Initialize application when DOM content is fully loaded
 if (document.readyState === 'loading') {

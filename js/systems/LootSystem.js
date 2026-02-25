@@ -1,4 +1,6 @@
-import { playSFX, createFloatingText } from '../main.js';
+import { playSFX } from '../main.js';
+import { vfxHelper } from '../managers/VFXHelper.js';
+const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 
 const DROP_TABLE = [
     // Common (65%) — score bursts replace coin drops
