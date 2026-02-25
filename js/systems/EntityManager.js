@@ -1,4 +1,5 @@
 import { playSFX } from "./../main.js";
+import { ActionTypes } from "./../state/ActionDispatcher.js";
 
 /**
  * Manages all game entities including players, enemies, and projectiles.
@@ -64,7 +65,8 @@ export class EntityManager {
         // Score with combo multiplier and wave scaling
         const baseScore = this._getEnemyBaseScore(enemy);
         const waveMultiplier = 1 + (this.game.wave * 0.1);
-        this.game.score += Math.floor(baseScore * comboMultiplier * waveMultiplier);
+        const scoreGain = Math.floor(baseScore * comboMultiplier * waveMultiplier);
+        this.game.score += scoreGain;
 
         // XP per kill
         this.game.addXP(this._getEnemyXP(enemy));
@@ -79,6 +81,26 @@ export class EntityManager {
         // Achievement & challenge tracking
         this.game.achievementSystem.onEnemyKilled(enemy);
         this.game.challengeSystem.onEnemyKilled(enemy);
+
+        // ── Dispatch to state store ──
+        if (this.game.dispatcher) {
+            this.game.dispatcher.dispatch({
+                type: ActionTypes.ENEMY_KILLED,
+                payload: {
+                    score: scoreGain,
+                    enemyType: enemy.isBoss ? 'boss' : (enemy.isSplitter ? 'splitter' : 'normal'),
+                    position: { x: enemy.x, y: enemy.y },
+                },
+            });
+            this.game.dispatcher.dispatch({
+                type: ActionTypes.COMBO_HIT,
+                payload: {},
+            });
+            this.game.dispatcher.dispatch({
+                type: ActionTypes.WAVE_ENEMY_KILLED,
+                payload: {},
+            });
+        }
 
         this.game.trace('enemy.death.process.end', {
             enemyId: enemy.id,

@@ -2,6 +2,7 @@ import { playSFX } from '../main.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 import { MathUtils } from '../utils/MathUtils.js';
+import { ActionTypes } from '../state/index.js';
 
 const COMBO_TIERS = [
     { kills: 5,  label: 'COMBO x5',       multiplier: 1.25, bonusScore: 50,   color: '#fff' },
@@ -112,6 +113,14 @@ export class ComboSystem {
         // Award bonus score instead of coins
         this.game.score += tier.bonusScore;
         this.totalBonusScore += tier.bonusScore;
+
+        // Dispatch to state store
+        this.game.dispatcher?.dispatch({
+            type: ActionTypes.SCORE_ADD,
+            amount: tier.bonusScore,
+            source: 'combo_tier',
+        });
+
         const { x: sx, y: sy } = this._getPlayerTextScreenPosition(38);
         createFloatingText(`+${tier.bonusScore} score`, sx, sy, 'score');
 

@@ -2,6 +2,7 @@ import { playSFX } from '../main.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 import { MathUtils } from '../utils/MathUtils.js';
+import { ActionTypes } from '../state/index.js';
 
 const CHALLENGE_POOL = [
     { id: 'speed_demon',   desc: 'Clear 3 waves in under 20s each',   icon: '⏱️', target: 3,  reward: { coins: 30, tokens: 2 } },
@@ -155,9 +156,25 @@ export class ChallengeSystem {
         const xpReward = (challenge.reward.coins || 0) * 5; // Convert old coin amount to XP
         if (xpReward > 0) this.game.addXP(xpReward);
         this.game.score += (challenge.reward.coins || 0) * 10;
+
+        // Dispatch score to state store
+        this.game.dispatcher?.dispatch({
+            type: ActionTypes.SCORE_ADD,
+            amount: (challenge.reward.coins || 0) * 10,
+            source: 'challenge_complete',
+        });
+
         if (challenge.reward.tokens > 0) {
             this.game.progressionManager._incrementCurrency('LEGACY_TOKENS', challenge.reward.tokens);
             this.game.progressionManager._saveState();
+
+            // Dispatch currency to state store
+            this.game.dispatcher?.dispatch({
+                type: ActionTypes.CURRENCY_ADD,
+                currency: 'LEGACY_TOKENS',
+                amount: challenge.reward.tokens,
+                source: 'challenge_reward',
+            });
         }
 
         playSFX('challenge_complete');

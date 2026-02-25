@@ -2,6 +2,7 @@ import { MathUtils } from '../utils/MathUtils.js';
 import { GameConfig } from '../config/GameConfig.js';
 import { playSFX } from './../main.js';
 import { vfxHelper } from './../managers/VFXHelper.js';
+import { ActionTypes } from '../state/index.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
@@ -176,6 +177,15 @@ export class CollisionSystem {
         // Damage player
         this.game.player.takeDamage(enemy.damage);
 
+        // Dispatch to state store
+        this.game.dispatcher?.dispatch({
+            type: ActionTypes.PLAYER_DAMAGE,
+            damage: enemy.damage,
+            source: 'enemy',
+            currentHp: this.game.player.hp,
+            maxHp: this.game.player.maxHp,
+        });
+
         // Emit player:damaged event for skill plugins
         this.game.eventBus.emit('player:damaged', { damage: enemy.damage, source: 'enemy' });
         
@@ -252,6 +262,15 @@ export class CollisionSystem {
 
         // Damage player
         this.game.player.takeDamage(projectile.damage, 'enemyProjectile');
+
+        // Dispatch to state store
+        this.game.dispatcher?.dispatch({
+            type: ActionTypes.PLAYER_DAMAGE,
+            damage: projectile.damage,
+            source: 'enemyProjectile',
+            currentHp: this.game.player.hp,
+            maxHp: this.game.player.maxHp,
+        });
 
         // Emit player:damaged event for skill plugins
         this.game.eventBus.emit('player:damaged', { damage: projectile.damage, source: 'enemyProjectile' });

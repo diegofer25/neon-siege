@@ -322,6 +322,15 @@ function init() {
     applySettings(initialSettings);
     syncStartDifficultyUI();
 
+    // Expose state system on window for debugging (only in debug mode)
+    if (urlParams.has('debug')) {
+        /** @type {any} */ (window).__NEON_STATE__ = {
+            get store() { return game?.store; },
+            get fsm() { return game?.fsm; },
+            get dispatcher() { return game?.dispatcher; },
+        };
+    }
+
     // Display initial start screen
     document.getElementById('startScreen').classList.add('show');
 

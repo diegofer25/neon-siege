@@ -2,6 +2,7 @@ import { playSFX } from '../main.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 import { MathUtils } from '../utils/MathUtils.js';
+import { ActionTypes } from '../state/index.js';
 
 const ACHIEVEMENTS = [
     // Kill-based
@@ -152,6 +153,13 @@ export class AchievementSystem {
         }
         this.game.progressionManager.state.achievements[achievement.id] = true;
         this.game.progressionManager._saveState();
+
+        // Dispatch to state store
+        this.game.dispatcher?.dispatch({
+            type: ActionTypes.ACHIEVEMENT_UNLOCK,
+            achievementId: achievement.id,
+            name: achievement.name,
+        });
 
         if (this._toastActive) {
             this._toastQueue.push(achievement);

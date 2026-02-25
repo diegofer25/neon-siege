@@ -19,6 +19,7 @@ import {
 	COOLDOWN_CONFIG,
 	LEVEL_CONFIG,
 } from '../config/SkillConfig.js';
+import { ActionTypes } from '../state/index.js';
 
 export class SkillManager {
 	/**
@@ -28,6 +29,8 @@ export class SkillManager {
 		this.progressionManager = progressionManager;
 		/** @type {import('../skills/SkillEffectEngine.js').SkillEffectEngine|null} Set by Game.js */
 		this._skillEffectEngine = null;
+		/** @type {import('../state/ActionDispatcher.js').ActionDispatcher|null} Set by Game.js */
+		this._dispatcher = null;
 		this.reset();
 	}
 
@@ -107,6 +110,16 @@ export class SkillManager {
 
 		this.attributes[attrKey] += amount;
 		this.unspentAttributePoints -= amount;
+
+		// Dispatch to state store
+		this._dispatcher?.dispatch({
+			type: ActionTypes.ATTR_ALLOCATE,
+			attrKey,
+			amount,
+			newValue: this.attributes[attrKey],
+			unspentAttributePoints: this.unspentAttributePoints,
+		});
+
 		return true;
 	}
 
@@ -237,6 +250,16 @@ export class SkillManager {
 		if (this._skillEffectEngine) {
 			this._skillEffectEngine.equipSkill(skillId, this.skillRanks[skillId], skill);
 		}
+
+		// Dispatch to state store
+		this._dispatcher?.dispatch({
+			type: ActionTypes.SKILL_LEARN,
+			skillId,
+			rank: this.skillRanks[skillId],
+			archetypeKey,
+			skillType: skill.type,
+			unspentSkillPoints: this.unspentSkillPoints,
+		});
 
 		return true;
 	}

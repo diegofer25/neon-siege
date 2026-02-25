@@ -31,6 +31,10 @@ import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
 import { MathUtils } from "./utils/MathUtils.js";
 
+// ── State System ────────────────────────────────────────────────────────────
+import { createStateSystem, ActionTypes, GameFSM } from "./state/index.js";
+import { syncPlayerStats } from "./state/ComputedStats.js";
+
 const DEFAULT_RUNTIME_SETTINGS = {
 	screenShakeEnabled: true,
 	performanceModeEnabled: false,
@@ -59,6 +63,59 @@ export class Game {
 		GAMEOVER: "gameover",
 	};
 
+	// ── FSM ↔ Legacy bridge ─────────────────────────────────────────────────
+	// Maps legacy gameState strings to FSM states and vice versa.
+	// External code that reads `game.gameState` still works via this getter.
+
+	/** @type {Object<string, string>} Legacy state name → FSM state */
+	static _LEGACY_TO_FSM = {
+		menu: GameFSM.STATES.MENU,
+		playing: GameFSM.STATES.PLAYING_ACTIVE,
+		paused: GameFSM.STATES.PAUSED,
+		powerup: GameFSM.STATES.BETWEEN_WAVES_POWERUP,
+		levelup: GameFSM.STATES.PLAYING_MIDWAVE_LEVELUP,
+		ascension: GameFSM.STATES.BETWEEN_WAVES_ASCENSION,
+		gameover: GameFSM.STATES.GAMEOVER,
+	};
+
+	/** @type {Object<string, string>} FSM state → Legacy state name */
+	static _FSM_TO_LEGACY = {
+		[GameFSM.STATES.MENU]: 'menu',
+		[GameFSM.STATES.PLAYING]: 'playing',
+		[GameFSM.STATES.PLAYING_COUNTDOWN]: 'playing',
+		[GameFSM.STATES.PLAYING_ACTIVE]: 'playing',
+		[GameFSM.STATES.PLAYING_MIDWAVE_LEVELUP]: 'levelup',
+		[GameFSM.STATES.PAUSED]: 'paused',
+		[GameFSM.STATES.BETWEEN_WAVES]: 'powerup',
+		[GameFSM.STATES.BETWEEN_WAVES_ASCENSION]: 'ascension',
+		[GameFSM.STATES.BETWEEN_WAVES_POWERUP]: 'powerup',
+		[GameFSM.STATES.GAMEOVER]: 'gameover',
+	};
+
+	/**
+	 * Legacy gameState getter — maps FSM state to old string enum.
+	 * @returns {string}
+	 */
+	get gameState() {
+		if (!this.fsm) return this._gameStateLegacy || 'menu';
+		return Game._FSM_TO_LEGACY[this.fsm.current] || this._gameStateLegacy || 'menu';
+	}
+
+	/**
+	 * Legacy gameState setter — maps old string enum to FSM transition.
+	 * @param {string} value
+	 */
+	set gameState(value) {
+		this._gameStateLegacy = value;
+		if (!this.fsm) return;
+
+		const fsmTarget = Game._LEGACY_TO_FSM[value];
+		if (fsmTarget && this.fsm.current !== fsmTarget) {
+			// Use forceTransition since legacy code doesn't check allowed transitions
+			this.fsm.forceTransition(fsmTarget);
+		}
+	}
+
 	/**
 	 * Creates a new game instance and initializes all subsystems.
 	 */
@@ -69,7 +126,24 @@ export class Game {
 
 		this.canvas = canvas;
 		this.ctx = ctx;
-		this.gameState = Game.STATES.MENU;
+
+		// ── State System (FSM + Store + Dispatcher) ──
+		const { store, fsm, dispatcher, snapshot, devTools } = createStateSystem();
+		/** @type {import('./state/GameStore.js').GameStore} */
+		this.store = store;
+		/** @type {import('./state/GameFSM.js').GameFSM} */
+		this.fsm = fsm;
+		/** @type {import('./state/ActionDispatcher.js').ActionDispatcher} */
+		this.dispatcher = dispatcher;
+		/** @type {import('./state/SnapshotManager.js').SnapshotManager} */
+		this.snapshotManager = snapshot;
+		/** @type {import('./state/StateDevTools.js').StateDevTools|null} */
+		this.devTools = devTools;
+
+		// Legacy gameState string — reads from FSM for backward compat
+		this._gameStateLegacy = Game.STATES.MENU;
+		this.fsm.transition(GameFSM.STATES.MENU);
+
 		this._initializeDebugTrace();
 
 		this._initializeEntities();
@@ -155,6 +229,7 @@ export class Game {
 
 		// Wire engine into SkillManager for auto-notification on skill learn
 		this.skillManager._skillEffectEngine = this.skillEffectEngine;
+		this.skillManager._dispatcher = this.dispatcher;
 	}
 
 	/**
@@ -331,6 +406,9 @@ export class Game {
 	 * Start a new game session.
 	 */
 	start() {
+		// Dispatch GAME_START to reset all store slices
+		this.dispatcher.dispatch({ type: ActionTypes.GAME_START, payload: {} });
+
 		this.gameState = "playing";
 		this.wave = 1;
 		this.score = 0;
@@ -353,13 +431,29 @@ export class Game {
 		this.achievementSystem.resetForRun();
 		this.challengeSystem.selectChallenges();
 
-		// Sync player with initial skill/attribute state
+		// Sync player with initial skill/attribute state (via ComputedStats)
 		this._syncPlayerFromSkills();
 
 		this._runWaveCountdown(() => {
 			this._waveStartTime = performance.now();
 			this.challengeSystem.onWaveStart();
 			this.waveManager.startWave(this.wave);
+
+			// Dispatch WAVE_START to store
+			this.dispatcher.dispatch({
+				type: ActionTypes.WAVE_START,
+				payload: {
+					wave: this.wave,
+					enemiesToSpawn: this.waveManager.enemiesToSpawn,
+					isBoss: this.waveManager.isBossWave,
+				},
+			});
+		});
+
+		// Dispatch difficulty
+		this.dispatcher.dispatch({
+			type: ActionTypes.SET_DIFFICULTY,
+			payload: { difficulty: this.runDifficulty },
 		});
 
 		telemetry.track("run_start", {
@@ -484,12 +578,19 @@ export class Game {
 		// Update skill cooldowns
 		this.skillManager.updateCooldowns(delta);
 
+		// Dispatch cooldown tick to store
+		this.dispatcher.dispatch({ type: ActionTypes.COOLDOWN_TICK, payload: { delta } });
+
 		// Update all game systems
 		this.waveManager.update(delta);
 		this.entityManager.updateAll(delta, input);
 		this.comboSystem.update(delta);
 		this.lootSystem.update(delta);
 		this.achievementSystem.update(delta);
+
+		// Dispatch combo and buff ticks
+		this.dispatcher.dispatch({ type: ActionTypes.COMBO_TICK, payload: { delta } });
+		this.dispatcher.dispatch({ type: ActionTypes.BUFF_TICK, payload: { delta } });
 
 		// Handle collisions
 		this.collisionSystem.checkAllCollisions();
@@ -513,6 +614,19 @@ export class Game {
 					this.comboSystem.maxStreakThisRun,
 					this.achievementSystem.killsThisRun
 				);
+
+				// Dispatch run end to store
+				this.dispatcher.dispatch({
+					type: ActionTypes.PROGRESSION_RUN_END,
+					payload: {
+						wave: this.wave,
+						score: this.score,
+						maxCombo: this.comboSystem.maxStreakThisRun,
+						totalKills: this.achievementSystem.killsThisRun,
+						result: this._lastRunResult,
+					},
+				});
+
 				telemetry.track("game_over", {
 					wave: this.wave,
 					score: this.score,
@@ -542,7 +656,23 @@ export class Game {
 		const waveClearBonus = 100 * this.wave;
 		const speedBonus = completionTime < 30000 ? 200 : (completionTime < 60000 ? 100 : 0);
 		const perfectBonus = (this.player.hp === this.player.maxHp) ? 300 : 0;
-		this.score += waveClearBonus + speedBonus + perfectBonus;
+		const totalBonus = waveClearBonus + speedBonus + perfectBonus;
+		this.score += totalBonus;
+
+		// Dispatch score and wave completion to store
+		this.dispatcher.dispatch({ type: ActionTypes.SCORE_ADD, payload: { amount: totalBonus } });
+		this.dispatcher.dispatch({
+			type: ActionTypes.WAVE_COMPLETE,
+			payload: { wave: this.wave },
+		});
+		this.dispatcher.dispatch({
+			type: ActionTypes.PROGRESSION_WAVE,
+			payload: {
+				wave: this.wave,
+				isBossWave: this.waveManager.isBossWave,
+				tokensEarned: 0,
+			},
+		});
 
 		// XP for wave clear (via SkillManager)
 		const xpAmount = LEVEL_CONFIG.XP_PER_WAVE_CLEAR_BASE + this.wave * LEVEL_CONFIG.XP_PER_WAVE_CLEAR_SCALING;
@@ -559,6 +689,13 @@ export class Game {
 			this.progressionManager._incrementCurrency('LEGACY_TOKENS', milestone.bonusTokens);
 			this.progressionManager._saveState();
 			this.addXP(milestone.bonusXP);
+
+			// Dispatch milestone tokens to store
+			this.dispatcher.dispatch({
+				type: ActionTypes.CURRENCY_ADD,
+				payload: { currency: 'LEGACY_TOKENS', amount: milestone.bonusTokens },
+			});
+
 			playSFX('boss_defeat');
 		} else if (isMiniMilestone(this.wave)) {
 			const { width, height } = this.getLogicalCanvasSize();
@@ -624,6 +761,16 @@ export class Game {
 			this._waveStartTime = performance.now();
 			this.challengeSystem.onWaveStart();
 			this.waveManager.startWave(this.wave);
+
+			// Dispatch WAVE_START to store
+			this.dispatcher.dispatch({
+				type: ActionTypes.WAVE_START,
+				payload: {
+					wave: this.wave,
+					enemiesToSpawn: this.waveManager.enemiesToSpawn,
+					isBoss: this.waveManager.isBossWave,
+				},
+			});
 		});
 	}
 
@@ -773,6 +920,9 @@ export class Game {
 
 		// Emit stats:sync event for plugins that need to react to stat changes
 		this.eventBus.emit('stats:sync', { player: this.player, attrs, ascension });
+
+		// Mirror computed stats to the store (dual-write)
+		syncPlayerStats(this.store, this.dispatcher, this.skillEffectEngine, this.ascensionSystem, this.player);
 	}
 
 	/**
@@ -821,6 +971,12 @@ export class Game {
 				this.skillEffectEngine.equipSkill(modifierId, 1, mod);
 			}
 
+			// Dispatch to store
+			this.dispatcher.dispatch({
+				type: ActionTypes.ASCENSION_SELECT,
+				payload: { modifier: mod },
+			});
+
 			this._syncPlayerFromSkills();
 			telemetry.track('ascension_picked', { modifierId, wave: this.wave });
 
@@ -861,6 +1017,10 @@ export class Game {
 
 	addXP(amount) {
 		const levelsGained = this.skillManager.addXP(amount);
+
+		// Mirror XP to store
+		this.dispatcher.dispatch({ type: ActionTypes.XP_ADD, payload: { amount } });
+
 		for (let i = 0; i < levelsGained; i++) {
 			this._onLevelUp();
 		}
@@ -903,6 +1063,12 @@ export class Game {
 		if (modifierKey && GameConfig.WAVE_MODIFIERS[modifierKey]) {
 			Object.assign(this.modifierState, GameConfig.WAVE_MODIFIERS[modifierKey].effect);
 		}
+
+		// Dispatch modifier to store
+		this.dispatcher.dispatch({
+			type: ActionTypes.APPLY_MODIFIER,
+			payload: { key: modifierKey },
+		});
 
 		if (this.player) {
 			this.player.setExternalModifiers({
@@ -1065,7 +1231,32 @@ export class Game {
 	}
 
 	getSaveSnapshot() {
-		return {
+		// Prefer SnapshotManager for full state capture
+		const snapshot = this.snapshotManager.capture({
+			player: this.player,
+			enemies: this.enemies,
+			projectiles: this.projectiles,
+			ascensionSystem: this.ascensionSystem,
+			skillEffectEngine: this.skillEffectEngine,
+		});
+
+		// Also include legacy fields for dual-format compatibility
+		if (snapshot) {
+			snapshot.legacyCompat = {
+				gameState: this.gameState,
+				difficulty: this.runDifficulty,
+				wave: this.wave,
+				checkpointWave: Math.max(1, this.wave),
+				score: this.score,
+				modifierKey: this.waveModifierKey || null,
+				player: this._getPlayerSaveState(),
+				waveState: this.waveManager.getSaveSnapshot(),
+				skillManager: this.skillManager.getSaveState(),
+				ascensionSystem: this.ascensionSystem.getSaveState(),
+			};
+		}
+
+		return snapshot || {
 			gameState: this.gameState,
 			difficulty: this.runDifficulty,
 			wave: this.wave,
@@ -1084,7 +1275,15 @@ export class Game {
 			return false;
 		}
 
-		const checkpointWave = Math.max(1, snapshot.checkpointWave || snapshot.wave || 1);
+		// If this is a v3 SnapshotManager format, restore store directly
+		if (snapshot.version >= 3 && snapshot.store) {
+			const restoreResult = this.snapshotManager.restore(snapshot, this.ascensionSystem);
+			if (!restoreResult) return false;
+		}
+
+		// Fall back to legacy fields for v1/v2 saves
+		const legacy = snapshot.legacyCompat || snapshot;
+		const checkpointWave = Math.max(1, legacy.checkpointWave || legacy.wave || 1);
 
 		this.enemies = [];
 		this.projectiles = [];
@@ -1095,34 +1294,44 @@ export class Game {
 		this.player.reset();
 
 		// Restore skill & ascension state first, then sync player stats
-		if (snapshot.skillManager) {
-			this.skillManager.restoreFromSave(snapshot.skillManager);
+		if (legacy.skillManager) {
+			this.skillManager.restoreFromSave(legacy.skillManager);
 		}
-		if (snapshot.ascensionSystem) {
-			this.ascensionSystem.restoreFromSave(snapshot.ascensionSystem);
+		if (legacy.ascensionSystem) {
+			this.ascensionSystem.restoreFromSave(legacy.ascensionSystem);
 		}
 		// Re-equip plugins for restored skills
 		this._reequipPluginsFromState();
 		this._syncPlayerFromSkills();
 
 		// Overlay HP/shield from snapshot (player may have taken damage before save)
-		if (snapshot.player) {
-			this._applyPlayerSaveState(snapshot.player);
+		if (legacy.player) {
+			this._applyPlayerSaveState(legacy.player);
 		}
 
 		this.wave = checkpointWave;
-		this.score = snapshot.score || 0;
+		this.score = legacy.score || 0;
 		this.gameState = Game.STATES.PLAYING;
 		this._gameOverTracked = false;
-		this.setRunDifficulty(snapshot.difficulty || DEFAULT_RUN_DIFFICULTY);
+		this.setRunDifficulty(legacy.difficulty || DEFAULT_RUN_DIFFICULTY);
 
 		this.waveManager.reset();
 		this.waveManager.setDifficulty(this.runDifficulty);
 		this.waveManager.startWave(this.wave);
 
-		if (snapshot.modifierKey) {
-			this.applyWaveModifier(snapshot.modifierKey);
+		if (legacy.modifierKey) {
+			this.applyWaveModifier(legacy.modifierKey);
 		}
+
+		// Dispatch WAVE_START for the restored wave
+		this.dispatcher.dispatch({
+			type: ActionTypes.WAVE_START,
+			payload: {
+				wave: this.wave,
+				enemiesToSpawn: this.waveManager.enemiesToSpawn,
+				isBoss: this.waveManager.isBossWave,
+			},
+		});
 
 		telemetry.track("save_loaded", {
 			wave: this.wave,

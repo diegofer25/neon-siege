@@ -8,6 +8,7 @@
 import { ASCENSION_POOL, ASCENSION_PICKS, ASCENSION_WAVES } from '../config/SkillConfig.js';
 import { playSFX } from '../main.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
+import { ActionTypes } from '../state/index.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
@@ -60,6 +61,13 @@ export class AscensionSystem {
 
 		this.currentOptions = options;
 		this.pendingPick = true;
+
+		// Dispatch to state store
+		this.game.dispatcher?.dispatch({
+			type: ActionTypes.ASCENSION_OFFER,
+			options: options.map(o => ({ id: o.id, name: o.name })),
+		});
+
 		return options;
 	}
 

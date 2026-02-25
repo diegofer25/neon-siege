@@ -2,6 +2,7 @@ import { Enemy } from '../Enemy.js';
 import { Boss } from '../Boss.js';
 import { GameConfig } from '../config/GameConfig.js';
 import { playSFX } from '../main.js';
+import { ActionTypes } from '../state/ActionDispatcher.js';
 
 /**
  * Manages wave progression, enemy spawning, and wave completion logic.
@@ -166,6 +167,18 @@ export class WaveManager {
         enemy.setGameReference(this.game);
         
         this.game.enemies.push(enemy);
+
+        // Dispatch enemy spawned to store
+        if (this.game.dispatcher) {
+            this.game.dispatcher.dispatch({
+                type: ActionTypes.ENEMY_SPAWNED,
+                payload: { type: enemy.isBoss ? 'boss' : 'normal' },
+            });
+            this.game.dispatcher.dispatch({
+                type: ActionTypes.WAVE_ENEMY_SPAWNED,
+                payload: {},
+            });
+        }
 
         if (this.enemiesSpawned === 0) {
             if (enemy.isSplitter) {

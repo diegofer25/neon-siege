@@ -1,5 +1,6 @@
 import { playSFX } from '../main.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
+import { ActionTypes } from '../state/ActionDispatcher.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 
 const DROP_TABLE = [
@@ -52,11 +53,25 @@ export class LootSystem {
             case 'score': {
                 const amount = typeof drop.amount === 'function' ? drop.amount() : drop.amount;
                 this.game.score += amount;
+                // Dispatch score to store
+                if (this.game.dispatcher) {
+                    this.game.dispatcher.dispatch({
+                        type: ActionTypes.SCORE_ADD,
+                        payload: { amount },
+                    });
+                }
                 break;
             }
             case 'heal': {
                 const healAmount = this.game.player.maxHp * drop.amount;
                 this.game.player.hp = Math.min(this.game.player.maxHp, this.game.player.hp + healAmount);
+                // Dispatch heal to store
+                if (this.game.dispatcher) {
+                    this.game.dispatcher.dispatch({
+                        type: ActionTypes.PLAYER_HEAL,
+                        payload: { amount: healAmount },
+                    });
+                }
                 break;
             }
             case 'tempBuff':
@@ -100,10 +115,14 @@ export class LootSystem {
             case 'doubleFireRate':
                 if (this._originalFireRateMod === null) this._originalFireRateMod = player.fireRateMod;
                 player.fireRateMod *= 2;
+                buff.multiplier = 2;
+                buff.type = 'fireRate';
                 break;
             case 'doubleDamage':
                 if (this._originalDamageMod === null) this._originalDamageMod = player.damageMod;
                 player.damageMod *= 2;
+                buff.multiplier = 2;
+                buff.type = 'damage';
                 break;
             case 'shield':
                 player.hasShield = true;
@@ -116,6 +135,14 @@ export class LootSystem {
         }
 
         this.activeTempBuffs.push(buff);
+
+        // Dispatch buff to store (source of truth for save/load and ComputedStats)
+        if (this.game.dispatcher) {
+            this.game.dispatcher.dispatch({
+                type: ActionTypes.BUFF_APPLY,
+                payload: { buff: { ...buff } },
+            });
+        }
     }
 
     _removeTempBuff(buff) {
