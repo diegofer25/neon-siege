@@ -294,6 +294,8 @@ export class Game {
 		// XP/level now owned by skillManager; keep accessors for compatibility
 		this._waveStartTime = 0;
 		this._waveCountdownTimeouts = [];
+		/** @type {Function|null} Saved onGo callback when countdown is interrupted by pause */
+		this._pendingCountdownOnGo = null;
 
 		/** @type {boolean} DevPanel: draw collision radii overlay */
 		this.debugHitboxes = false;
@@ -322,6 +324,7 @@ export class Game {
 		}
 
 		this._clearWaveCountdownTimeouts();
+		this._pendingCountdownOnGo = onGo;
 		const sequence = ['3', '2', '1', 'GO'];
 		let index = 0;
 
@@ -333,6 +336,7 @@ export class Game {
 			this._setCountdownDisplay(current, isGo);
 
 			if (isGo) {
+				this._pendingCountdownOnGo = null;
 				onGo();
 				const hideId = setTimeout(() => cd.hide(), 450);
 				this._waveCountdownTimeouts.push(hideId);
@@ -582,6 +586,12 @@ export class Game {
 		this.particles = [];
 		// Clear any pooled particles
 		this.particlePool.clear();
+		// Stop in-progress wave countdown so it doesn't fire while paused
+		if (this._waveCountdownTimeouts.length > 0) {
+			this._clearWaveCountdownTimeouts();
+			const cd = document.querySelector('wave-countdown');
+			cd?.hide();
+		}
 	}
 
 	/**
@@ -589,6 +599,12 @@ export class Game {
 	 */
 	resume() {
 		this.gameState = "playing";
+		// Restart the countdown if one was running when we paused
+		if (this._pendingCountdownOnGo) {
+			const cb = this._pendingCountdownOnGo;
+			this._pendingCountdownOnGo = null;
+			this._runWaveCountdown(cb);
+		}
 	}
 
 	/**
