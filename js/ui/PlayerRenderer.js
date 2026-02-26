@@ -66,7 +66,7 @@ export function updatePlayerVisualTimers(p, delta) {
     }
 
     // Chain Hit lightning flicker
-    if (vs.learnedSkills.has('techno_chain_hit') || vs.learnedSkills.has('techno_chain_master')) {
+    if (vs.learnedSkills.has('techno_chain_hit') || vs.learnedSkills.has('techno_lightning_cascade')) {
         p._chainFlickerTimer += delta;
         if (p._chainFlickerTimer >= p._chainFlickerNext) {
             p._chainFlickerOn = !p._chainFlickerOn;
@@ -419,8 +419,8 @@ export function renderPlayer(ctx, p) {
         ctx.restore();
     }
 
-    // Homing Rounds
-    if (vs.learnedSkills.has('gunner_homing')) {
+    // Homing Rounds (from Aimbot Overdrive ultimate)
+    if (vs.learnedSkills.has('gunner_aimbot_overdrive')) {
         ctx.save();
         ctx.strokeStyle = '#ff2dec';
         ctx.lineWidth = 1;
@@ -520,9 +520,9 @@ export function renderPlayer(ctx, p) {
     }
 
     // Chain Hit lightning arcs
-    if ((vs.learnedSkills.has('techno_chain_hit') || vs.learnedSkills.has('techno_chain_master')) && p._chainFlickerOn) {
+    if ((vs.learnedSkills.has('techno_chain_hit') || vs.learnedSkills.has('techno_lightning_cascade')) && p._chainFlickerOn) {
         ctx.save();
-        const isChainMaster = vs.learnedSkills.has('techno_chain_master');
+        const isChainMaster = vs.learnedSkills.has('techno_lightning_cascade');
         ctx.strokeStyle = isChainMaster ? '#aa44ff' : '#6666ff';
         ctx.lineWidth = isChainMaster ? 2 : 1.5;
         ctx.shadowColor = ctx.strokeStyle;

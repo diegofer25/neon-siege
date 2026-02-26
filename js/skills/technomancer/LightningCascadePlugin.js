@@ -10,6 +10,15 @@ const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
 export class LightningCascadePlugin extends BaseSkillPlugin {
+	/** Passive: chain damage escalation (merged from Chain Master) */
+	getModifiers() {
+		const escalation = this.skillConfig.effect.chainDamageEscalation;
+		if (!escalation) return [];
+		return [
+			{ stat: 'chainDamageEscalation', op: 'add', value: escalation },
+		];
+	}
+
 	/**
 	 * @param {import('../../Game.js').Game} game
 	 * @param {{ skill: Object, rank: number }} skillInfo

@@ -20,7 +20,6 @@ import { QuickAimPlugin } from './gunner/QuickAimPlugin.js';
 import { CriticalMasteryPlugin } from './gunner/CriticalMasteryPlugin.js';
 import { BarragePlugin } from './gunner/BarragePlugin.js';
 import { OverchargePlugin } from './gunner/OverchargePlugin.js';
-import { HomingPlugin } from './gunner/HomingPlugin.js';
 import { AimbotOverdrivePlugin } from './gunner/AimbotOverdrivePlugin.js';
 
 // ── Technomancer plugins ──
@@ -33,7 +32,6 @@ import { BurnPlugin } from './technomancer/BurnPlugin.js';
 import { ElementalSynergyPlugin } from './technomancer/ElementalSynergyPlugin.js';
 import { NeonNovaPlugin } from './technomancer/NeonNovaPlugin.js';
 import { MeltdownPlugin } from './technomancer/MeltdownPlugin.js';
-import { ChainMasterPlugin } from './technomancer/ChainMasterPlugin.js';
 import { LightningCascadePlugin } from './technomancer/LightningCascadePlugin.js';
 
 // ── Ascension plugins ──
@@ -66,7 +64,6 @@ export const SKILL_PLUGIN_REGISTRY = new Map(/** @type {Array<[string, typeof im
 	['gunner_critical_mastery', CriticalMasteryPlugin],
 	['gunner_barrage', BarragePlugin],
 	['gunner_overcharge', OverchargePlugin],
-	['gunner_homing', HomingPlugin],
 	['gunner_aimbot_overdrive', AimbotOverdrivePlugin],
 
 	// ── Technomancer ──
@@ -79,7 +76,6 @@ export const SKILL_PLUGIN_REGISTRY = new Map(/** @type {Array<[string, typeof im
 	['techno_elemental_synergy', ElementalSynergyPlugin],
 	['techno_neon_nova', NeonNovaPlugin],
 	['techno_meltdown', MeltdownPlugin],
-	['techno_chain_master', ChainMasterPlugin],
 	['techno_lightning_cascade', LightningCascadePlugin],
 
 	// ── Ascension modifiers ──

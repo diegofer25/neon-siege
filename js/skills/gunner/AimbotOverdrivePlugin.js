@@ -9,6 +9,15 @@ const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
 
 export class AimbotOverdrivePlugin extends BaseSkillPlugin {
+	/** Passive: homing projectiles (merged from Homing Rounds) */
+	getModifiers() {
+		const homing = this.skillConfig.effect.homingStrength;
+		if (!homing) return [];
+		return [
+			{ stat: 'homingStrength', op: 'set', value: homing },
+		];
+	}
+
 	/**
 	 * @param {import('../../Game.js').Game} game
 	 * @param {{ skill: Object, rank: number }} skillInfo

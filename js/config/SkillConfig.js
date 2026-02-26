@@ -272,28 +272,17 @@ export const ARCHETYPES = {
 				maxRank: 2,
 				effect: { shotInterval: 8, damageMultiplier: 5, intervalReduction: 2, multiplierPerRank: 2 },
 			},
-			// ── Tier 4 "Perfection" (gate: 10 pts, token-locked) ──
-			// Prerequisites: [0]←Critical Mastery  [1]←Bullet Storm
-			{
-				id: 'gunner_homing',
-				name: 'Homing Rounds',
-				description: 'All projectiles gently track enemies.',
-				icon: '🧲',
-				type: 'passive',
-				tier: 4,
-				maxRank: 1,
-				effect: { homingStrength: 0.03 },
-			},
+			// ── Ultimate (standalone — requires 15 total skill points in Gunner tree) ──
 			{
 				id: 'gunner_aimbot_overdrive',
 				name: 'Aimbot Overdrive',
-				description: 'Ultimate: Lock onto every enemy simultaneously. Fire homing shots at all of them for 6s. 90s base CD.',
+				description: 'Ultimate: Lock onto every enemy simultaneously. Fire homing shots at all of them for 6s. All projectiles gently track enemies. 90s base CD.',
 				icon: '🎯',
 				type: 'ultimate',
 				tier: 4,
 				maxRank: 1,
 				cooldown: 90000,
-				effect: { duration: 6000, damagePerShot: 1.5 },
+				effect: { duration: 6000, damagePerShot: 1.5, homingStrength: 0.03 },
 			},
 		],
 	},
@@ -406,28 +395,17 @@ export const ARCHETYPES = {
 				maxRank: 2,
 				effect: { meltdownChance: 0.15, chancePerRank: 0.10, meltdownDamageRatio: 0.50, meltdownRadius: 60 },
 			},
-			// ── Tier 4 "Cataclysm" (gate: 10 pts, token-locked) ──
-			// Prerequisites: [0]←Elemental Synergy  [1]←Neon Nova
-			{
-				id: 'techno_chain_master',
-				name: 'Chain Master',
-				description: 'Chain hits deal escalating damage (+25% per bounce).',
-				icon: '🔗',
-				type: 'passive',
-				tier: 4,
-				maxRank: 1,
-				effect: { chainDamageEscalation: 0.25 },
-			},
+			// ── Ultimate (standalone — requires 15 total skill points in Technomancer tree) ──
 			{
 				id: 'techno_lightning_cascade',
 				name: 'Lightning Cascade',
-				description: 'Ultimate: Chain lightning bounces between ALL enemies. Each bounce amplifies damage by 15%. 90s base CD.',
+				description: 'Ultimate: Chain lightning bounces between ALL enemies. Each bounce amplifies damage by 15%. Chain hits deal escalating damage (+25% per bounce). 90s base CD.',
 				icon: '⚡',
 				type: 'ultimate',
 				tier: 4,
 				maxRank: 1,
 				cooldown: 90000,
-				effect: { baseDamage: 50, bounceAmplification: 0.15, maxBounces: 100 },
+				effect: { baseDamage: 50, bounceAmplification: 0.15, maxBounces: 100, chainDamageEscalation: 0.25 },
 			},
 		],
 	},

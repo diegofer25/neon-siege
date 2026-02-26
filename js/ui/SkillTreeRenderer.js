@@ -26,8 +26,6 @@ const CY = WORLD_H / 2 + 10;
 const ATTR_RADIUS = 68;
 const TIER_RADII = [178, 282, 368, 436];
 const SECTOR_SPREAD_DEG = 22;
-/** Ultimate sits just below the archetype label (label is TIER_RADII[3]+50) */
-const ULT_LABEL_OFFSET = 30;
 
 const NODE_SIZE = 46;
 const ATTR_NODE_SIZE = 52;
@@ -410,7 +408,7 @@ export class SkillTreeRenderer {
 				if (ti >= 0 && ti < 4) byTier[ti].push(skill);
 			}
 
-			for (let t = 0; t < 4; t++) {
+			for (let t = 0; t < 3; t++) {
 				const skills = byTier[t];
 				const count = skills.length;
 				if (!count) continue;
@@ -433,9 +431,9 @@ export class SkillTreeRenderer {
 				}
 			}
 
-			// Place ultimates just below the archetype label (standalone, no branch edges)
+			// Place ultimates at T4 radius, centred on the archetype angle (standalone, no branch edges)
 			for (const ult of ultimates) {
-				const ultR = TIER_RADII[3] + ULT_LABEL_OFFSET;
+				const ultR = TIER_RADII[3];
 				const [ux, uy] = polar(archCfg.angle, ultR);
 				nodes.push({
 					skillId: ult.id,
@@ -480,7 +478,7 @@ export class SkillTreeRenderer {
 			}
 
 			// Tier N → tier N+1 (closest-neighbour in previous tier, skip ultimates)
-			for (let t = 1; t < 4; t++) {
+			for (let t = 1; t < 3; t++) {
 				const curr = archData.nodes.filter(n => n.tier === t + 1 && n.type !== 'ultimate');
 				const prev = archData.nodes.filter(n => n.tier === t && n.type !== 'ultimate');
 				for (const c of curr) {
