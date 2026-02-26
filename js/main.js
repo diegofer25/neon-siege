@@ -10,7 +10,6 @@ import { telemetry } from './managers/TelemetryManager.js';
 import { settingsManager } from './managers/SettingsManager.js';
 import { saveStateManager } from './managers/SaveStateManager.js';
 import { audioManager } from './managers/AudioManager.js';
-import { vfxHelper } from './managers/VFXHelper.js';
 import { hudManager } from './managers/HUDManager.js';
 import { skillUI } from './ui/SkillUIController.js';
 import { DevPanel } from './ui/DevPanel.js';
@@ -860,25 +859,6 @@ function resetSettingsToDefaults() {
     const defaults = settingsManager.resetToDefaults();
     applySettings(defaults);
 }
-
-/** @deprecated Import from managers/VFXHelper.js instead */
-export function createFloatingText(text, x, y, className = 'damage') {
-    vfxHelper.createFloatingText(text, x, y, className);
-}
-
-/** @deprecated Import from managers/VFXHelper.js instead */
-export function screenFlash() {
-    vfxHelper.screenFlash();
-}
-
-/** @deprecated Import from ui/SkillUIController.js instead */
-export function showLevelUpPanel() { skillUI.showLevelUpPanel(); }
-
-/** @deprecated Import from ui/SkillUIController.js instead */
-export function showAscensionPanel() { skillUI.showAscensionPanel(); }
-
-/** @deprecated Import from ui/SkillUIController.js instead */
-export function closeAllSkillOverlays() { skillUI.closeAll(); }
 
 // Initialize application when DOM content is fully loaded
 if (document.readyState === 'loading') {
