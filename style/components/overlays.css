@@ -1,9 +1,0 @@
-/* ============================================================================
-   OVERLAYS — styles migrated to shadow DOM components:
-     - Base overlay → shared-styles.js overlayStyles
-     - Start screen → <start-screen>
-     - Game over → <game-over-screen>
-     - Victory → <victory-screen>
-     - Settings → <settings-modal>
-     - Pause → <pause-screen>
-   ============================================================================ */

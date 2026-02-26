@@ -13,15 +13,9 @@
 @import 'layout/game-container.css';
 
 /* Components */
-@import 'components/hud.css';
-@import 'components/health.css';
-@import 'components/stats.css';
-@import 'components/overlays.css';
 @import 'components/cards.css';
-@import 'components/skills.css';
 
 /* Effects */
-@import 'effects/floating-text.css';
 @import 'effects/visual-effects.css';
 @import 'effects/animations.css';
 
