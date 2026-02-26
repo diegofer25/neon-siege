@@ -149,10 +149,26 @@ export class LootSystem {
                 item.alpha = 1;
             }
 
-            // Pickup collision (squared distance)
+            // Pickup collision — player walks over or projectile hits
+            let collected = false;
             const dx = player.x - item.x;
             const dy = player.y - item.y;
             if (dx * dx + dy * dy < pickupDistSq) {
+                collected = true;
+            } else {
+                const projectiles = this.game.projectiles;
+                for (let p = projectiles.length - 1; p >= 0; p--) {
+                    const proj = projectiles[p];
+                    const pdx = proj.x - item.x;
+                    const pdy = proj.y - item.y;
+                    const dist = proj.radius + LOOT_RADIUS;
+                    if (pdx * pdx + pdy * pdy < dist * dist) {
+                        collected = true;
+                        break;
+                    }
+                }
+            }
+            if (collected) {
                 this.applyDrop(item.drop, item.x, item.y);
                 const last = this.groundItems.length - 1;
                 if (i !== last) this.groundItems[i] = this.groundItems[last];
