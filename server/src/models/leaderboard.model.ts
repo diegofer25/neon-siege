@@ -1,0 +1,159 @@
+import { query, queryOne } from '../config/database';
+
+export interface LeaderboardEntry {
+  id: string;
+  user_id: string;
+  difficulty: 'easy' | 'normal' | 'hard';
+  score: number;
+  wave: number;
+  kills: number;
+  max_combo: number;
+  level: number;
+  is_victory: boolean;
+  run_details: RunDetails;
+  game_duration_ms: number | null;
+  client_version: string | null;
+  checksum: string | null;
+  flagged: boolean;
+  created_at: Date;
+}
+
+export interface RunDetails {
+  skills?: {
+    ranks?: Record<string, number>;
+    equippedPassives?: string[];
+    equippedActives?: string[];
+    equippedUltimate?: string | null;
+  };
+  ascensions?: string[];
+  attributes?: {
+    STR?: number;
+    DEX?: number;
+    VIT?: number;
+    INT?: number;
+    LUCK?: number;
+  };
+  stats?: {
+    damageMod?: number;
+    fireRateMod?: number;
+    maxHp?: number;
+    maxShieldHp?: number;
+    piercingLevel?: number;
+    hasTripleShot?: boolean;
+    hasHomingShots?: boolean;
+    explosiveShots?: boolean;
+  };
+}
+
+export interface LeaderboardRow extends LeaderboardEntry {
+  display_name: string;
+  rank: number;
+}
+
+export interface CreateEntryData {
+  userId: string;
+  difficulty: string;
+  score: number;
+  wave: number;
+  kills: number;
+  maxCombo: number;
+  level: number;
+  isVictory: boolean;
+  runDetails: RunDetails;
+  gameDurationMs?: number;
+  clientVersion?: string;
+  checksum?: string;
+  flagged?: boolean;
+}
+
+export async function createEntry(data: CreateEntryData): Promise<LeaderboardEntry> {
+  const result = await queryOne<LeaderboardEntry>(
+    `INSERT INTO leaderboard_entries
+      (user_id, difficulty, score, wave, kills, max_combo, level, is_victory, run_details, game_duration_ms, client_version, checksum, flagged)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+     RETURNING *`,
+    [
+      data.userId,
+      data.difficulty,
+      data.score,
+      data.wave,
+      data.kills,
+      data.maxCombo,
+      data.level,
+      data.isVictory,
+      JSON.stringify(data.runDetails),
+      data.gameDurationMs ?? null,
+      data.clientVersion ?? null,
+      data.checksum ?? null,
+      data.flagged ?? false,
+    ]
+  );
+  return result!;
+}
+
+export async function getLeaderboard(
+  difficulty: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ entries: LeaderboardRow[]; total: number }> {
+  const [entries, countResult] = await Promise.all([
+    query<LeaderboardRow>(
+      `SELECT
+        le.*,
+        u.display_name,
+        ROW_NUMBER() OVER (ORDER BY le.score DESC) AS rank
+       FROM leaderboard_entries le
+       JOIN users u ON u.id = le.user_id
+       WHERE le.difficulty = $1 AND le.flagged = FALSE
+       ORDER BY le.score DESC
+       LIMIT $2 OFFSET $3`,
+      [difficulty, limit, offset]
+    ),
+    queryOne<{ count: string }>(
+      `SELECT COUNT(*) as count FROM leaderboard_entries WHERE difficulty = $1 AND flagged = FALSE`,
+      [difficulty]
+    ),
+  ]);
+
+  return {
+    entries,
+    total: parseInt(countResult?.count || '0'),
+  };
+}
+
+export async function getUserEntries(
+  userId: string,
+  difficulty: string,
+  limit: number = 10
+): Promise<LeaderboardRow[]> {
+  return query<LeaderboardRow>(
+    `SELECT
+      le.*,
+      u.display_name,
+      (SELECT COUNT(*) + 1 FROM leaderboard_entries le2
+       WHERE le2.difficulty = le.difficulty AND le2.score > le.score AND le2.flagged = FALSE
+      ) AS rank
+     FROM leaderboard_entries le
+     JOIN users u ON u.id = le.user_id
+     WHERE le.user_id = $1 AND le.difficulty = $2 AND le.flagged = FALSE
+     ORDER BY le.score DESC
+     LIMIT $3`,
+    [userId, difficulty, limit]
+  );
+}
+
+export async function getUserRank(userId: string, difficulty: string): Promise<number | null> {
+  const result = await queryOne<{ rank: string }>(
+    `SELECT rank FROM (
+      SELECT
+        user_id,
+        ROW_NUMBER() OVER (ORDER BY MAX(score) DESC) AS rank
+      FROM leaderboard_entries
+      WHERE difficulty = $1 AND flagged = FALSE
+      GROUP BY user_id
+    ) ranked
+    WHERE user_id = $2`,
+    [difficulty, userId]
+  );
+  return result ? parseInt(result.rank) : null;
+}

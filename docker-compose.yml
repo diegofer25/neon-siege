@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: neon-siege-db
+    environment:
+      POSTGRES_USER: neon_siege
+      POSTGRES_PASSWORD: neon_siege
+      POSTGRES_DB: neon_siege
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
