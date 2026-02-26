@@ -12,6 +12,8 @@
  */
 
 import { skillIconHtml } from '../utils/IconUtils.js';
+import '../ui/components/HudTooltip.js';
+import '../ui/components/GameHud.js';
 
 // ---------------------------------------------------------------------------
 // DOM-ref helper – returns element or a stub so we never null-check in hot path
@@ -20,8 +22,13 @@ const NOOP_EL = /** @type {HTMLElement} */ (
     Object.freeze({ style: {}, textContent: '', className: '', classList: { add() {}, remove() {} }, dataset: {}, innerHTML: '' })
 );
 
-/** @param {string} id @returns {HTMLElement} */
-function $(id) { return document.getElementById(id) || NOOP_EL; }
+/**
+ * Resolve an element by id, looking inside <game-hud>'s shadow root first.
+ * @param {string} id
+ * @param {ShadowRoot|Document} root
+ * @returns {HTMLElement}
+ */
+function $(id, root = document) { return /** @type {HTMLElement} */ (root.getElementById(id)) || NOOP_EL; }
 
 // ---------------------------------------------------------------------------
 // HUDManager
@@ -88,59 +95,62 @@ class HUDManager {
         /** @type {HTMLElement} */ this._hpsValue = NOOP_EL;
 
         // Tooltip
-        /** @type {HTMLElement|null} */ this._hudTooltipEl = null;
+        /** @type {HudTooltipElement|null} */ this._hudTooltipEl = null;
     }
 
     // ------------------------------------------------------------------
     // Cache all DOM refs once
     // ------------------------------------------------------------------
     _cacheRefs() {
-        this._healthFill = $('healthFill');
-        this._healthText = $('healthText');
+        const hudEl = document.querySelector('game-hud');
+        const root = hudEl?.shadowRoot || document;
 
-        this._defenseBar = $('defenseBar');
-        this._defenseFill = $('defenseFill');
-        this._defenseText = $('defenseText');
+        this._healthFill = $('healthFill', root);
+        this._healthText = $('healthText', root);
 
-        this._waveEl = $('wave');
-        this._scoreValue = $('scoreValue');
-        this._scoreMultiplier = $('scoreMultiplier');
-        this._xpFill = $('xpFill');
-        this._xpLevel = $('xpLevel');
+        this._defenseBar = $('defenseBar', root);
+        this._defenseFill = $('defenseFill', root);
+        this._defenseText = $('defenseText', root);
 
-        this._comboCounter = $('comboCounter');
-        this._comboLabel = $('comboLabel');
-        this._comboCount = $('comboCount');
-        this._comboTimerFill = $('comboTimerFill');
+        this._waveEl = $('wave', root);
+        this._scoreValue = $('scoreValue', root);
+        this._scoreMultiplier = $('scoreMultiplier', root);
+        this._xpFill = $('xpFill', root);
+        this._xpLevel = $('xpLevel', root);
 
-        this._challengeDisplay = $('challengeDisplay');
+        this._comboCounter = $('comboCounter', root);
+        this._comboLabel = $('comboLabel', root);
+        this._comboCount = $('comboCount', root);
+        this._comboTimerFill = $('comboTimerFill', root);
+
+        this._challengeDisplay = $('challengeDisplay', root);
 
         // Skill / passive slot arrays
         this._skillNames = [];
         this._skillCds = [];
         this._skillSlots = [];
         for (let i = 0; i < 4; i++) {
-            const nameEl = $(`skillName${i}`);
+            const nameEl = $(`skillName${i}`, root);
             this._skillNames.push(nameEl);
-            this._skillCds.push($(`skillCd${i}`));
+            this._skillCds.push($(`skillCd${i}`, root));
             this._skillSlots.push(nameEl !== NOOP_EL ? nameEl.closest('.skill-slot') : null);
         }
 
-        this._passiveSlotsContainer = $('passiveSlots');
+        this._passiveSlotsContainer = $('passiveSlots', root);
         this._passiveSlotCount = 0; // tracks how many DOM children exist
 
-        this._ascensionSlots = $('ascensionSlots');
+        this._ascensionSlots = $('ascensionSlots', root);
 
-        this._perfContainer = $('performanceStats');
-        this._fpsValue = $('fpsValue');
-        this._frameTimeValue = $('frameTimeValue');
-        this._avgFpsValue = $('avgFpsValue');
-        this._optimizedValue = $('optimizedValue');
+        this._perfContainer = $('performanceStats', root);
+        this._fpsValue = $('fpsValue', root);
+        this._frameTimeValue = $('frameTimeValue', root);
+        this._avgFpsValue = $('avgFpsValue', root);
+        this._optimizedValue = $('optimizedValue', root);
 
-        this._attackValue = $('attackValue');
-        this._speedValue = $('speedValue');
-        this._regenValue = $('regenValue');
-        this._hpsValue = $('hpsValue');
+        this._attackValue = $('attackValue', root);
+        this._speedValue = $('speedValue', root);
+        this._regenValue = $('regenValue', root);
+        this._hpsValue = $('hpsValue', root);
 
         this._cached = true;
     }
@@ -385,12 +395,14 @@ class HUDManager {
     // HUD Tooltip system
     // ------------------------------------------------------------------
     setupTooltips() {
-        this._hudTooltipEl = document.getElementById('hudTooltip');
+        this._hudTooltipEl = /** @type {HudTooltipElement} */ (document.querySelector('hud-tooltip'));
         if (!this._hudTooltipEl) return;
 
         document.addEventListener('mouseover', (e) => {
             if (!this.game) return;
-            const target = /** @type {Element} */ (e.target);
+            // Use composedPath to pierce Shadow DOM event retargeting
+            const target = /** @type {Element} */ (e.composedPath()[0]);
+            if (!(target instanceof Element)) return;
             const skillSlot = /** @type {HTMLElement|null} */ (target.closest('.skill-slot[data-tooltip-type]'));
             const passiveSlot = /** @type {HTMLElement|null} */ (target.closest('.passive-slot[data-tooltip-type]'));
             const ascBadge = /** @type {HTMLElement|null} */ (target.closest('.ascension-badge[data-mod-id]'));
@@ -416,8 +428,8 @@ class HUDManager {
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (this._hudTooltipEl && this._hudTooltipEl.style.display !== 'none') {
-                this._positionTooltip(e.clientX, e.clientY);
+            if (this._hudTooltipEl?.isShown) {
+                this._hudTooltipEl.positionTooltip(e.clientX, e.clientY);
             }
         });
     }
@@ -492,41 +504,16 @@ class HUDManager {
     _showTooltip(info, anchorEl) {
         const el = this._hudTooltipEl;
         if (!el) return;
-        el.className = `hud-tooltip${info.type === 'ascension' ? ' hud-tooltip--ascension' : ''}`;
         const iconHtml = info.iconImage
             ? skillIconHtml(info, 20)
             : `<span class="hud-tooltip__icon">${info.icon}</span>`;
-        el.innerHTML = `
-            <div class="hud-tooltip__header">
-                ${iconHtml}
-                <span class="hud-tooltip__name">${info.name}</span>
-            </div>
-            <div class="hud-tooltip__meta">${info.meta}</div>
-            <div class="hud-tooltip__desc">${info.desc}</div>
-            ${info.cd ? `<div class="hud-tooltip__cd">${info.cd}</div>` : ''}
-        `;
-        el.style.display = 'block';
+        el.showTooltip(info, iconHtml);
         const rect = anchorEl.getBoundingClientRect();
-        this._positionTooltip(rect.left + rect.width / 2, rect.top);
+        el.positionTooltip(rect.left + rect.width / 2, rect.top);
     }
 
     _hideTooltip() {
-        if (this._hudTooltipEl) this._hudTooltipEl.style.display = 'none';
-    }
-
-    /** @param {number} cx @param {number} cy */
-    _positionTooltip(cx, cy) {
-        const el = this._hudTooltipEl;
-        if (!el) return;
-        const tw = el.offsetWidth;
-        const th = el.offsetHeight;
-        const margin = 10;
-        let x = cx - tw / 2;
-        let y = cy - th - 12;
-        x = Math.max(margin, Math.min(window.innerWidth - tw - margin, x));
-        if (y < margin) y = cy + 20;
-        el.style.left = x + 'px';
-        el.style.top = y + 'px';
+        this._hudTooltipEl?.hideTooltip();
     }
 }
 

@@ -307,23 +307,16 @@ export class Game {
 	}
 
 	_setCountdownDisplay(label, isGo = false) {
-		const countdown = document.getElementById('waveCountdown');
-		const text = document.getElementById('waveCountdownText');
-		if (!countdown || !text) {
-			return;
-		}
-
-		text.textContent = label;
-		text.classList.toggle('go', isGo);
-		text.style.animation = 'none';
-		void text.offsetWidth;
-		text.style.animation = '';
+		const cd = document.querySelector('wave-countdown');
+		if (!cd) return;
+		cd.setText(label);
+		cd.setGo(isGo);
+		cd.restartAnimation();
 	}
 
 	_runWaveCountdown(onGo) {
-		const countdown = document.getElementById('waveCountdown');
-		const text = document.getElementById('waveCountdownText');
-		if (!countdown || !text) {
+		const cd = document.querySelector('wave-countdown');
+		if (!cd) {
 			onGo();
 			return;
 		}
@@ -332,7 +325,7 @@ export class Game {
 		const sequence = ['3', '2', '1', 'GO'];
 		let index = 0;
 
-		countdown.classList.add('show');
+		cd.show();
 
 		const runStep = () => {
 			const current = sequence[index];
@@ -341,9 +334,7 @@ export class Game {
 
 			if (isGo) {
 				onGo();
-				const hideId = setTimeout(() => {
-					countdown.classList.remove('show');
-				}, 450);
+				const hideId = setTimeout(() => cd.hide(), 450);
 				this._waveCountdownTimeouts.push(hideId);
 				return;
 			}

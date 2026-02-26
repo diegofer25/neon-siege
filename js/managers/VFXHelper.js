@@ -36,17 +36,10 @@ class VFXHelper {
             });
         }
 
-        const el = document.createElement('div');
-        el.className = `floating-text ${className}`;
-        el.textContent = text;
-        el.style.left = x + 'px';
-        el.style.top = y + 'px';
-
-        document.getElementById('floatingTexts').appendChild(el);
-
-        setTimeout(() => {
-            if (el.parentNode) el.parentNode.removeChild(el);
-        }, 1000);
+        const container = document.querySelector('floating-texts');
+        if (container) {
+            container.addText(text, className, x, y);
+        }
     }
 
     /**

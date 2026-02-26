@@ -16,307 +16,40 @@
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         
-        <!-- HUD Elements -->
-        <div id="hud">
-            <div id="healthBar" class="hud-element">
-                <div class="healthbar">
-                    <div class="healthfill" id="healthFill"></div>
-                </div>
-                <span id="healthText">100/100</span>
-            </div>
-            <div id="defenseBar" class="hud-element" style="display: none;">
-                <div class="defensebar">
-                    <div class="defensefill" id="defenseFill"></div>
-                </div>
-                <span id="defenseText">0/0</span>
-            </div>
-            <!-- Skill Slots (QERT) -->
-            <div id="skillSlots" class="skill-slots">
-                <div class="skill-slot" data-slot="0" data-key="Q" data-tooltip-type="active">
-                    <span class="skill-key">Q</span>
-                    <div class="skill-cd-fill" id="skillCd0"></div>
-                    <span class="skill-slot-name" id="skillName0">—</span>
-                </div>
-                <div class="skill-slot" data-slot="1" data-key="E" data-tooltip-type="active">
-                    <span class="skill-key">E</span>
-                    <div class="skill-cd-fill" id="skillCd1"></div>
-                    <span class="skill-slot-name" id="skillName1">—</span>
-                </div>
-                <div class="skill-slot" data-slot="2" data-key="R" data-tooltip-type="active">
-                    <span class="skill-key">R</span>
-                    <div class="skill-cd-fill" id="skillCd2"></div>
-                    <span class="skill-slot-name" id="skillName2">—</span>
-                </div>
-                <div class="skill-slot ultimate" data-slot="3" data-key="T" data-tooltip-type="active">
-                    <span class="skill-key">T</span>
-                    <div class="skill-cd-fill" id="skillCd3"></div>
-                    <span class="skill-slot-name" id="skillName3">🔒</span>
-                </div>
-            </div>
-            <!-- Passive skill icons (dynamically populated) -->
-            <div id="passiveSlots" class="passive-slots"></div>
-            <!-- Ascension Modifier Badges -->
-            <div id="ascensionSlots" class="ascension-slots"></div>
-            <div id="waveCounter" class="hud-element">
-                <span id="wave">Wave: 1</span>
-            </div>
-            <div id="settingsButton" class="hud-element">
-                <button id="settingsBtn" title="Settings">⚙️</button>
-            </div>
-            <div id="statsDisplay" class="hud-element">
-                <div class="stat-item">
-                    <span class="stat-icon">⚔️</span>
-                    <span class="stat-label">ATK:</span>
-                    <span id="attackValue" class="stat-value">10</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-icon">⚡</span>
-                    <span class="stat-label">SPD:</span>
-                    <span id="speedValue" class="stat-value">1.0x</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-icon">❤️</span>
-                    <span class="stat-label">HP REG:</span>
-                    <span id="hpsValue" class="stat-value">0</span>
-                </div>
-                                <div class="stat-item">
-                    <span class="stat-icon">💚</span>
-                    <span class="stat-label">DEF REG:</span>
-                    <span id="regenValue" class="stat-value">0</span>
-                </div>
-            </div>
-            
-            <!-- Score Display -->
-            <div id="scoreDisplay" class="score-display">
-                <span id="scoreValue" class="score-value">0</span>
-                <span id="scoreMultiplier" class="score-multiplier" style="display: none;">x1.0</span>
-            </div>
-
-            <!-- XP Bar -->
-            <div id="xpBar" class="xp-bar">
-                <div id="xpFill" class="xp-fill"></div>
-                <span id="xpLevel" class="xp-level">Lv.1</span>
-            </div>
-
-            <!-- Combo Counter -->
-            <div id="comboCounter" class="combo-counter" style="display: none;">
-                <span id="comboLabel" class="combo-label">COMBO</span>
-                <span id="comboCount" class="combo-count">0</span>
-                <div class="combo-timer-bar">
-                    <div id="comboTimerFill" class="combo-timer-fill"></div>
-                </div>
-            </div>
-
-            <!-- Challenges -->
-            <div id="challengeDisplay" class="challenge-display" style="display: none;"></div>
-
-            <!-- Performance Statistics (only shown with ?stats=true) -->
-            <div id="performanceStats" class="performance-stats" style="display: none;">
-                <div class="perf-stat-item">
-                    <span class="perf-label">FPS:</span>
-                    <span id="fpsValue" class="perf-value">60</span>
-                </div>
-                <div class="perf-stat-item">
-                    <span class="perf-label">Frame:</span>
-                    <span id="frameTimeValue" class="perf-value">16ms</span>
-                </div>
-                <div class="perf-stat-item">
-                    <span class="perf-label">Avg:</span>
-                    <span id="avgFpsValue" class="perf-value">60</span>
-                </div>
-                <div class="perf-stat-item">
-                    <span class="perf-label">Optimized:</span>
-                    <span id="optimizedValue" class="perf-value">No</span>
-                </div>
-            </div>
-        </div>
+        <!-- HUD (shadow-DOM component) -->
+        <game-hud></game-hud>
 
         <!-- Start Screen -->
-        <div id="startScreen" class="overlay">
-            <img class="start-logo" src="assets/images/start_screen_logo.png" alt="Neon Defender emblem">
-            <h1>NEON DEFENDER</h1>
-            <p>Conquer 30 waves and defeat 6 unique bosses</p>
-            <p>Auto-targeting turret defense game</p>
-            <p>Level up and unlock skills between waves!</p>
-            <div class="start-difficulty-row" aria-label="Difficulty">
-                <span>Difficulty</span>
-                <div class="start-difficulty-options" id="startDifficulty" role="radiogroup" aria-label="Select difficulty">
-                    <button type="button" role="radio" class="start-difficulty-option" data-difficulty="easy" aria-checked="false" tabindex="-1">Easy</button>
-                    <button type="button" role="radio" class="start-difficulty-option active" data-difficulty="normal" aria-checked="true" tabindex="0">Normal</button>
-                    <button type="button" role="radio" class="start-difficulty-option" data-difficulty="hard" aria-checked="false" tabindex="-1">Hard</button>
-                </div>
-            </div>
-            <button id="startBtn">CLICK TO START</button>
-            <button id="loadSaveBtn" style="display: none;">LOAD LAST SAVE</button>
-            <div id="lastRunStats" class="last-run-stats" style="display: none;">
-                <div class="last-run-row"><span>Last Run: </span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
-                <div class="last-run-row best"><span>Best: </span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>
-            </div>
-        </div>
+        <start-screen></start-screen>
 
         <!-- Settings Screen -->
-        <div id="settingsModal" class="overlay">
-            <div class="settings-panel">
-                <h2>Settings</h2>
-                <div class="settings-grid">
-                    <label class="settings-row">
-                        <span>Sound Effects</span>
-                        <span class="settings-audio-control">
-                            <input id="settingSoundVolume" type="range" min="0" max="100" step="1" value="30" aria-label="Sound effects volume">
-                            <span id="settingSoundVolumeValue" class="settings-volume-value">30</span>
-                        </span>
-                    </label>
-                    <label class="settings-row">
-                        <span>Music</span>
-                        <span class="settings-audio-control">
-                            <input id="settingMusicVolume" type="range" min="0" max="100" step="1" value="20" aria-label="Music volume">
-                            <span id="settingMusicVolumeValue" class="settings-volume-value">20</span>
-                        </span>
-                    </label>
-                    <label class="settings-row">
-                        <span>Screen Shake</span>
-                        <span class="toggle-switch">
-                            <input id="settingScreenShake" type="checkbox" checked>
-                            <span class="toggle-slider"></span>
-                        </span>
-                    </label>
-                    <label class="settings-row">
-                        <span>Performance Mode</span>
-                        <span class="toggle-switch">
-                            <input id="settingPerformanceMode" type="checkbox">
-                            <span class="toggle-slider"></span>
-                        </span>
-                    </label>
-                    <label class="settings-row">
-                        <span>Show FPS</span>
-                        <span class="toggle-switch">
-                            <input id="settingShowStats" type="checkbox">
-                            <span class="toggle-slider"></span>
-                        </span>
-                    </label>
-                    <label class="settings-row">
-                        <span>Keybind Hints</span>
-                        <span class="toggle-switch">
-                            <input id="settingKeybindHints" type="checkbox" checked>
-                            <span class="toggle-slider"></span>
-                        </span>
-                    </label>
-                </div>
-                <p id="keybindHintsText" class="settings-help">Keyboard: WASD/Arrows move • Q/E/R/T cast skills • P pause/resume</p>
-                <div class="settings-actions">
-                    <button id="saveGameBtn">Save Game</button>
-                    <button id="loadGameBtn">Load Save</button>
-                    <button id="clearSaveBtn" class="danger">Delete Save</button>
-                </div>
-                <div class="settings-actions">
-                    <button id="resetSettingsBtn">Reset Defaults</button>
-                    <button id="closeSettingsBtn" class="primary">Close</button>
-                </div>
-                <div id="devPanelSettingsRow" class="settings-actions" style="display:none">
-                    <button id="devPanelToggleBtn" class="danger">⚙ Admin Panel</button>
-                </div>
-            </div>
-        </div>
+        <settings-modal></settings-modal>
 
         <!-- Level-Up Skill Tree Panel -->
-        <div id="levelUpPanel" class="overlay">
-            <div class="skill-tree-panel">
-                <div class="skill-tree-header">
-                    <div class="skill-tree-title-group">
-                        <h2 id="levelUpTitle">LEVEL UP!</h2>
-                        <span id="levelUpHint" class="level-up-hint">Click glowing nodes to spend points!</span>
-                    </div>
-                    <div class="skill-tree-points">
-                        <span id="attrBadge" class="points-badge attr-badge">⚡ <span id="attrPointsLeft">3</span> AP</span>
-                        <span id="skillBadge" class="points-badge skill-badge">🔮 <span id="skillPointsLeft">1</span> SP</span>
-                    </div>
-                </div>
-                <div class="skill-tree-viewport" id="skillTreeViewport">
-                    <!-- Populated by SkillTreeRenderer -->
-                </div>
-                <div class="skill-tree-actions">
-                    <button id="levelUpResetBtn" class="glow-btn" disabled>RESET</button>
-                    <button id="levelUpConfirmBtn" class="primary glow-btn" disabled>CONFIRM</button>
-                </div>
-            </div>
-            <!-- First-time onboarding banner (outside skill-tree-panel to avoid viewport clipping) -->
-            <div id="skillTreeOnboarding" class="skill-tree-onboarding">
-                
-                <div class="onboarding-content">
-                    <div class="onboarding-row"><span class="onboarding-icon">⚡</span><span><strong>AP (Attribute Points)</strong> — Click the <strong>+ button</strong> on the glowing centre nodes to boost your stats</span></div>
-                    <div class="onboarding-row"><span class="onboarding-icon">🔮</span><span><strong>SP (Skill Points)</strong> — Click any <strong>glowing skill node</strong> on the outer rings to unlock an ability</span></div>
-                    <div class="onboarding-row"><span class="onboarding-icon">✅</span><span>Spend all points, then hit <strong>CONFIRM</strong> to continue the run</span></div>
-                </div>
-                <button id="onboardingCloseBtn" class="onboarding-close" aria-label="Close">&times;</button>
-            </div>
-        </div>
+        <level-up-panel></level-up-panel>
 
         <!-- HUD floating tooltip -->
-        <div id="hudTooltip" class="hud-tooltip" style="display:none;"></div>
+        <hud-tooltip></hud-tooltip>
 
         <!-- Ascension Pick (every 10 waves) -->
-        <div id="ascensionPanel" class="overlay">
-            <div class="ascension-container">
-                <h2>ASCENSION</h2>
-                <p class="ascension-subtitle">Choose a run-warping modifier</p>
-                <div id="ascensionOptions" class="ascension-grid">
-                    <!-- Dynamically populated -->
-                </div>
-            </div>
-        </div>
+        <ascension-panel></ascension-panel>
 
         <!-- Victory Screen (wave 30 completion) -->
-        <div id="victoryScreen" class="overlay">
-            <h1 class="victory-title">VICTORY!</h1>
-            <p class="victory-subtitle">You conquered all 30 waves!</p>
-            <div id="victoryNewRecord" class="new-record" style="display: none;">NEW PERSONAL BEST!</div>
-            <div class="game-over-stats victory-stats">
-                <div class="go-stat-row"><span>Waves Cleared</span><span id="victoryWave">30</span></div>
-                <div class="go-stat-row"><span>Final Score</span><span id="victoryScore">0</span></div>
-                <div class="go-stat-row"><span>Best Combo</span><span id="victoryCombo">0</span></div>
-                <div class="go-stat-row"><span>Level Reached</span><span id="victoryLevel">1</span></div>
-                <div class="go-stat-row"><span>Enemies Defeated</span><span id="victoryKills">0</span></div>
-            </div>
-            <button id="continueEndlessBtn" class="primary">CONTINUE TO ENDLESS</button>
-            <button id="victoryRestartBtn">RETURN TO MENU</button>
-        </div>
+        <victory-screen></victory-screen>
 
         <!-- Game Over Screen -->
-        <div id="gameOver" class="overlay">
-            <h1>GAME OVER</h1>
-            <div id="newRecordBanner" class="new-record" style="display: none;">NEW PERSONAL BEST!</div>
-            <div class="game-over-stats">
-                <div class="go-stat-row"><span>Wave Reached</span><span id="finalWave">0</span></div>
-                <div class="go-stat-row"><span>Final Score</span><span id="finalScore">0</span></div>
-                <div class="go-stat-row"><span>Best Combo</span><span id="finalCombo">0</span></div>
-                <div class="go-stat-row"><span>Level Reached</span><span id="finalLevel">1</span></div>
-            </div>
-            <div id="nearMissInfo" class="near-miss" style="display: none;"></div>
-            <button id="loadAfterGameOverBtn" style="display: none;">LOAD LAST SAVE</button>
-            <button id="restartBtn">START AGAIN</button>
-        </div>
+        <game-over-screen></game-over-screen>
 
         <!-- Achievement Toast -->
-        <div id="achievementToast" class="achievement-toast">
-            <span id="achievementIcon" class="achievement-icon"></span>
-            <div class="achievement-text">
-                <span class="achievement-label">ACHIEVEMENT UNLOCKED</span>
-                <span id="achievementName" class="achievement-name"></span>
-            </div>
-        </div>
+        <achievement-toast></achievement-toast>
 
         <!-- Pause Screen -->
-        <div id="pauseScreen" class="overlay">
-            <h2>PAUSED</h2>
-            <p>Press P to resume</p>
-        </div>
+        <pause-screen></pause-screen>
 
-        <div id="waveCountdown" class="wave-countdown" aria-live="polite" aria-atomic="true">
-            <span id="waveCountdownText">3</span>
-        </div>
+        <wave-countdown></wave-countdown>
 
         <!-- Floating Text Container -->
-        <div id="floatingTexts"></div>
+        <floating-texts></floating-texts>
     </div>
 
     <script type="module" src="./js/main.js"></script>

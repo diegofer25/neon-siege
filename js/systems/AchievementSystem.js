@@ -178,18 +178,16 @@ export class AchievementSystem {
             createFloatingText(`🏆 ${achievement.name}`, screen.x, screen.y, 'achievement-unlock');
         }
 
-        const toast = document.getElementById('achievementToast');
+        const toast = document.querySelector('achievement-toast');
         if (!toast) return;
 
-        document.getElementById('achievementIcon').textContent = achievement.icon;
-        document.getElementById('achievementName').textContent = achievement.name;
-        toast.classList.add('show');
+        toast.showToast(achievement.icon, achievement.name);
 
         playSFX('achievement_unlock');
     }
 
     _hideToast() {
-        const toast = document.getElementById('achievementToast');
-        if (toast) toast.classList.remove('show');
+        const toast = document.querySelector('achievement-toast');
+        if (toast) toast.hideToast();
     }
 }

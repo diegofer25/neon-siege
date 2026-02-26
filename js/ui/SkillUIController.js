@@ -1,6 +1,6 @@
 /**
  * @fileoverview SkillUIController – manages all skill-tree / level-up /
- * ascension panel DOM state.
+ * ascension panel DOM state via Web Component APIs.
  *
  * Extracted from main.js to keep the entry-point lean.
  *
@@ -17,6 +17,10 @@ import { skillIconHtml } from '../utils/IconUtils.js';
 import { GameConfig } from '../config/GameConfig.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 import { audioManager } from '../managers/AudioManager.js';
+
+// Side-effect imports — register custom elements
+import './components/LevelUpPanel.js';
+import './components/AscensionPanel.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -56,6 +60,16 @@ function _isObjectShallowEqual(a = {}, b = {}) {
     return true;
 }
 
+/** @returns {LevelUpPanelElement} */
+function _getLevelUpPanel() {
+    return /** @type {LevelUpPanelElement} */ (document.querySelector('level-up-panel'));
+}
+
+/** @returns {AscensionPanelElement} */
+function _getAscensionPanel() {
+    return /** @type {AscensionPanelElement} */ (document.querySelector('ascension-panel'));
+}
+
 // ---------------------------------------------------------------------------
 // SkillUIController
 // ---------------------------------------------------------------------------
@@ -70,6 +84,56 @@ class SkillUIController {
 
         /** Snapshot taken when the level-up panel opens (for reset). */
         this._levelUpPanelSnapshot = null;
+
+        /** @type {boolean} Whether component events have been wired. */
+        this._eventsWired = false;
+    }
+
+    // ------------------------------------------------------------------
+    // Internal: one-time event wiring for level-up-panel component
+    // ------------------------------------------------------------------
+    _wireEvents() {
+        if (this._eventsWired) return;
+        this._eventsWired = true;
+
+        const panel = _getLevelUpPanel();
+        if (!panel) return;
+
+        panel.addEventListener('reset-click', () => {
+            if (!this._levelUpPanelSnapshot) return;
+            const sm = this.game?.skillManager;
+            if (!sm) return;
+            sm.restoreFromSave(this._levelUpPanelSnapshot);
+            this._refreshTree(sm);
+            playSFX('ui_click');
+        });
+
+        panel.addEventListener('confirm-click', () => {
+            const g = this.game;
+            if (!g) return;
+            this._levelUpPanelSnapshot = null;
+            panel.hide();
+            if (g.gameState === 'levelup') {
+                g.completeMidWaveLevelUp();
+            } else {
+                g.continueToNextWave();
+            }
+        });
+
+        panel.addEventListener('onboarding-close', () => {
+            localStorage.setItem('neon_seen_skilltree', '1');
+        });
+
+        const ascPanel = _getAscensionPanel();
+        if (ascPanel) {
+            ascPanel.addEventListener('select-ascension', (/** @type {CustomEvent} */ e) => {
+                const g = this.game;
+                if (!g) return;
+                g.selectAscension(e.detail.modId);
+                ascPanel.hide();
+                playSFX('ui_purchase_success');
+            });
+        }
     }
 
     // ------------------------------------------------------------------
@@ -114,41 +178,26 @@ class SkillUIController {
     }
 
     _updateActionButtons(sm) {
-        /** @type {HTMLButtonElement | null} */
-        const resetBtn = document.querySelector('button#levelUpResetBtn');
-        /** @type {HTMLButtonElement | null} */
-        const confirmBtn = document.querySelector('button#levelUpConfirmBtn');
-        if (!resetBtn || !confirmBtn) return;
+        const panel = _getLevelUpPanel();
+        if (!panel) return;
 
         const hasChanges = this._hasSelectionChanges(sm);
         const hasUnspentPoints = sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0;
         const mustSpendPoints = this.game?.gameState === 'levelup';
 
-        resetBtn.disabled = !hasChanges;
-        confirmBtn.disabled = mustSpendPoints && hasUnspentPoints;
-
-        if (!confirmBtn.disabled && !hasUnspentPoints) {
-            confirmBtn.classList.add('ready-to-confirm');
-        } else {
-            confirmBtn.classList.remove('ready-to-confirm');
-        }
+        panel.setButtonStates({
+            resetDisabled: !hasChanges,
+            confirmDisabled: mustSpendPoints && hasUnspentPoints,
+            confirmReady: !(mustSpendPoints && hasUnspentPoints) && !hasUnspentPoints,
+        });
     }
 
     // ------------------------------------------------------------------
     // Internal: refresh tree + point badges after spending a point
     // ------------------------------------------------------------------
     _refreshTree(sm) {
-        document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
-        document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
-
-        const attrBadge = document.getElementById('attrBadge');
-        const skillBadge = document.getElementById('skillBadge');
-        const hintEl = document.getElementById('levelUpHint');
-
-        if (attrBadge) attrBadge.classList.toggle('has-points', sm.unspentAttributePoints > 0);
-        if (skillBadge) skillBadge.classList.toggle('has-points', sm.unspentSkillPoints > 0);
-        if (hintEl) hintEl.style.display = (sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0) ? 'block' : 'none';
-
+        const panel = _getLevelUpPanel();
+        if (panel) panel.setPoints(sm.unspentAttributePoints, sm.unspentSkillPoints);
         if (this._treeRenderer) this._treeRenderer.update(sm);
         this._updateActionButtons(sm);
     }
@@ -164,25 +213,17 @@ class SkillUIController {
         const g = this.game;
         if (!g || !g.skillManager) return;
         const sm = g.skillManager;
-        const panel = document.getElementById('levelUpPanel');
-        const titleEl = document.getElementById('levelUpTitle');
+        const panel = _getLevelUpPanel();
+        if (!panel) return;
+
+        this._wireEvents();
         this._levelUpPanelSnapshot = sm.getSaveState();
-        titleEl.textContent = `LEVEL ${sm.level}!`;
 
-        // Update point badges
-        document.getElementById('attrPointsLeft').textContent = sm.unspentAttributePoints;
-        document.getElementById('skillPointsLeft').textContent = sm.unspentSkillPoints;
-
-        const attrBadge = document.getElementById('attrBadge');
-        const skillBadge = document.getElementById('skillBadge');
-        const hintEl = document.getElementById('levelUpHint');
-
-        if (attrBadge) attrBadge.classList.toggle('has-points', sm.unspentAttributePoints > 0);
-        if (skillBadge) skillBadge.classList.toggle('has-points', sm.unspentSkillPoints > 0);
-        if (hintEl) hintEl.style.display = (sm.unspentAttributePoints > 0 || sm.unspentSkillPoints > 0) ? 'block' : 'none';
+        panel.setTitle(`LEVEL ${sm.level}!`);
+        panel.setPoints(sm.unspentAttributePoints, sm.unspentSkillPoints);
 
         // Render the skill tree
-        const viewport = document.getElementById('skillTreeViewport');
+        const viewport = panel.getViewport();
         if (!this._treeRenderer) {
             this._treeRenderer = new SkillTreeRenderer(viewport);
         }
@@ -221,49 +262,15 @@ class SkillUIController {
             },
         );
 
-        /** @type {HTMLButtonElement | null} */
-        const resetBtn = document.querySelector('button#levelUpResetBtn');
-        /** @type {HTMLButtonElement | null} */
-        const confirmBtn = document.querySelector('button#levelUpConfirmBtn');
-
-        if (resetBtn) {
-            resetBtn.onclick = () => {
-                if (!this._levelUpPanelSnapshot) return;
-                sm.restoreFromSave(this._levelUpPanelSnapshot);
-                this._refreshTree(sm);
-                playSFX('ui_click');
-            };
-        }
-        if (confirmBtn) {
-            confirmBtn.onclick = () => {
-                if (confirmBtn.disabled) return;
-                this._levelUpPanelSnapshot = null;
-                panel.classList.remove('show');
-                if (g.gameState === 'levelup') {
-                    g.completeMidWaveLevelUp();
-                } else {
-                    g.continueToNextWave();
-                }
-            };
-        }
-
         // Show panel BEFORE rendering so viewport has real dimensions for centering
-        panel.classList.add('show');
+        panel.show();
         this._updateActionButtons(sm);
         this._treeRenderer.render(sm);
 
         // Show first-time onboarding banner (stays open until user clicks X)
         const hasSeenSkillTree = localStorage.getItem('neon_seen_skilltree');
-        const onboardingEl = document.getElementById('skillTreeOnboarding');
-        if (!hasSeenSkillTree && onboardingEl) {
-            onboardingEl.classList.add('show');
-            const closeBtn = document.getElementById('onboardingCloseBtn');
-            if (closeBtn) {
-                closeBtn.onclick = () => {
-                    onboardingEl.classList.remove('show');
-                    localStorage.setItem('neon_seen_skilltree', '1');
-                };
-            }
+        if (!hasSeenSkillTree) {
+            panel.showOnboarding();
         }
     }
 
@@ -273,35 +280,23 @@ class SkillUIController {
     showAscensionPanel() {
         const g = this.game;
         if (!g || !g.ascensionSystem) return;
+
+        this._wireEvents();
+
         const options = g.ascensionSystem.generateOptions();
-        const container = document.getElementById('ascensionOptions');
-        container.innerHTML = '';
+        const ascPanel = _getAscensionPanel();
+        if (!ascPanel) return;
 
-        for (const mod of options) {
-            const card = document.createElement('div');
-            card.className = 'ascension-card';
-            card.innerHTML = `
-                <div class="ascension-icon">${skillIconHtml(mod, 40)}</div>
-                <div class="ascension-name">${mod.name}</div>
-                <div class="ascension-desc">${mod.description}</div>
-            `;
-            card.onclick = () => {
-                g.selectAscension(mod.id);
-                document.getElementById('ascensionPanel').classList.remove('show');
-                playSFX('ui_purchase_success');
-            };
-            container.appendChild(card);
-        }
-
-        document.getElementById('ascensionPanel').classList.add('show');
+        ascPanel.setOptions(options, skillIconHtml);
+        ascPanel.show();
     }
 
     /**
      * Close all skill-related overlays.
      */
     closeAll() {
-        document.getElementById('levelUpPanel')?.classList.remove('show');
-        document.getElementById('ascensionPanel')?.classList.remove('show');
+        _getLevelUpPanel()?.hide();
+        _getAscensionPanel()?.hide();
     }
 }
 
