@@ -311,10 +311,11 @@ function init() {
     };
 
     loginScreen.addEventListener('auth-login-anonymous', async (e) => {
+        const { displayName } = /** @type {CustomEvent} */ (e).detail;
         try {
             loginScreen.setError(null);
             loginScreen.setLoading(true);
-            await authService.loginAnonymous(e.detail.displayName);
+            await authService.loginAnonymous(displayName);
             loginScreen.setLoading(false);
             loginScreen.setUser(authService.getCurrentUser());
             _onAuthSuccess();
@@ -324,10 +325,11 @@ function init() {
     });
 
     loginScreen.addEventListener('auth-login-email', async (e) => {
+        const { email, password } = /** @type {CustomEvent} */ (e).detail;
         try {
             loginScreen.setError(null);
             loginScreen.setLoading(true);
-            await authService.loginEmail(e.detail.email, e.detail.password);
+            await authService.loginEmail(email, password);
             loginScreen.setLoading(false);
             loginScreen.setUser(authService.getCurrentUser());
             _onAuthSuccess();
@@ -337,10 +339,11 @@ function init() {
     });
 
     loginScreen.addEventListener('auth-register-email', async (e) => {
+        const { email, password, displayName } = /** @type {CustomEvent} */ (e).detail;
         try {
             loginScreen.setError(null);
             loginScreen.setLoading(true);
-            await authService.registerEmail(e.detail.email, e.detail.password, e.detail.displayName);
+            await authService.registerEmail(email, password, displayName);
             loginScreen.setLoading(false);
             loginScreen.setUser(authService.getCurrentUser());
             _onAuthSuccess();

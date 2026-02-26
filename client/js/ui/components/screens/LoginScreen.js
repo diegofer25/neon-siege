@@ -488,7 +488,7 @@ class LoginScreen extends BaseComponent {
     /* ── Event binding ──────────────────────────────────────────────────── */
     _bindEvents() {
         // Navigation between screens
-        this.shadowRoot.querySelectorAll('[data-goto]').forEach(btn => {
+        this.shadowRoot.querySelectorAll('[data-goto]').forEach(/** @param {HTMLElement} btn */ btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this._switchScreen(btn.dataset.goto);
@@ -498,19 +498,19 @@ class LoginScreen extends BaseComponent {
         // Forms
         this._$('#anonForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const fd = new FormData(e.target);
+            const fd = new FormData(/** @type {HTMLFormElement} */ (e.target));
             this._emit('auth-login-anonymous', { displayName: fd.get('displayName') });
         });
 
         this._$('#loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const fd = new FormData(e.target);
+            const fd = new FormData(/** @type {HTMLFormElement} */ (e.target));
             this._emit('auth-login-email', { email: fd.get('email'), password: fd.get('password') });
         });
 
         this._$('#registerForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const fd = new FormData(e.target);
+            const fd = new FormData(/** @type {HTMLFormElement} */ (e.target));
             this._emit('auth-register-email', {
                 email: fd.get('email'),
                 password: fd.get('password'),
@@ -519,13 +519,13 @@ class LoginScreen extends BaseComponent {
         });
 
         // Password visibility toggles
-        this._$$('.pw-toggle').forEach(toggle => {
+        this._$$('.pw-toggle').forEach(/** @param {HTMLButtonElement} toggle */ toggle => {
             toggle.addEventListener('click', () => this._togglePasswordVisibility(toggle));
         });
 
         // Password strength meter
         this._$('#regPassword')?.addEventListener('input', (e) => {
-            this._updateStrength(e.target.value);
+            this._updateStrength(/** @type {HTMLInputElement} */ (e.target).value);
         });
 
         // Close & logout

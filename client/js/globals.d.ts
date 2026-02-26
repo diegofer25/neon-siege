@@ -64,6 +64,7 @@ declare global {
         setLastRunStats(stats: { lastWave?: number; lastScore?: number; bestWave?: number; bestScore?: number }): void;
         getSelectedDifficulty(): string;
         setDifficulty(difficulty: string): void;
+        setAuthUser(user: { display_name: string } | null): void;
     }
 
     interface SettingsModalElement extends HTMLElement {
@@ -104,11 +105,26 @@ declare global {
         // No public API — HUDManager accesses nested sub-component shadowRoots directly
     }
 
+    interface LoginScreenElement extends HTMLElement {
+        show(): void;
+        hide(): void;
+        isVisible(): boolean;
+        setUser(user: { id: string; display_name: string; auth_provider: string } | null): void;
+        setError(message: string | null): void;
+        setLoading(loading: boolean): void;
+    }
+
+    interface LeaderboardScreenElement extends HTMLElement {
+        show(): void;
+        hide(): void;
+    }
+
     // ── Global primitives ──
     interface NeonButtonElement extends HTMLElement {
         variant: string;
         disabled: boolean;
         ready: boolean;
+        loading: boolean;
         label: string;
     }
 
@@ -138,6 +154,8 @@ declare global {
         'ascension-panel': AscensionPanelElement;
         'hud-tooltip': HudTooltipElement;
         'game-hud': GameHudElement;
+        'login-screen': LoginScreenElement;
+        'leaderboard-screen': LeaderboardScreenElement;
         'neon-button': NeonButtonElement;
         'hud-health-bars': HudHealthBarsElement;
         'hud-skill-bar': HudSkillBarElement;
