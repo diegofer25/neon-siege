@@ -1257,6 +1257,7 @@ export class Game {
 		ctx.restore();
 
 		for (let i = 0; i < this.enemies.length; i++) this.enemies[i].draw(ctx);
+		this.lootSystem.renderGroundItems(ctx);
 		for (let i = 0; i < this.projectiles.length; i++) this.projectiles[i].draw(ctx);
 		this.player.draw(ctx);
 

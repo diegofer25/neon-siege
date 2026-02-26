@@ -20,6 +20,8 @@ export class CollisionSystem {
         this.game = game;
         /** @type {SpatialGrid|null} */
         this._enemyGrid = null;
+        /** @type {Map<number|string, number>} tracks last contact-damage timestamp per boss id */
+        this._bossContactLastHit = new Map();
     }
 
     /**
@@ -219,6 +221,14 @@ export class CollisionSystem {
      * @param {number} enemyIndex - Index of enemy in array
      */
     _handlePlayerHit(enemy, enemyIndex) {
+        // Bosses deal damage-per-second on contact and are NOT removed
+        if (enemy.isBoss) {
+            const now = Date.now();
+            const lastHit = this._bossContactLastHit.get(enemy.id) || 0;
+            if (now - lastHit < 1000) return; // still in cooldown
+            this._bossContactLastHit.set(enemy.id, now);
+        }
+
         const shieldBeforeHit = this.game.player.shieldHp;
 
         // Damage player
@@ -263,6 +273,9 @@ export class CollisionSystem {
         // Show damage text
         this._showPlayerDamageText(enemy.damage);
         
+        // Bosses stay alive on contact; only remove regular enemies
+        if (enemy.isBoss) return;
+
         // Remove enemy after collision
         this.game.trace('enemy.removed.playerCollision', {
             enemyId: enemy.id,

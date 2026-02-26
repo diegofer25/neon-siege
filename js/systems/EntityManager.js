@@ -81,7 +81,7 @@ export class EntityManager {
         const comboTier = this.game.comboSystem.comboTier;
         const drop = this.game.lootSystem.rollForDrop(enemy, comboTier);
         if (drop) {
-            this.game.lootSystem.applyDrop(drop, enemy.x, enemy.y);
+            this.game.lootSystem.spawnGroundItem(drop, enemy.x, enemy.y);
         }
 
         // Achievement & challenge tracking

@@ -28,10 +28,26 @@ const MAX_DROP_CHANCE = 0.15;
 const WAVE_DROP_BONUS = 0.001;
 const COMBO_TIER_DROP_BONUS = 0.02;
 
+// Ground loot configuration
+const LOOT_LIFETIME = 15000;
+const LOOT_BLINK_START = 3000;
+const LOOT_RADIUS = 12;
+const PICKUP_BONUS = 10;
+const LOOT_BOB_SPEED = 0.003;
+const LOOT_BOB_AMPLITUDE = 2;
+
+const RARITY_COLORS = {
+    common: '#ffffff',
+    uncommon: '#00ffff',
+    rare: '#ffff00',
+    legendary: '#ff00ff',
+};
+
 export class LootSystem {
     constructor(game) {
         this.game = game;
         this.activeTempBuffs = [];
+        this.groundItems = [];
         this._originalFireRateMod = null;
         this._originalDamageMod = null;
     }
@@ -44,6 +60,18 @@ export class LootSystem {
 
         if (Math.random() > dropChance) return null;
         return this._weightedRandom(DROP_TABLE);
+    }
+
+    spawnGroundItem(drop, x, y) {
+        this.groundItems.push({
+            x,
+            y,
+            radius: LOOT_RADIUS,
+            drop,
+            age: 0,
+            lifetime: LOOT_LIFETIME,
+            alpha: 1,
+        });
     }
 
     applyDrop(drop, x, y) {
@@ -93,6 +121,44 @@ export class LootSystem {
                 this.activeTempBuffs.splice(i, 1);
             }
         }
+
+        // Update ground loot items
+        const player = this.game.player;
+        const pickupDist = player.radius + LOOT_RADIUS + PICKUP_BONUS;
+        const pickupDistSq = pickupDist * pickupDist;
+
+        for (let i = this.groundItems.length - 1; i >= 0; i--) {
+            const item = this.groundItems[i];
+            item.age += delta;
+
+            // Despawn expired items
+            if (item.age >= item.lifetime) {
+                const last = this.groundItems.length - 1;
+                if (i !== last) this.groundItems[i] = this.groundItems[last];
+                this.groundItems.pop();
+                continue;
+            }
+
+            // Blink warning in final seconds
+            const remaining = item.lifetime - item.age;
+            if (remaining < LOOT_BLINK_START) {
+                const urgency = 1 - remaining / LOOT_BLINK_START;
+                const freq = 4 + urgency * 12;
+                item.alpha = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(item.age * freq * 0.001 * Math.PI * 2));
+            } else {
+                item.alpha = 1;
+            }
+
+            // Pickup collision (squared distance)
+            const dx = player.x - item.x;
+            const dy = player.y - item.y;
+            if (dx * dx + dy * dy < pickupDistSq) {
+                this.applyDrop(item.drop, item.x, item.y);
+                const last = this.groundItems.length - 1;
+                if (i !== last) this.groundItems[i] = this.groundItems[last];
+                this.groundItems.pop();
+            }
+        }
     }
 
     resetForRun() {
@@ -100,12 +166,101 @@ export class LootSystem {
             this._removeTempBuff(buff);
         }
         this.activeTempBuffs = [];
+        this.groundItems.length = 0;
         this._originalFireRateMod = null;
         this._originalDamageMod = null;
     }
 
     getActiveBuffs() {
         return this.activeTempBuffs;
+    }
+
+    renderGroundItems(ctx) {
+        const items = this.groundItems;
+        if (items.length === 0) return;
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const color = RARITY_COLORS[item.drop.rarity] || RARITY_COLORS.common;
+            const bob = Math.sin(item.age * LOOT_BOB_SPEED) * LOOT_BOB_AMPLITUDE;
+            const drawY = item.y + bob;
+
+            // Outer glow
+            ctx.globalAlpha = item.alpha * 0.15;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(item.x, drawY, LOOT_RADIUS + 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main shape
+            ctx.globalAlpha = item.alpha;
+            this._drawLootShape(ctx, item.drop.type, item.x, drawY, LOOT_RADIUS * 0.7, color);
+
+            // Center dot
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(item.x, drawY, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.globalAlpha = 1;
+    }
+
+    _drawLootShape(ctx, type, x, y, size, color) {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+
+        switch (type) {
+            case 'score': {
+                ctx.beginPath();
+                ctx.moveTo(x, y - size);
+                ctx.lineTo(x + size * 0.7, y);
+                ctx.lineTo(x, y + size);
+                ctx.lineTo(x - size * 0.7, y);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            }
+            case 'heal': {
+                const arm = size * 0.3;
+                ctx.fillRect(x - arm, y - size, arm * 2, size * 2);
+                ctx.fillRect(x - size, y - arm, size * 2, arm * 2);
+                break;
+            }
+            case 'tempBuff': {
+                ctx.beginPath();
+                for (let j = 0; j < 5; j++) {
+                    const angle = -Math.PI / 2 + (j * Math.PI * 2) / 5;
+                    const outerX = x + Math.cos(angle) * size;
+                    const outerY = y + Math.sin(angle) * size;
+                    if (j === 0) ctx.moveTo(outerX, outerY);
+                    else ctx.lineTo(outerX, outerY);
+                    const innerAngle = angle + Math.PI / 5;
+                    ctx.lineTo(x + Math.cos(innerAngle) * size * 0.4, y + Math.sin(innerAngle) * size * 0.4);
+                }
+                ctx.closePath();
+                ctx.fill();
+                break;
+            }
+            case 'nuke': {
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.5, y);
+                ctx.lineTo(x + size * 0.5, y);
+                ctx.moveTo(x, y - size * 0.5);
+                ctx.lineTo(x, y + size * 0.5);
+                ctx.stroke();
+                break;
+            }
+            default: {
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
     }
 
     _applyTempBuff(drop) {
