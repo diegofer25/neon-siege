@@ -491,14 +491,15 @@ export class Player {
         dx /= len;
         dy /= len;
 
-        const speed = GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * (delta / 1000);
+        const arenaScale = game?.getArenaScale?.() || 1;
+        const speed = GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * arenaScale * (delta / 1000);
         this.x += dx * speed;
         this.y += dy * speed;
 
         // Store velocity for renderer (px/s, normalized direction × move speed)
         this.isMoving = true;
-        this.moveVx = dx * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod;
-        this.moveVy = dy * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod;
+        this.moveVx = dx * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * arenaScale;
+        this.moveVy = dy * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * arenaScale;
 
         // Clamp to canvas bounds
         const { width: cw, height: ch } = game.getLogicalCanvasSize();

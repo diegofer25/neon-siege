@@ -107,9 +107,9 @@ export const GameConfig = {
         /** @type {number} Player collision radius in pixels */
         RADIUS: 20,
         /** @type {number} Player movement speed in pixels per second */
-        MOVE_SPEED: 200,
+        MOVE_SPEED: 75,
         /** @type {number} Base projectile speed in pixels per second */
-        BASE_PROJECTILE_SPEED: 400,
+        BASE_PROJECTILE_SPEED: 200,
         // Player-specific ability constants
         /** @type {number} Number of enemies piercing shots can hit */
         PIERCING_COUNT: 3,

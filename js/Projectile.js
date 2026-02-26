@@ -4,6 +4,7 @@
  */
 
 import { game } from './main.js';
+import { GameConfig } from './config/GameConfig.js';
 import { vfxHelper } from './managers/VFXHelper.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 import { MathUtils } from './utils/MathUtils.js';
@@ -33,7 +34,7 @@ export class Projectile {
      */
     constructor(x, y, angle, damage, speedMod = 1) {
         // Static configuration
-        this.baseSpeed = 400; // Base speed in pixels per second
+        this.baseSpeed = GameConfig.PLAYER.BASE_PROJECTILE_SPEED;
         this.radius = 5;
         this.trail = [];
         this.trailLength = 8;
@@ -156,8 +157,11 @@ export class Projectile {
         
         // Update position using velocity and frame time
         // Convert from pixels per second to pixels per frame
-        this.x += this.vx * (delta / 1000);
-        this.y += this.vy * (delta / 1000);
+        // Scale by arenaScale so projectiles traverse the screen in consistent
+        // proportional time regardless of viewport size (matches enemy scaling).
+        const arenaScale = game?.getArenaScale?.() || 1;
+        this.x += this.vx * arenaScale * (delta / 1000);
+        this.y += this.vy * arenaScale * (delta / 1000);
         
         // Track projectile age for automatic cleanup
         this.lifetime += delta;
