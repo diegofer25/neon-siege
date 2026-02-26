@@ -82,11 +82,13 @@ class VictoryScreen extends BaseComponent {
                     <div class="go-stat-row"><span>Enemies Defeated</span><span id="kills">0</span></div>
                 </div>
                 <neon-button id="continueBtn" variant="primary">CONTINUE TO ENDLESS</neon-button>
+                <neon-button id="leaderboardBtn">VIEW LEADERBOARD</neon-button>
                 <neon-button id="menuBtn">RETURN TO MENU</neon-button>
             </div>
         `, overlayStyles, styles);
 
         this._$('#continueBtn').addEventListener('click', () => this._emit('continue-endless'));
+        this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
         this._$('#menuBtn').addEventListener('click', () => this._emit('return-to-menu'));
     }
 

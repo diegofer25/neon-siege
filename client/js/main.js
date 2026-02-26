@@ -13,6 +13,7 @@ import { audioManager } from './managers/AudioManager.js';
 import { hudManager } from './managers/HUDManager.js';
 import { skillUI } from './ui/SkillUIController.js';
 import { DevPanel } from './ui/DevPanel.js';
+import * as authService from './services/AuthService.js';
 
 // Web Components (side-effect: registers all custom elements)
 import './ui/components/index.js';
@@ -272,6 +273,70 @@ function init() {
     if (appRuntime.devPanel?.enabled) {
         settingsModalEl.setDevPanelVisible(true);
     }
+
+    // Auth & leaderboard screens
+    const loginScreen = document.querySelector('login-screen');
+    const leaderboardScreen = document.querySelector('leaderboard-screen');
+
+    // Show leaderboard from any screen
+    const showLeaderboard = () => leaderboardScreen.show();
+    startScreen.addEventListener('show-leaderboard', showLeaderboard);
+    gameOverScreen.addEventListener('show-leaderboard', showLeaderboard);
+    victoryScreen.addEventListener('show-leaderboard', showLeaderboard);
+
+    // Show login/profile
+    startScreen.addEventListener('show-login', () => {
+        loginScreen.setUser(authService.getCurrentUser());
+        loginScreen.show();
+    });
+
+    // Auth events
+    loginScreen.addEventListener('auth-login-anonymous', async (e) => {
+        try {
+            loginScreen.setError(null);
+            await authService.loginAnonymous(e.detail.displayName);
+            loginScreen.setUser(authService.getCurrentUser());
+            loginScreen.hide();
+        } catch (err) {
+            loginScreen.setError(err.message);
+        }
+    });
+
+    loginScreen.addEventListener('auth-login-email', async (e) => {
+        try {
+            loginScreen.setError(null);
+            await authService.loginEmail(e.detail.email, e.detail.password);
+            loginScreen.setUser(authService.getCurrentUser());
+            loginScreen.hide();
+        } catch (err) {
+            loginScreen.setError(err.message);
+        }
+    });
+
+    loginScreen.addEventListener('auth-register-email', async (e) => {
+        try {
+            loginScreen.setError(null);
+            await authService.registerEmail(e.detail.email, e.detail.password, e.detail.displayName);
+            loginScreen.setUser(authService.getCurrentUser());
+            loginScreen.hide();
+        } catch (err) {
+            loginScreen.setError(err.message);
+        }
+    });
+
+    loginScreen.addEventListener('auth-logout', async () => {
+        await authService.logout();
+        loginScreen.setUser(null);
+        startScreen.setAuthUser(null);
+    });
+
+    // Update start screen button when auth changes
+    authService.onAuthChange((user) => {
+        startScreen.setAuthUser(user);
+    });
+
+    // Try restoring session from refresh token
+    authService.restoreSession();
 
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();

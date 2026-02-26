@@ -34,12 +34,14 @@ class GameOverScreen extends BaseComponent {
                 </div>
                 <div id="nearMiss" class="near-miss" style="display: none;"></div>
                 <neon-button id="loadBtn" style="display: none;">LOAD LAST SAVE</neon-button>
+                <neon-button id="leaderboardBtn">VIEW LEADERBOARD</neon-button>
                 <neon-button id="restartBtn" variant="primary">START AGAIN</neon-button>
             </div>
         `, overlayStyles, styles);
 
         this._$('#restartBtn').addEventListener('click', () => this._emit('restart'));
         this._$('#loadBtn').addEventListener('click', () => this._emit('load-save'));
+        this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
     }
 
     /** @param {{ wave: number, score: number, combo: number, level: number }} data */

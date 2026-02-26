@@ -134,6 +134,10 @@ class StartScreen extends BaseComponent {
                     </div>
                 </div>
                 <neon-button id="startBtn" variant="primary">CLICK TO START</neon-button>
+                <div style="display: flex; gap: 8px; margin-top: var(--spacing-sm); justify-content: center;">
+                    <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
+                    <neon-button id="loginBtn">SIGN IN</neon-button>
+                </div>
                 <div id="lastRunStats" class="last-run-stats" style="display: none;">
                     <div class="last-run-row"><span>Last Run: </span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
                     <div class="last-run-row best"><span>Best: </span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>
@@ -142,6 +146,8 @@ class StartScreen extends BaseComponent {
         `, overlayStyles, styles);
 
         this._$('#startBtn').addEventListener('click', () => this._emit('start-game'));
+        this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
+        this._$('#loginBtn').addEventListener('click', () => this._emit('show-login'));
         this._setupDifficultyControls();
     }
 
@@ -228,6 +234,17 @@ class StartScreen extends BaseComponent {
         if (bestScoreEl) bestScoreEl.textContent = (bestScore || 0).toLocaleString();
 
         container.style.display = 'block';
+    }
+
+    /** @param {{ display_name: string }|null} user */
+    setAuthUser(user) {
+        const btn = this._$('#loginBtn');
+        if (!btn) return;
+        if (user) {
+            btn.textContent = user.display_name.toUpperCase();
+        } else {
+            btn.textContent = 'SIGN IN';
+        }
     }
 
 }

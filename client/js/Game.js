@@ -31,6 +31,7 @@ import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { saveStateManager } from "./managers/SaveStateManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
 import { MathUtils } from "./utils/MathUtils.js";
+import { submitScore, buildRunDetails } from "./services/ScoreSubmitter.js";
 
 // ── State System ────────────────────────────────────────────────────────────
 import { createStateSystem, ActionTypes, GameFSM } from "./state/index.js";
@@ -433,6 +434,7 @@ export class Game {
 		this._gameOverTracked = false;
 		this._lastRunResult = null;
 		this._endlessMode = false;
+		this._runStartTimestamp = Date.now();
 
 		this.player.reset();
 		this.skillManager.reset();
@@ -525,6 +527,8 @@ export class Game {
 				score: this.score,
 				level: this.skillManager.level,
 			});
+
+			this._submitScoreToLeaderboard(true);
 		}
 	}
 
@@ -737,8 +741,28 @@ export class Game {
 					score: this.score,
 					level: this.skillManager.level,
 				});
+
+				this._submitScoreToLeaderboard(false);
 			}
 		}
+	}
+
+	/**
+	 * Submit score to the leaderboard API (fire-and-forget).
+	 * @param {boolean} isVictory
+	 */
+	_submitScoreToLeaderboard(isVictory) {
+		submitScore({
+			difficulty: this.getRunDifficulty(),
+			score: this.score,
+			wave: this.wave,
+			kills: this.achievementSystem.killsThisRun,
+			maxCombo: this.comboSystem.maxStreakThisRun,
+			level: this.skillManager.level,
+			isVictory,
+			runDetails: buildRunDetails(this.store),
+			gameDurationMs: Date.now() - (this._runStartTimestamp || Date.now()),
+		});
 	}
 
 	/**

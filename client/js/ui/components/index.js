@@ -22,6 +22,8 @@ import './screens/GameOverScreen.js';
 import './screens/VictoryScreen.js';
 import './screens/StartScreen.js';
 import './screens/SettingsModal.js';
+import './screens/LoginScreen.js';
+import './screens/LeaderboardScreen.js';
 
 // Panel overlays
 import './panels/LevelUpPanel.js';
