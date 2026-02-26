@@ -84,7 +84,7 @@ function shouldSkipTransientMobileResize(nextViewport) {
 
 /**
  * Audio system is now managed by AudioManager singleton.
- * @see ./managers/AudioManager.js
+ * See managers/AudioManager.js
  */
 
 function setupMenuScrollSoundHooks() {

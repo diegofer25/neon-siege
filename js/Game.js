@@ -899,7 +899,6 @@ export class Game {
 	/**
 	 * Sync player stats from SkillManager attributes + plugin effects + ascension.
 	 * Called after each skill/attribute allocation.
-	 * @private
 	 */
 	_syncPlayerFromSkills() {
 		const attrs = this.skillManager.getComputedAttributes();
