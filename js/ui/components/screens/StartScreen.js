@@ -122,8 +122,8 @@ class StartScreen extends BaseComponent {
     connectedCallback() {
         this._render(/* html */ `
             <div class="overlay">
-                <img class="start-logo" src="assets/images/start_screen_logo.png" alt="Neon Defender emblem">
-                <h1>NEON DEFENDER</h1>
+                <img class="start-logo" src="assets/images/start_screen_logo.png" alt="Neon Siege emblem">
+                <h1>NEON SIEGE</h1>
                 <p>Conquer 30 waves and defeat 6 unique bosses</p>
                 <p>Auto-targeting turret defense game</p>
                 <p>Level up and unlock skills between waves!</p>

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npm run dev",
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp -r assets dist/",
     "preview": "vite preview",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
