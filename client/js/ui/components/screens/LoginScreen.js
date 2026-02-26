@@ -64,18 +64,18 @@ const styles = createSheet(/* css */ `
     pointer-events: none;
   }
 
-  /* ── Close button ─────────────────────────────────────────────────────── */
+  /* ── Close button (overlay top-right) ──────────────────────────────────── */
   .close-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    position: absolute !important;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.5) !important;
     color: #888;
-    font-size: 20px;
+    font-size: 22px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -83,11 +83,21 @@ const styles = createSheet(/* css */ `
     transition: all 0.2s;
     z-index: 2;
     line-height: 1;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    letter-spacing: 0 !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+    text-transform: none !important;
   }
+  .close-btn::before { display: none !important; }
   .close-btn:hover {
     color: #fff;
-    border-color: var(--color-primary-neon);
-    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    border-color: var(--color-primary-neon) !important;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3) !important;
+    animation: none !important;
+    transform: none !important;
   }
 
   /* ── Headings ─────────────────────────────────────────────────────────── */
@@ -172,23 +182,33 @@ const styles = createSheet(/* css */ `
 
   /* ── Password visibility toggle ───────────────────────────────────────── */
   .pw-toggle {
-    position: absolute;
+    position: absolute !important;
     top: 50%;
     right: 12px;
     transform: translateY(-50%);
     width: 24px;
     height: 24px;
-    background: none;
-    border: none;
+    background: none !important;
+    border: none !important;
     color: #666;
     cursor: pointer;
-    padding: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: color 0.2s;
+    box-shadow: none !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    overflow: visible !important;
   }
-  .pw-toggle:hover { color: var(--color-primary-neon); }
+  .pw-toggle::before { display: none !important; }
+  .pw-toggle:hover {
+    color: var(--color-primary-neon);
+    animation: none !important;
+    transform: translateY(-50%) !important;
+  }
   .pw-toggle svg { width: 18px; height: 18px; }
 
   /* ── Password strength meter ──────────────────────────────────────────── */
@@ -240,15 +260,25 @@ const styles = createSheet(/* css */ `
     text-decoration: none;
     font-weight: bold;
     transition: color 0.2s, text-shadow 0.2s;
-    background: none;
-    border: none;
+    background: none !important;
+    border: none !important;
     font-family: inherit;
     font-size: inherit;
-    padding: 0;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    display: inline !important;
+    overflow: visible !important;
+    position: static !important;
   }
+  .auth-link::before { display: none !important; }
   .auth-link:hover {
     color: #fff;
     text-shadow: 0 0 8px var(--color-primary-neon);
+    animation: none !important;
+    transform: none !important;
   }
   .auth-link.secondary {
     color: var(--color-secondary-neon);
@@ -259,21 +289,31 @@ const styles = createSheet(/* css */ `
 
   /* ── Back button ──────────────────────────────────────────────────────── */
   .back-btn {
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     gap: 6px;
-    background: none;
-    border: none;
+    background: none !important;
+    border: none !important;
     color: #888;
     font-family: var(--font-primary);
     font-size: 13px;
     cursor: pointer;
-    padding: 4px 0;
-    margin-bottom: var(--spacing-xs);
+    padding: 4px 0 !important;
+    margin: 0 0 var(--spacing-xs) 0 !important;
     transition: color 0.2s;
     align-self: flex-start;
+    box-shadow: none !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    overflow: visible !important;
+    position: static !important;
   }
-  .back-btn:hover { color: var(--color-primary-neon); }
+  .back-btn::before { display: none !important; }
+  .back-btn:hover {
+    color: var(--color-primary-neon);
+    animation: none !important;
+    transform: none !important;
+  }
   .back-btn svg { width: 16px; height: 16px; }
 
   /* ── Error message ────────────────────────────────────────────────────── */
@@ -383,8 +423,8 @@ class LoginScreen extends BaseComponent {
     connectedCallback() {
         this._render(/* html */ `
             <div class="overlay">
+                <button class="close-btn" id="closeBtn">&times;</button>
                 <div class="auth-container">
-                    <button class="close-btn" id="closeBtn">&times;</button>
 
                     <!-- ── Profile view (logged-in) ─────────────────────── -->
                     <div id="userView" style="display:none;">
