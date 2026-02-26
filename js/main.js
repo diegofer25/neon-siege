@@ -388,8 +388,13 @@ function setupInputHandlers() {
             togglePause();
         }
 
-        if (e.code === 'Escape' && document.querySelector('settings-modal').isVisible()) {
-            closeSettingsModal();
+        if (e.code === 'Escape') {
+            const settingsModalEl = /** @type {SettingsModalElement} */ (document.querySelector('settings-modal'));
+            if (settingsModalEl.isVisible()) {
+                closeSettingsModal();
+            } else if (game && (game.gameState === 'playing' || game.gameState === 'paused')) {
+                openSettingsModal();
+            }
         }
 
         // QERT skill casting (only when playing)

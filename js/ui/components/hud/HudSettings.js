@@ -15,6 +15,7 @@ const styles = createSheet(/* css */`
     position: absolute;
     top: 0;
     right: 0;
+    pointer-events: auto;
   }
 
   #settingsBtn {
