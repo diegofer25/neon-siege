@@ -822,9 +822,6 @@ export class Game {
 			isBossWave: this.waveManager.isBossWave
 		});
 
-		// Auto-save at the end of every wave
-		saveStateManager.saveSnapshot(this.getSaveSnapshot());
-
 		// Decide what UI to show between waves
 		this._showBetweenWaveUI();
 	}
@@ -875,6 +872,9 @@ export class Game {
 			this._waveStartTime = performance.now();
 			this.challengeSystem.onWaveStart();
 			this.waveManager.startWave(this.wave);
+
+			// Auto-save at the start of every wave (after countdown)
+			saveStateManager.saveSnapshot(this.getSaveSnapshot());
 
 			// Dispatch WAVE_START to store
 			this.dispatcher.dispatch({

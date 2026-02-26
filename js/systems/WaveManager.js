@@ -69,8 +69,8 @@ export class WaveManager {
 
         const enemyCount = GameConfig.DERIVED.getEnemyCountForWave(this.currentWave);
         const adjustedEnemyCount = Math.max(1, Math.floor(enemyCount * this.difficultyPreset.enemyCountMultiplier));
-        // Boss waves are boss-only (regular spawns disabled)
-        this.enemiesToSpawn = this.isBossWave ? 0 : adjustedEnemyCount;
+        // Boss waves 5/10/15 are boss-only; wave 20+ spawn boss AND a regular enemy wave
+        this.enemiesToSpawn = (this.isBossWave && this.currentWave < 20) ? 0 : adjustedEnemyCount;
         this.enemySpawnInterval = Math.max(
             GameConfig.WAVE.MIN_SPAWN_INTERVAL,
             GameConfig.DERIVED.getSpawnIntervalForWave(this.currentWave) * this.difficultyPreset.spawnIntervalMultiplier

@@ -73,8 +73,8 @@ const ascensionSheet = createSheet(/* css */`
     }
 
     .ascension-icon .skill-icon-img {
-        width: 40px;
-        height: 40px;
+        width: 54px;
+        height: 54px;
         border-radius: 8px;
         object-fit: cover;
     }
@@ -123,7 +123,7 @@ class AscensionPanel extends BaseComponent {
             const card = document.createElement('div');
             card.className = 'ascension-card';
             card.innerHTML = `
-                <div class="ascension-icon">${iconRenderer(mod, 40)}</div>
+                <div class="ascension-icon">${iconRenderer(mod, 54)}</div>
                 <div class="ascension-name">${mod.name}</div>
                 <div class="ascension-desc">${mod.description}</div>
             `;

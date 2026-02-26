@@ -252,7 +252,6 @@ function init() {
     const gameHudEl = document.querySelector('game-hud');
 
     startScreen.addEventListener('start-game', startGame);
-    startScreen.addEventListener('load-save', () => loadGameFromSave('start_screen'));
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('load-save', () => loadGameFromSave('game_over'));
     victoryScreen.addEventListener('continue-endless', continueToEndless);
@@ -837,7 +836,6 @@ function clearSavedGame() {
 function syncSaveButtons() {
     const hasSave = saveStateManager.hasSave();
 
-    document.querySelector('start-screen')?.setLoadSaveVisible(hasSave);
     document.querySelector('settings-modal')?.setSaveButtonStates({ hasSave });
     document.querySelector('game-over-screen')?.setLoadSaveVisible(hasSave);
 }

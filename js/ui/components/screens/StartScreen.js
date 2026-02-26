@@ -3,14 +3,12 @@
  *
  * Public API:
  *   setLastRunStats({ lastWave, lastScore, bestWave, bestScore })
- *   setLoadSaveVisible(bool)
  *   getSelectedDifficulty() → string
  *   setDifficulty(difficulty)
  *   show() / hide()
  *
  * Events (composed, bubbling):
  *   'start-game'         — "Click to Start" button clicked
- *   'load-save'          — "Load Last Save" button clicked
  *   'difficulty-change'  — difficulty option clicked, detail: { difficulty }
  */
 
@@ -136,7 +134,6 @@ class StartScreen extends BaseComponent {
                     </div>
                 </div>
                 <neon-button id="startBtn" variant="primary">CLICK TO START</neon-button>
-                <neon-button id="loadBtn" style="display: none;">LOAD LAST SAVE</neon-button>
                 <div id="lastRunStats" class="last-run-stats" style="display: none;">
                     <div class="last-run-row"><span>Last Run: </span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
                     <div class="last-run-row best"><span>Best: </span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>
@@ -145,7 +142,6 @@ class StartScreen extends BaseComponent {
         `, overlayStyles, styles);
 
         this._$('#startBtn').addEventListener('click', () => this._emit('start-game'));
-        this._$('#loadBtn').addEventListener('click', () => this._emit('load-save'));
         this._setupDifficultyControls();
     }
 
@@ -234,11 +230,6 @@ class StartScreen extends BaseComponent {
         container.style.display = 'block';
     }
 
-    /** @param {boolean} visible */
-    setLoadSaveVisible(visible) {
-        const el = this._$('#loadBtn');
-        if (el) el.style.display = visible ? 'inline-block' : 'none';
-    }
 }
 
 customElements.define('start-screen', StartScreen);

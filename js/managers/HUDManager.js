@@ -150,7 +150,16 @@ class HUDManager {
             const nameEl = $(`skillName${i}`, skillRoot);
             this._skillNames.push(nameEl);
             this._skillCds.push($(`skillCd${i}`, skillRoot));
-            this._skillSlots.push(nameEl !== NOOP_EL ? nameEl.closest('.skill-slot') : null);
+            const slotEl = nameEl !== NOOP_EL ? nameEl.closest('.skill-slot') : null;
+            this._skillSlots.push(slotEl);
+            if (slotEl) {
+                slotEl.addEventListener('click', () => {
+                    if (!this.game || this.game.gameState !== 'playing') return;
+                    const slots = this.game.skillManager.getKeybindSlots();
+                    const slot = slots[i];
+                    if (slot?.skillId) this.game.castActiveSkill(slot.skillId);
+                });
+            }
         }
 
         // Passive slots — inside <hud-passive-slots>
@@ -433,40 +442,68 @@ class HUDManager {
         this._hudTooltipEl = /** @type {HudTooltipElement} */ (document.querySelector('hud-tooltip'));
         if (!this._hudTooltipEl) return;
 
-        document.addEventListener('mouseover', (e) => {
+        /**
+         * Scan the full composedPath (crosses all shadow root boundaries) for the
+         * first element matching a predicate.
+         * @param {EventTarget[]} path
+         * @param {(el: Element) => boolean} predicate
+         * @returns {HTMLElement|null}
+         */
+        const findInPath = (path, predicate) => {
+            for (const node of path) {
+                if (node instanceof Element && predicate(node)) {
+                    return /** @type {HTMLElement} */ (node);
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Evaluate the composedPath of any mouse event and update / hide the
+         * tooltip accordingly.  Called on both mouseover AND mousemove so that
+         * moving the cursor directly from slot A to slot B always reflects the
+         * new slot immediately, without relying solely on mouseover event ordering.
+         * @param {MouseEvent} e
+         */
+        const evaluateTooltip = (e) => {
             if (!this.game) return;
-            // Use composedPath to pierce Shadow DOM event retargeting
-            const target = /** @type {Element} */ (e.composedPath()[0]);
-            if (!(target instanceof Element)) return;
-            const skillSlot = /** @type {HTMLElement|null} */ (target.closest('.skill-slot[data-tooltip-type]'));
-            const passiveSlot = /** @type {HTMLElement|null} */ (target.closest('.passive-slot[data-tooltip-type]'));
-            const ascBadge = /** @type {HTMLElement|null} */ (target.closest('.ascension-badge[data-mod-id]'));
+            const path = e.composedPath();
+
+            const skillSlot = findInPath(path, el =>
+                el.classList.contains('skill-slot') && 'tooltipType' in el.dataset);
+            const passiveSlot = !skillSlot && findInPath(path, el =>
+                el.classList.contains('passive-slot') && 'tooltipType' in el.dataset);
+            const ascBadge = !skillSlot && !passiveSlot && findInPath(path, el =>
+                el.classList.contains('ascension-badge') && 'modId' in el.dataset);
 
             if (skillSlot) {
                 this._handleSkillSlotTooltip(skillSlot);
+                this._hudTooltipEl.positionTooltip(e.clientX, e.clientY);
                 return;
             }
 
             if (passiveSlot) {
                 this._handlePassiveSlotTooltip(passiveSlot);
+                this._hudTooltipEl.positionTooltip(e.clientX, e.clientY);
                 return;
             }
 
             if (ascBadge) {
                 this._handleAscensionBadgeTooltip(ascBadge);
+                this._hudTooltipEl.positionTooltip(e.clientX, e.clientY);
                 return;
             }
 
-            if (!target.closest('.hud-tooltip')) {
+            const overTooltip = findInPath(path, el => el.classList.contains('hud-tooltip'));
+            if (!overTooltip) {
                 this._hideTooltip();
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (this._hudTooltipEl?.isShown) {
+            } else if (this._hudTooltipEl?.isShown) {
                 this._hudTooltipEl.positionTooltip(e.clientX, e.clientY);
             }
-        });
+        };
+
+        document.addEventListener('mouseover', evaluateTooltip);
+        document.addEventListener('mousemove', evaluateTooltip);
     }
 
     /** @param {HTMLElement} slotEl */

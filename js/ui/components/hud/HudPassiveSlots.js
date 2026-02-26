@@ -36,6 +36,14 @@ const styles = createSheet(/* css */`
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+
+  .passive-slot:hover {
+    transform: scale(1.18);
+    box-shadow: 0 0 12px rgba(255, 45, 236, 0.55);
+    border-color: rgba(255, 45, 236, 0.75);
   }
 
   .passive-slot span {

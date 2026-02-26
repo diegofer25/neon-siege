@@ -62,7 +62,6 @@ declare global {
         show(): void;
         hide(): void;
         setLastRunStats(stats: { lastWave?: number; lastScore?: number; bestWave?: number; bestScore?: number }): void;
-        setLoadSaveVisible(visible: boolean): void;
         getSelectedDifficulty(): string;
         setDifficulty(difficulty: string): void;
     }

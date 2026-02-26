@@ -33,8 +33,20 @@ const styles = createSheet(/* css */`
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    cursor: default;
+    cursor: pointer;
     user-select: none;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+
+  .skill-slot:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 14px rgba(0, 255, 255, 0.55);
+    border-color: rgba(0, 255, 255, 0.9);
+  }
+
+  .skill-slot.ultimate:hover {
+    box-shadow: 0 0 14px rgba(255, 45, 236, 0.55);
+    border-color: rgba(255, 45, 236, 0.9);
   }
 
   .skill-slot.ultimate {
