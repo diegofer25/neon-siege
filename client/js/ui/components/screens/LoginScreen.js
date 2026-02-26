@@ -581,29 +581,38 @@ class LoginScreen extends BaseComponent {
     _switchScreen(screenId) {
         const current = this._$(`.auth-screen.active`);
         const next = this._$(`#screen-${screenId}`);
-        if (!next || current === next) return;
+        if (!next || current === next || this._switching) return;
+        this._switching = true;
 
         // Determine slide direction
         const screens = ['quick-play', 'login', 'register'];
         const currentIdx = screens.indexOf(this._currentScreen);
         const nextIdx = screens.indexOf(screenId);
-        const slideOut = nextIdx > currentIdx ? 'slide-left' : 'slide-right';
         const slideIn = nextIdx > currentIdx ? 'slide-right' : 'slide-left';
 
-        // Slide current out
-        current.classList.add(slideOut);
-        current.addEventListener('transitionend', () => {
-            current.classList.remove('active', slideOut);
-        }, { once: true });
+        // Phase 1 – fade out current screen
+        current.style.opacity = '0';
+        current.style.transform = nextIdx > currentIdx ? 'translateX(-20px)' : 'translateX(20px)';
 
-        // Prepare and slide next in
-        next.classList.add(slideIn);
-        next.offsetHeight; // reflow
-        next.classList.add('active');
+        const onDone = () => {
+            current.removeEventListener('transitionend', onDone);
+            current.classList.remove('active');
+            current.style.opacity = '';
+            current.style.transform = '';
 
-        requestAnimationFrame(() => {
-            next.classList.remove(slideIn);
-        });
+            // Phase 2 – slide new screen in
+            next.classList.add(slideIn);
+            next.offsetHeight; // reflow
+            next.classList.add('active');
+            requestAnimationFrame(() => {
+                next.classList.remove(slideIn);
+                this._switching = false;
+            });
+        };
+
+        current.addEventListener('transitionend', onDone, { once: true });
+        // Safety timeout in case transitionend doesn't fire
+        setTimeout(() => { if (this._switching) onDone(); }, 300);
 
         this._currentScreen = screenId;
         this.setError(null);
