@@ -3,7 +3,7 @@
  *
  * Public API:
  *   updateUI(settings)                          — sync all controls from a settings object
- *   setSaveButtonStates({ hasSave, canSave })   — enable/disable save/load/clear buttons
+ *   setSaveButtonStates({ hasSave })            — enable/disable load/clear buttons
  *   setDevPanelVisible(bool)                    — show/hide the dev panel toggle row
  *   setKeybindHintsVisible(bool)                — show/hide the keybind hints text
  *   isVisible() → bool
@@ -11,7 +11,6 @@
  *
  * Events (composed, bubbling):
  *   'setting-change'    — { key, value } for any setting control
- *   'save-game'
  *   'load-game'
  *   'clear-save'
  *   'reset-settings'
@@ -227,7 +226,6 @@ class SettingsModal extends BaseComponent {
                     </div>
                     <p id="keybindHintsText" class="settings-help">Keyboard: WASD/Arrows move &bull; Q/E/R/T cast skills &bull; P pause/resume</p>
                     <div class="settings-actions">
-                        <neon-button id="saveBtn">Save Game</neon-button>
                         <neon-button id="loadBtn">Load Save</neon-button>
                         <neon-button id="clearBtn" variant="danger">Delete Save</neon-button>
                     </div>
@@ -274,7 +272,6 @@ class SettingsModal extends BaseComponent {
         }
 
         // Action buttons
-        this._$('#saveBtn').addEventListener('click', () => this._emit('save-game'));
         this._$('#loadBtn').addEventListener('click', () => this._emit('load-game'));
         this._$('#clearBtn').addEventListener('click', () => this._emit('clear-save'));
         this._$('#resetBtn').addEventListener('click', () => this._emit('reset-settings'));
@@ -319,11 +316,10 @@ class SettingsModal extends BaseComponent {
         if (el) el.style.display = visible ? 'block' : 'none';
     }
 
-    /** @param {{ hasSave: boolean, canSave: boolean }} states */
-    setSaveButtonStates({ hasSave, canSave }) {
+    /** @param {{ hasSave: boolean }} states */
+    setSaveButtonStates({ hasSave }) {
         /** @type {HTMLButtonElement} */ (this._$('#loadBtn')).disabled = !hasSave;
         /** @type {HTMLButtonElement} */ (this._$('#clearBtn')).disabled = !hasSave;
-        /** @type {HTMLButtonElement} */ (this._$('#saveBtn')).disabled = !canSave;
     }
 
     /** @param {boolean} visible */

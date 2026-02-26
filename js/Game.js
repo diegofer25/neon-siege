@@ -28,6 +28,7 @@ const showLevelUpPanel = () => skillUI.showLevelUpPanel();
 const showAscensionPanel = () => skillUI.showAscensionPanel();
 const closeAllSkillOverlays = () => skillUI.closeAll();
 import { ProgressionManager } from "./managers/ProgressionManager.js";
+import { saveStateManager } from "./managers/SaveStateManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
 import { MathUtils } from "./utils/MathUtils.js";
 
@@ -821,6 +822,9 @@ export class Game {
 			isBossWave: this.waveManager.isBossWave
 		});
 
+		// Auto-save at the end of every wave
+		saveStateManager.saveSnapshot(this.getSaveSnapshot());
+
 		// Decide what UI to show between waves
 		this._showBetweenWaveUI();
 	}
@@ -1408,10 +1412,6 @@ export class Game {
 			enemiesToSpawn,
 			totalEnemies,
 		};
-	}
-
-	canSaveCurrentRun() {
-		return this.gameState === Game.STATES.PLAYING || this.gameState === Game.STATES.PAUSED;
 	}
 
 	getSaveSnapshot() {

@@ -260,7 +260,6 @@ function init() {
 
     gameHudEl.addEventListener('settings-click', openSettingsModal);
     settingsModalEl.addEventListener('close-settings', closeSettingsModal);
-    settingsModalEl.addEventListener('save-game', handleSaveFromSettings);
     settingsModalEl.addEventListener('load-game', () => loadGameFromSave('settings_menu'));
     settingsModalEl.addEventListener('clear-save', clearSavedGame);
     settingsModalEl.addEventListener('reset-settings', resetSettingsToDefaults);
@@ -788,18 +787,6 @@ function closeSettingsModal() {
     settingsModalWasPlaying = false;
 }
 
-function handleSaveFromSettings() {
-    if (!game || !game.canSaveCurrentRun()) {
-        return;
-    }
-
-    const saved = saveStateManager.saveSnapshot(game.getSaveSnapshot());
-    if (saved) {
-        playSFX('ui_purchase_success');
-        syncSaveButtons();
-    }
-}
-
 function loadGameFromSave(source = 'unknown') {
     const rawSave = saveStateManager.getRawSave();
     if (!rawSave || !game) {
@@ -849,10 +836,9 @@ function clearSavedGame() {
 
 function syncSaveButtons() {
     const hasSave = saveStateManager.hasSave();
-    const canSaveRun = game?.canSaveCurrentRun() || false;
 
     document.querySelector('start-screen')?.setLoadSaveVisible(hasSave);
-    document.querySelector('settings-modal')?.setSaveButtonStates({ hasSave, canSave: canSaveRun });
+    document.querySelector('settings-modal')?.setSaveButtonStates({ hasSave });
     document.querySelector('game-over-screen')?.setLoadSaveVisible(hasSave);
 }
 
