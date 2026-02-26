@@ -679,7 +679,7 @@
     display: flex;
     justify-content: center;
     background: linear-gradient(180deg, transparent 0%, rgba(0, 6, 16, 0.95) 25%);
-    padding: 20px 48px 16px 24px;
+    padding: 20px 0 16px 24px;
     pointer-events: none;
     z-index: 200;
     opacity: 0;

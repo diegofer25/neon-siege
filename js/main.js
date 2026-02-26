@@ -408,10 +408,6 @@ function setupCanvas() {
     canvas.logicalWidth = logicalWidth;
     canvas.logicalHeight = logicalHeight;
 
-    // Apply logical size via CSS
-    canvas.style.width = logicalWidth + 'px';
-    canvas.style.height = logicalHeight + 'px';
-
     // Handle high DPI displays by resizing the backing store
     const dpr = window.devicePixelRatio || 1;
     const ctx = canvas.getContext('2d');
