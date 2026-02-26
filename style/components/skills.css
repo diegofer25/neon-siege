@@ -46,6 +46,17 @@
     font-family: 'Press Start 2P', monospace;
     font-size: 8px;
     color: rgba(255, 255, 255, 0.75);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.passive-slot .skill-icon-img {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    object-fit: cover;
+    image-rendering: auto;
 }
 
 .passive-slot.filled {
@@ -109,6 +120,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skill-slot-name .skill-icon-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    image-rendering: auto;
 }
 
 /* ================================================================
@@ -306,6 +328,16 @@
 .tree-node--attr .tree-node__icon {
     font-size: 18px;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tree-node--attr .tree-node__icon .skill-icon-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 .tree-node--attr .tree-node__value {
@@ -385,6 +417,16 @@
 .tree-node--skill .tree-node__icon {
     font-size: 18px;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tree-node--skill .tree-node__icon .skill-icon-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
 }
 
 .tree-node__rank {
@@ -655,6 +697,16 @@
 .ascension-icon {
     font-size: 2rem;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ascension-icon .skill-icon-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
 }
 
 .ascension-name {
@@ -780,6 +832,14 @@
     user-select: none;
 }
 
+.ascension-badge .skill-icon-img {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    object-fit: cover;
+    image-rendering: auto;
+}
+
 .ascension-badge:hover {
     transform: scale(1.18);
     box-shadow: 0 0 16px rgba(255, 215, 0, 0.65);
@@ -807,6 +867,13 @@
     align-items: center;
     gap: 7px;
     margin-bottom: 5px;
+}
+
+.hud-tooltip__header .skill-icon-img {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    object-fit: cover;
 }
 
 .hud-tooltip__icon {

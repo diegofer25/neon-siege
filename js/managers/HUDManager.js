@@ -11,6 +11,8 @@
  *   hudManager.update();               // call each frame
  */
 
+import { skillIconHtml } from '../utils/IconUtils.js';
+
 // ---------------------------------------------------------------------------
 // DOM-ref helper – returns element or a stub so we never null-check in hot path
 // ---------------------------------------------------------------------------
@@ -226,7 +228,7 @@ class HUDManager {
                 const slot = slots[i];
                 if (nameEl === NOOP_EL || cdEl === NOOP_EL) continue;
                 if (slot?.skillId && slot.skill) {
-                    nameEl.textContent = slot.skill.name.substring(0, 8);
+                    nameEl.innerHTML = skillIconHtml(slot.skill, 32);
                     const cd = g.skillManager.cooldowns[slot.skillId];
                     if (cd && cd > 0) {
                         const maxCd = g.skillManager.getCooldownInfo(slot.skillId).total;
@@ -252,7 +254,7 @@ class HUDManager {
             if (this._ascensionSlots.dataset.modCount !== String(mods.length)) {
                 this._ascensionSlots.dataset.modCount = String(mods.length);
                 this._ascensionSlots.innerHTML = mods.map(m =>
-                    `<div class="ascension-badge" data-tooltip-type="ascension" data-mod-id="${m.id}" title="">${m.icon}</div>`
+                    `<div class="ascension-badge" data-tooltip-type="ascension" data-mod-id="${m.id}" title="">${skillIconHtml(m, 22)}</div>`
                 ).join('');
             }
         }
@@ -336,12 +338,12 @@ class HUDManager {
         // Update text for each slot
         for (let i = 0; i < count; i++) {
             const skillId = equipped[i];
-            const slotEl = container.children[i];
-            const span = slotEl.firstChild;
+            const slotEl = /** @type {HTMLElement} */ (container.children[i]);
+            const span = /** @type {HTMLElement} */ (slotEl.firstChild);
             const skill = g.skillManager.getSkillDef(skillId);
             const rank = g.skillManager.getSkillRank(skillId);
             if (skill) {
-                span.textContent = `${skill.icon || '✨'} ${rank}`;
+                span.innerHTML = `${skillIconHtml(skill, 18)} ${rank}`;
                 slotEl.classList.add('filled');
                 slotEl.dataset.passiveSlot = String(i);
             }
@@ -433,6 +435,7 @@ class HUDManager {
             const typeLabel = /** @type {any} */ (slot)?.isUltimate ? 'Ultimate' : 'Active';
             this._showTooltip({
                 icon: slot.skill.icon || '⚡',
+                iconImage: slot.skill.iconImage,
                 name: slot.skill.name,
                 meta: `${typeLabel} · Tier ${slot.skill.tier} · Rank ${rank}/${slot.skill.maxRank}`,
                 desc: slot.skill.description,
@@ -455,6 +458,7 @@ class HUDManager {
             if (skill) {
                 this._showTooltip({
                     icon: skill.icon || '✨',
+                    iconImage: skill.iconImage,
                     name: skill.name,
                     meta: `Passive · Tier ${skill.tier} · Rank ${rank}/${skill.maxRank}`,
                     desc: skill.description,
@@ -474,6 +478,7 @@ class HUDManager {
         if (mod) {
             this._showTooltip({
                 icon: mod.icon || '✨',
+                iconImage: mod.iconImage,
                 name: mod.name,
                 meta: 'Ascension Modifier',
                 desc: mod.description,
@@ -483,14 +488,17 @@ class HUDManager {
         }
     }
 
-    /** @param {{ icon:string, name:string, meta:string, desc:string, cd?:string, type:string }} info @param {HTMLElement} anchorEl */
+    /** @param {{ icon:string, iconImage?:string, name:string, meta:string, desc:string, cd?:string, type:string }} info @param {HTMLElement} anchorEl */
     _showTooltip(info, anchorEl) {
         const el = this._hudTooltipEl;
         if (!el) return;
         el.className = `hud-tooltip${info.type === 'ascension' ? ' hud-tooltip--ascension' : ''}`;
+        const iconHtml = info.iconImage
+            ? skillIconHtml(info, 20)
+            : `<span class="hud-tooltip__icon">${info.icon}</span>`;
         el.innerHTML = `
             <div class="hud-tooltip__header">
-                <span class="hud-tooltip__icon">${info.icon}</span>
+                ${iconHtml}
                 <span class="hud-tooltip__name">${info.name}</span>
             </div>
             <div class="hud-tooltip__meta">${info.meta}</div>

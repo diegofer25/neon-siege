@@ -18,18 +18,19 @@ INFISICAL_PATH="/neon-td"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-OUTPUT_DIR="$PROJECT_ROOT/assets/images"
+DEFAULT_OUTPUT_DIR="$PROJECT_ROOT/assets/images"
 VENV_DIR="$PROJECT_ROOT/.venv"
 
 # Validar argumentos
 if [ -z "$1" ]; then
     echo "Erro: É necessário fornecer um prompt para gerar a imagem."
-    echo "Uso: $0 \"seu prompt aqui\" [nome_arquivo_opcional]"
+    echo "Uso: $0 \"seu prompt aqui\" [nome_arquivo_opcional] [diretorio_saida_opcional]"
     exit 1
 fi
 
 PROMPT="$1"
 FILENAME="${2:-image_$(date +%Y%m%d_%H%M%S)}"
+OUTPUT_DIR="${3:-$DEFAULT_OUTPUT_DIR}"
 
 # Garantir que o diretório de saída existe
 mkdir -p "$OUTPUT_DIR"

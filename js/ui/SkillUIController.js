@@ -13,6 +13,7 @@
  */
 
 import { SkillTreeRenderer } from './SkillTreeRenderer.js';
+import { skillIconHtml } from '../utils/IconUtils.js';
 import { GameConfig } from '../config/GameConfig.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 import { audioManager } from '../managers/AudioManager.js';
@@ -280,7 +281,7 @@ class SkillUIController {
             const card = document.createElement('div');
             card.className = 'ascension-card';
             card.innerHTML = `
-                <div class="ascension-icon">${mod.icon || '✨'}</div>
+                <div class="ascension-icon">${skillIconHtml(mod, 40)}</div>
                 <div class="ascension-name">${mod.name}</div>
                 <div class="ascension-desc">${mod.description}</div>
             `;

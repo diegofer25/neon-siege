@@ -23,6 +23,7 @@ export const ATTRIBUTES = {
 		label: 'Strength',
 		description: 'Increases bullet damage, bullet speed, and explosion damage.',
 		icon: '💥',
+		iconImage: 'assets/icons/skills/attr_str.jpg',
 		perPoint: {
 			damageMultiplier: 0.05,      // +5% damage per point
 			explosionDamage: 0.04,        // +4% explosion damage per point
@@ -35,6 +36,7 @@ export const ATTRIBUTES = {
 		label: 'Dexterity',
 		description: 'Increases fire rate, turn speed, and movement speed.',
 		icon: '⚡',
+		iconImage: 'assets/icons/skills/attr_dex.jpg',
 		perPoint: {
 			fireRateMultiplier: 0.04,     // +4% fire rate per point
 			turnSpeedMultiplier: 0.03,    // +3% turn speed per point
@@ -47,6 +49,7 @@ export const ATTRIBUTES = {
 		label: 'Vitality',
 		description: 'Increases max HP, shield capacity, and regeneration.',
 		icon: '❤️',
+		iconImage: 'assets/icons/skills/attr_vit.jpg',
 		perPoint: {
 			maxHpBonus: 8,                // +8 max HP per point
 			shieldCapacity: 4,            // +4 max shield per point
@@ -59,6 +62,7 @@ export const ATTRIBUTES = {
 		label: 'Intelligence',
 		description: 'Reduces skill cooldowns and increases AoE size.',
 		icon: '🧠',
+		iconImage: 'assets/icons/skills/attr_int.jpg',
 		perPoint: {
 			cooldownReduction: 0.03,      // +3% CDR per point (multiplicative)
 			aoeRadiusMultiplier: 0.03,    // +3% AoE radius per point
@@ -70,6 +74,7 @@ export const ATTRIBUTES = {
 		label: 'Luck',
 		description: 'Increases critical hit chance and loot quality.',
 		icon: '🍀',
+		iconImage: 'assets/icons/skills/attr_luck.jpg',
 		perPoint: {
 			critChance: 0.015,            // +1.5% crit chance per point
 			lootQualityBonus: 0.02,       // +2% loot quality per point
@@ -181,6 +186,7 @@ export const ARCHETYPES = {
 				name: 'Sharp Rounds',
 				description: '+20% bullet damage per rank.',
 				icon: '⚡',
+				iconImage: 'assets/icons/skills/gunner_sharp_rounds.jpg',
 				type: 'passive',
 				tier: 1,
 				maxRank: 3,
@@ -191,6 +197,7 @@ export const ARCHETYPES = {
 				name: 'Rapid Fire',
 				description: '+15% fire rate per rank.',
 				icon: '🔥',
+				iconImage: 'assets/icons/skills/gunner_rapid_fire.jpg',
 				type: 'passive',
 				tier: 1,
 				maxRank: 3,
@@ -201,6 +208,7 @@ export const ARCHETYPES = {
 				name: 'Focused Fire',
 				description: 'Active: +100% fire rate for 4s. 18s base CD. +1s duration per rank.',
 				icon: '💥',
+				iconImage: 'assets/icons/skills/gunner_focused_fire.jpg',
 				type: 'active',
 				tier: 1,
 				maxRank: 2,
@@ -214,6 +222,7 @@ export const ARCHETYPES = {
 				name: 'Piercing Shots',
 				description: 'Projectiles pierce +1 enemy per rank. -25% damage per pierce.',
 				icon: '🎯',
+				iconImage: 'assets/icons/skills/gunner_piercing.jpg',
 				type: 'passive',
 				tier: 2,
 				maxRank: 3,
@@ -224,6 +233,7 @@ export const ARCHETYPES = {
 				name: 'Triple Shot',
 				description: 'Fire 3 bullets in a spread. Side bullets deal 30% damage (+10%/rank).',
 				icon: '🔱',
+				iconImage: 'assets/icons/skills/gunner_triple_shot.jpg',
 				type: 'passive',
 				tier: 2,
 				maxRank: 3,
@@ -234,6 +244,7 @@ export const ARCHETYPES = {
 				name: 'Quick Aim',
 				description: '+20% turn speed per rank.',
 				icon: '🌀',
+				iconImage: 'assets/icons/skills/gunner_quick_aim.jpg',
 				type: 'passive',
 				tier: 2,
 				maxRank: 2,
@@ -246,6 +257,7 @@ export const ARCHETYPES = {
 				name: 'Critical Mastery',
 				description: '+8% crit chance and +50% crit damage per rank.',
 				icon: '💎',
+				iconImage: 'assets/icons/skills/gunner_critical_mastery.jpg',
 				type: 'passive',
 				tier: 3,
 				maxRank: 3,
@@ -256,6 +268,7 @@ export const ARCHETYPES = {
 				name: 'Bullet Storm',
 				description: 'Active: Fire a rapid burst of 20 homing shots over 3s. 25s base CD. +5 shots per rank.',
 				icon: '🌪️',
+				iconImage: 'assets/icons/skills/gunner_barrage.jpg',
 				type: 'active',
 				tier: 3,
 				maxRank: 2,
@@ -267,6 +280,7 @@ export const ARCHETYPES = {
 				name: 'Overcharge Burst',
 				description: 'Every 8th shot deals 5x damage. -2 interval and +2x damage per rank.',
 				icon: '⚡',
+				iconImage: 'assets/icons/skills/gunner_overcharge.jpg',
 				type: 'passive',
 				tier: 3,
 				maxRank: 2,
@@ -278,6 +292,7 @@ export const ARCHETYPES = {
 				name: 'Aimbot Overdrive',
 				description: 'Ultimate: Lock onto every enemy simultaneously. Fire homing shots at all of them for 6s. All projectiles gently track enemies. 90s base CD.',
 				icon: '🎯',
+				iconImage: 'assets/icons/skills/gunner_aimbot_overdrive.jpg',
 				type: 'ultimate',
 				tier: 4,
 				maxRank: 1,
@@ -304,6 +319,7 @@ export const ARCHETYPES = {
 				name: 'Explosive Rounds',
 				description: 'Bullets explode on impact, dealing 30% damage in an area. 50px radius.',
 				icon: '💣',
+				iconImage: 'assets/icons/skills/techno_explosive_rounds.jpg',
 				type: 'passive',
 				tier: 1,
 				maxRank: 1,
@@ -314,6 +330,7 @@ export const ARCHETYPES = {
 				name: 'Bigger Booms',
 				description: '+25% explosion radius and +15% explosion damage per rank.',
 				icon: '🔥',
+				iconImage: 'assets/icons/skills/techno_bigger_booms.jpg',
 				type: 'passive',
 				tier: 1,
 				maxRank: 3,
@@ -324,6 +341,7 @@ export const ARCHETYPES = {
 				name: 'EMP Pulse',
 				description: 'Active: Slow all enemies by 60% for 4s in a large radius. 20s base CD. +1.5s duration per rank.',
 				icon: '📡',
+				iconImage: 'assets/icons/skills/techno_emp_pulse.jpg',
 				type: 'active',
 				tier: 1,
 				maxRank: 2,
@@ -337,6 +355,7 @@ export const ARCHETYPES = {
 				name: 'Chain Hit',
 				description: 'Explosions have 30% chance (+15%/rank) to chain to a nearby enemy. 120px range.',
 				icon: '⛓️',
+				iconImage: 'assets/icons/skills/techno_chain_hit.jpg',
 				type: 'passive',
 				tier: 2,
 				maxRank: 3,
@@ -347,6 +366,7 @@ export const ARCHETYPES = {
 				name: 'Volatile Kills',
 				description: 'Enemies explode on death, dealing 20% of their max HP to nearby. +10%/rank. 80px radius.',
 				icon: '💀',
+				iconImage: 'assets/icons/skills/techno_volatile_kills.jpg',
 				type: 'passive',
 				tier: 2,
 				maxRank: 2,
@@ -357,6 +377,7 @@ export const ARCHETYPES = {
 				name: 'Immolation Aura',
 				description: 'Burn nearby enemies for 1% max HP/sec. +20 range per rank.',
 				icon: '🔥',
+				iconImage: 'assets/icons/skills/techno_burn.jpg',
 				type: 'passive',
 				tier: 2,
 				maxRank: 3,
@@ -369,6 +390,7 @@ export const ARCHETYPES = {
 				name: 'Elemental Synergy',
 				description: 'Burn + explosions deal 25% more damage combined. +15%/rank.',
 				icon: '🌟',
+				iconImage: 'assets/icons/skills/techno_elemental_synergy.jpg',
 				type: 'passive',
 				tier: 3,
 				maxRank: 2,
@@ -379,6 +401,7 @@ export const ARCHETYPES = {
 				name: 'Neon Nova',
 				description: 'Active: Massive AoE blast dealing 40% max HP to all enemies in range. 30s base CD. +50px radius per rank.',
 				icon: '☀️',
+				iconImage: 'assets/icons/skills/techno_neon_nova.jpg',
 				type: 'active',
 				tier: 3,
 				maxRank: 2,
@@ -390,6 +413,7 @@ export const ARCHETYPES = {
 				name: 'Meltdown',
 				description: 'Projectiles hitting burning enemies have 15% (+10%/rank) chance to trigger a bonus explosion.',
 				icon: '🌋',
+				iconImage: 'assets/icons/skills/techno_meltdown.jpg',
 				type: 'passive',
 				tier: 3,
 				maxRank: 2,
@@ -401,6 +425,7 @@ export const ARCHETYPES = {
 				name: 'Lightning Cascade',
 				description: 'Ultimate: Chain lightning bounces between ALL enemies. Each bounce amplifies damage by 15%. Chain hits deal escalating damage (+25% per bounce). 90s base CD.',
 				icon: '⚡',
+				iconImage: 'assets/icons/skills/techno_lightning_cascade.jpg',
 				type: 'ultimate',
 				tier: 4,
 				maxRank: 1,
@@ -467,6 +492,7 @@ export const ASCENSION_POOL = [
 		name: 'Ricochet Rounds',
 		description: 'All projectiles bounce off screen walls once.',
 		icon: '🏓',
+		iconImage: 'assets/icons/skills/asc_ricochet.jpg',
 		effect: { ricochet: true },
 	},
 	{
@@ -474,6 +500,7 @@ export const ASCENSION_POOL = [
 		name: 'Volatile Death',
 		description: 'All enemies explode on death dealing 15% HP to nearby foes.',
 		icon: '💥',
+		iconImage: 'assets/icons/skills/asc_death_explosions.jpg',
 		effect: { deathExplosion: 0.15 },
 	},
 	{
@@ -481,6 +508,7 @@ export const ASCENSION_POOL = [
 		name: 'Overclock Protocol',
 		description: 'Skill cooldowns halved, but take 20% more damage.',
 		icon: '⚡',
+		iconImage: 'assets/icons/skills/asc_double_cd.jpg',
 		effect: { cooldownMultiplier: 0.5, damageTakenMultiplier: 1.2 },
 	},
 	{
@@ -488,6 +516,7 @@ export const ASCENSION_POOL = [
 		name: 'Glass Cannon',
 		description: '+60% damage dealt, but -30% max HP.',
 		icon: '🔫',
+		iconImage: 'assets/icons/skills/asc_glass_cannon.jpg',
 		effect: { damageMultiplier: 1.6, maxHpMultiplier: 0.7 },
 	},
 	{
@@ -495,6 +524,7 @@ export const ASCENSION_POOL = [
 		name: 'Vampiric Touch',
 		description: 'Heal 2% of damage dealt to enemies.',
 		icon: '🧛',
+		iconImage: 'assets/icons/skills/asc_vampiric.jpg',
 		effect: { lifeStealPercent: 0.02 },
 	},
 	{
@@ -502,6 +532,7 @@ export const ASCENSION_POOL = [
 		name: 'Bullet Time',
 		description: 'Enemies move 20% slower permanently.',
 		icon: '⏳',
+		iconImage: 'assets/icons/skills/asc_bullet_time.jpg',
 		effect: { globalEnemySlow: 0.20 },
 	},
 	{
@@ -509,6 +540,7 @@ export const ASCENSION_POOL = [
 		name: 'Knowledge Surge',
 		description: '+40% XP from all sources.',
 		icon: '📚',
+		iconImage: 'assets/icons/skills/asc_xp_surge.jpg',
 		effect: { xpMultiplier: 1.4 },
 	},
 	{
@@ -516,6 +548,7 @@ export const ASCENSION_POOL = [
 		name: 'Thick Skin',
 		description: '+40% max HP and +2 HP regen/sec.',
 		icon: '🛡️',
+		iconImage: 'assets/icons/skills/asc_thick_skin.jpg',
 		effect: { maxHpMultiplier: 1.4, hpRegenBonus: 2 },
 	},
 	{
@@ -523,6 +556,7 @@ export const ASCENSION_POOL = [
 		name: 'Chain Reaction',
 		description: 'Critical hits bounce to 1 nearby enemy at 50% damage.',
 		icon: '⛓️',
+		iconImage: 'assets/icons/skills/asc_chain_reaction.jpg',
 		effect: { critBounce: true, critBounceDamage: 0.50 },
 	},
 	{
@@ -530,6 +564,7 @@ export const ASCENSION_POOL = [
 		name: 'Treasure Hunter',
 		description: '+100% score and loot drop chance doubled.',
 		icon: '💰',
+		iconImage: 'assets/icons/skills/asc_treasure_hunter.jpg',
 		effect: { scoreMultiplier: 2.0, lootChanceMultiplier: 2.0 },
 	},
 	{
@@ -537,6 +572,7 @@ export const ASCENSION_POOL = [
 		name: 'Rapid Evolution',
 		description: 'Gain +1 skill point and +5 attribute points immediately.',
 		icon: '🧬',
+		iconImage: 'assets/icons/skills/asc_rapid_evolution.jpg',
 		effect: { bonusSkillPoints: 1, bonusAttributePoints: 5 },
 		consumeOnPick: true,
 	},
@@ -545,6 +581,7 @@ export const ASCENSION_POOL = [
 		name: 'Berserker',
 		description: 'Deal +3% more damage for each 10% HP missing.',
 		icon: '🔥',
+		iconImage: 'assets/icons/skills/asc_berserker.jpg',
 		effect: { berserkerDamagePerMissingHpPercent: 0.03 },
 	},
 	{
@@ -552,6 +589,7 @@ export const ASCENSION_POOL = [
 		name: 'Shield Nova',
 		description: 'When shield breaks, damage all nearby enemies for 200% shield capacity.',
 		icon: '💫',
+		iconImage: 'assets/icons/skills/asc_shield_nova.jpg',
 		effect: { shieldNovaMultiplier: 2.0, shieldNovaRadius: 150 },
 	},
 	{
@@ -559,6 +597,7 @@ export const ASCENSION_POOL = [
 		name: 'Echo Strike',
 		description: '15% chance to fire a duplicate projectile.',
 		icon: '👥',
+		iconImage: 'assets/icons/skills/asc_echo.jpg',
 		effect: { echoChance: 0.15 },
 	},
 	{
@@ -566,6 +605,7 @@ export const ASCENSION_POOL = [
 		name: 'Resilience',
 		description: 'Reduce all damage taken by 15%.',
 		icon: '🪨',
+		iconImage: 'assets/icons/skills/asc_resilience.jpg',
 		effect: { damageReduction: 0.15 },
 	},
 ];

@@ -16,6 +16,8 @@ import {
 	PLAYABLE_ARCHETYPES,
 } from '../config/SkillConfig.js';
 
+import { skillIconHtml } from '../utils/IconUtils.js';
+
 // ─── LAYOUT CONSTANTS ──────────────────────────────────────────────────────────
 
 const WORLD_W = 1400;
@@ -600,7 +602,7 @@ export class SkillTreeRenderer {
 			node.style.height = ATTR_NODE_SIZE + 'px';
 
 			node.innerHTML = `
-				<span class="tree-node__icon">${attr.icon}</span>
+				<span class="tree-node__icon">${skillIconHtml(attr, 28)}</span>
 				<span class="tree-node__value">${pts}</span>
 			`;
 
@@ -622,8 +624,7 @@ export class SkillTreeRenderer {
 				const canAllocateNow = currUnspent > 0 && currPts < attr.maxPoints;
 				this._showTooltip(node, {
 					name: attr.label,
-					icon: attr.icon,
-					description: attr.description,
+					icon: attr.icon,				iconImage: attr.iconImage,					description: attr.description,
 					extra: `Points: ${currPts} / ${attr.maxPoints}`,
 					actionHint: canAllocateNow ? '👆 Click + to allocate!' : '',
 					color: '#0ff',
@@ -712,7 +713,7 @@ export class SkillTreeRenderer {
 			rankHtml = '<span class="tree-node__rank">✓</span>';
 		}
 
-		el.innerHTML = `<span class="tree-node__icon">${skill.icon}</span>${rankHtml}`;
+		el.innerHTML = `<span class="tree-node__icon">${skillIconHtml(skill, 28)}</span>${rankHtml}`;
 
 		// Click to learn / rank up
 		if (canLearn && sm.unspentSkillPoints > 0 && isAvailable) {
@@ -739,6 +740,7 @@ export class SkillTreeRenderer {
 			this._showTooltip(el, {
 				name: skill.name,
 				icon: skill.icon,
+				iconImage: skill.iconImage,
 				description: skill.description,
 				extra: `${typeLabel} · Tier ${skill.tier}`,
 				status,
@@ -773,9 +775,12 @@ export class SkillTreeRenderer {
 		this._tooltipEl.style.top = top + 'px';
 
 		const col = data.color || '#0ff';
+		const tooltipIcon = data.iconImage
+			? skillIconHtml(data, 20)
+			: `<span>${data.icon || ''}</span>`;
 		this._tooltipEl.innerHTML = `
 			<div class="tree-tooltip__header" style="color:${col}">
-				<span>${data.icon || ''}</span>
+				${tooltipIcon}
 				<span class="tree-tooltip__name">${data.name}</span>
 			</div>
 			<div class="tree-tooltip__extra">${data.extra || ''}</div>
