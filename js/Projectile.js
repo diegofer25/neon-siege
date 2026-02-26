@@ -36,8 +36,11 @@ export class Projectile {
         // Static configuration
         this.baseSpeed = GameConfig.PLAYER.BASE_PROJECTILE_SPEED;
         this.radius = 5;
-        this.trail = [];
         this.trailLength = 8;
+        this.trail = new Array(this.trailLength);
+        for (let i = 0; i < this.trailLength; i++) this.trail[i] = { x: 0, y: 0 };
+        this._trailHead = 0;
+        this._trailCount = 0;
         this.hitEnemyIds = [];
 
         // Lifecycle defaults
@@ -90,7 +93,8 @@ export class Projectile {
 
         this.color = '#fff';
         this.glowColor = '#fff';
-        this.trail.length = 0;
+        this._trailHead = 0;
+        this._trailCount = 0;
 
         this.lifetime = 0;
         this._destroy = false;
@@ -169,12 +173,14 @@ export class Projectile {
             this._destroy = true;
         }
         
-        // Maintain visual trail by adding current position
-        this.trail.push({ x: this.x, y: this.y });
-        
-        // Limit trail length for performance
-        if (this.trail.length > this.trailLength) {
-            this.trail.shift(); // Remove oldest trail point
+        // Maintain visual trail via ring buffer (zero allocation)
+        const slot = (this._trailHead + this._trailCount) % this.trailLength;
+        this.trail[slot].x = this.x;
+        this.trail[slot].y = this.y;
+        if (this._trailCount < this.trailLength) {
+            this._trailCount++;
+        } else {
+            this._trailHead = (this._trailHead + 1) % this.trailLength;
         }
     }
     
@@ -395,8 +401,6 @@ export class Projectile {
      * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
      */
     draw(ctx) {
-        ctx.save();
-        
         // Fake glow: larger semi-transparent circle behind the body (replaces shadowBlur)
         const glowAlpha = this.isCriticalVisual ? 0.35 : 0.2;
         const glowRadius = this.isCriticalVisual ? 12 : 8;
@@ -444,26 +448,24 @@ export class Projectile {
         ctx.fill();
         ctx.stroke();
 
-        // DEX tracer — extended glowing trail behind the projectile (no shadowBlur)
-        if (this.tracerLevel > 0 && this.trail.length >= 2) {
-            ctx.save();
+        // DEX tracer — extended glowing trail behind the projectile (ring buffer)
+        if (this.tracerLevel > 0 && this._trailCount >= 2) {
             const tracerLen = 3 + this.tracerLevel * 0.4;
-            const tracerColor = '#00e5ff';
-            ctx.strokeStyle = tracerColor;
+            ctx.strokeStyle = '#00e5ff';
             ctx.lineWidth = 1.5;
-            const steps = Math.min(this.trail.length, Math.ceil(tracerLen));
+            const steps = Math.min(this._trailCount, Math.ceil(tracerLen));
             for (let i = 0; i < steps - 1; i++) {
+                const idx0 = (this._trailHead + i) % this.trailLength;
+                const idx1 = (this._trailHead + i + 1) % this.trailLength;
                 const t = 1 - i / steps;
                 ctx.globalAlpha = t * 0.6;
                 ctx.beginPath();
-                ctx.moveTo(this.trail[i].x, this.trail[i].y);
-                ctx.lineTo(this.trail[i + 1].x, this.trail[i + 1].y);
+                ctx.moveTo(this.trail[idx0].x, this.trail[idx0].y);
+                ctx.lineTo(this.trail[idx1].x, this.trail[idx1].y);
                 ctx.stroke();
             }
-            ctx.restore();
+            ctx.globalAlpha = 1;
         }
-        
-        ctx.restore();
     }
     
     /**

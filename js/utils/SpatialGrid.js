@@ -19,11 +19,20 @@ export class SpatialGrid {
         this.rows = Math.ceil(height / cellSize);
         /** @type {Map<number, Array>} */
         this.cells = new Map();
+
+        // Reusable query results array — avoids Set allocation per query
+        /** @private */
+        this._queryResults = [];
+        /** @private */
+        this._queryGen = 0;
     }
 
-    /** Remove all entities from the grid. */
+    /** Remove all entities from the grid (retain bucket arrays). */
     clear() {
-        this.cells.clear();
+        const cells = this.cells;
+        for (const bucket of cells.values()) {
+            bucket.length = 0;
+        }
     }
 
     /**
@@ -63,14 +72,17 @@ export class SpatialGrid {
 
     /**
      * Query all entities whose cells overlap the given circle.
-     * Returns a Set to deduplicate entities spanning multiple cells.
+     * Uses a generation counter for O(1) deduplication instead of Set allocation.
      * @param {number} x - Query center X
      * @param {number} y - Query center Y
      * @param {number} radius - Query radius
-     * @returns {Set<Object>}
+     * @returns {Array<Object>}
      */
     query(x, y, radius) {
-        const results = new Set();
+        const results = this._queryResults;
+        results.length = 0;
+        const gen = ++this._queryGen;
+
         const inv = this.invCellSize;
         const minC = Math.max(0, ((x - radius) * inv) | 0);
         const maxC = Math.min(this.cols - 1, ((x + radius) * inv) | 0);
@@ -82,7 +94,11 @@ export class SpatialGrid {
                 const bucket = this.cells.get(this._key(col, row));
                 if (bucket) {
                     for (let i = 0; i < bucket.length; i++) {
-                        results.add(bucket[i]);
+                        const entity = bucket[i];
+                        if (entity._queryGen !== gen) {
+                            entity._queryGen = gen;
+                            results.push(entity);
+                        }
                     }
                 }
             }

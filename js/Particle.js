@@ -187,9 +187,7 @@ export class Particle {
     draw(ctx) {
         if (this.isDead()) return;
         
-        ctx.save();
-        
-        // Set alpha (ensure proper range)
+        // Set alpha directly (no save/restore — caller handles batch state)
         ctx.globalAlpha = Math.max(0, Math.min(1, this.alpha));
         
         // Draw particle (no shadowBlur for performance — particles are too small for glow to matter)
@@ -200,11 +198,9 @@ export class Particle {
         // Only draw if radius is positive (round to avoid decimal positioning)
         if (renderRadius > 0) {
             ctx.beginPath();
-            ctx.arc(Math.round(this.x), Math.round(this.y), renderRadius, 0, Math.PI * 2);
+            ctx.arc((this.x + 0.5) | 0, (this.y + 0.5) | 0, renderRadius, 0, Math.PI * 2);
             ctx.fill();
         }
-        
-        ctx.restore();
     }
     
     /**

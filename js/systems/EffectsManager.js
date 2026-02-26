@@ -159,7 +159,7 @@ export class EffectsManager {
         
         const ringParticle = Particle.createExplosionRing(x, y, radius, '#f80');
         this.game.particles.push(ringParticle);
-        this._createDOMExplosionRing(x, y, radius);
+        // DOM explosion ring removed for performance — canvas ring particle suffices
     }
 
     /**

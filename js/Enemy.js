@@ -180,7 +180,6 @@ export class Enemy {
         }
         
         // Fake glow: semi-transparent circle behind enemy body (replaces expensive shadowBlur)
-        ctx.save();
         ctx.fillStyle = this.glowColor;
         ctx.globalAlpha = 0.25 * intensity;
         ctx.beginPath();
@@ -189,7 +188,9 @@ export class Enemy {
         ctx.globalAlpha = 1;
         
         // Draw enemy body
-        if (this.dying) {
+        const needsTransform = this.dying;
+        if (needsTransform) {
+            ctx.save();
             // Death animation - scale down and fade
             const deathProgress = Math.min(this.deathTimer / 200, 1);
             const scale = 1 - deathProgress;
@@ -249,7 +250,12 @@ export class Enemy {
             ctx.stroke();
         }
         
-        ctx.restore();
+        if (needsTransform) {
+            ctx.restore();
+        } else {
+            // Reset modified state for next entity
+            ctx.globalAlpha = 1;
+        }
     }
     
     /**

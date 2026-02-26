@@ -84,7 +84,8 @@ export class CollisionSystem {
             const queryRadius = projectile.radius + 60;
             const nearby = this._enemyGrid.query(projectile.x, projectile.y, queryRadius);
 
-            for (const enemy of nearby) {
+            for (let nIdx = 0; nIdx < nearby.length; nIdx++) {
+                const enemy = nearby[nIdx];
                 if (!enemy || enemy.dying || enemy.health <= 0) continue;
 
                 if (MathUtils.circleCollision(projectile, enemy)) {

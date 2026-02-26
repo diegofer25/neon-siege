@@ -114,17 +114,18 @@ export class ObjectPool {
      * // Get an enemy at spawn position
      * const enemy = enemyPool.get(spawnX, spawnY, enemySpeed, enemyHealth, enemyDamage);
      */
-    get(...args) {
+    get(a, b, c, d, e, f, g, h) {
         let obj;
         
         if (this.pool.length > 0) {
             obj = this.pool.pop();
-            this.resetFn(obj, ...args);
         } else {
             obj = this.createFn();
-            this.resetFn(obj, ...args);
         }
-        
+        this.resetFn(obj, a, b, c, d, e, f, g, h);
+
+        // Tag with index for O(1) release
+        obj._poolIndex = this.active.length;
         this.active.push(obj);
         return obj;
     }
@@ -154,18 +155,21 @@ export class ObjectPool {
      * }
      */
     release(obj) {
-        const index = this.active.indexOf(obj);
-        if (index === -1) {
+        const index = obj._poolIndex;
+        if (index == null || index < 0 || index >= this.active.length || this.active[index] !== obj) {
             console.warn('Attempted to release object not in active pool');
             return false;
         }
         
-        // Swap-and-pop: O(1) removal instead of O(n) splice
+        // Swap-and-pop with index tag: O(1) removal
         const last = this.active.length - 1;
         if (index !== last) {
-            this.active[index] = this.active[last];
+            const swapped = this.active[last];
+            this.active[index] = swapped;
+            swapped._poolIndex = index;
         }
         this.active.pop();
+        obj._poolIndex = -1;
         
         if (this.pool.length < this.maxSize) {
             this.pool.push(obj);

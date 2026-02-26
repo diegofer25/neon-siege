@@ -360,6 +360,19 @@ export class Game {
 		const centerY = logicalHeight / 2;
 		this.player = new Player(centerX, centerY);
 		this.applyResponsiveEntityScale();
+
+		// Pre-render static background grid to an offscreen canvas
+		this._gridCanvas = null;
+		this._gridWidth = 0;
+		this._gridHeight = 0;
+		this._rebuildGridCanvas();
+
+		// Pre-allocate reusable tick payload to avoid per-frame allocation
+		this._tickPayload = { delta: 0 };
+		// Pre-allocate per-frame dispatch actions to avoid GC churn
+		this._cooldownTickAction = { type: ActionTypes.COOLDOWN_TICK, payload: { delta: 0 } };
+		this._comboTickAction = { type: ActionTypes.COMBO_TICK, payload: { delta: 0 } };
+		this._buffTickAction = { type: ActionTypes.BUFF_TICK, payload: { delta: 0 } };
 	}
 
 	getLogicalCanvasSize() {
@@ -632,6 +645,7 @@ export class Game {
 	 * Main game update loop - now delegates to specialized systems.
 	 */
 	update(delta, input) {
+		this._lastDelta = delta;
 		// Always update effects manager for visual feedback (e.g. screen shake during level up)
 		this.effectsManager.update(delta);
 
@@ -648,8 +662,9 @@ export class Game {
 		// Update skill cooldowns
 		this.skillManager.updateCooldowns(delta);
 
-		// Dispatch cooldown tick to store
-		this.dispatcher.dispatch({ type: ActionTypes.COOLDOWN_TICK, payload: { delta } });
+		// Dispatch cooldown tick to store (reuse pre-allocated action)
+		this._cooldownTickAction.payload.delta = delta;
+		this.dispatcher.dispatch(this._cooldownTickAction);
 
 		// Update all game systems
 		this.waveManager.update(delta);
@@ -658,15 +673,18 @@ export class Game {
 		this.lootSystem.update(delta);
 		this.achievementSystem.update(delta);
 
-		// Dispatch combo and buff ticks
-		this.dispatcher.dispatch({ type: ActionTypes.COMBO_TICK, payload: { delta } });
-		this.dispatcher.dispatch({ type: ActionTypes.BUFF_TICK, payload: { delta } });
+		// Dispatch combo and buff ticks (reuse pre-allocated actions)
+		this._comboTickAction.payload.delta = delta;
+		this.dispatcher.dispatch(this._comboTickAction);
+		this._buffTickAction.payload.delta = delta;
+		this.dispatcher.dispatch(this._buffTickAction);
 
 		// Handle collisions
 		this.collisionSystem.checkAllCollisions();
 
-		// Emit per-frame tick event for skill plugins
-		this.eventBus.emit('tick', { delta });
+		// Emit per-frame tick event for skill plugins (reuse payload object)
+		this._tickPayload.delta = delta;
+		this.eventBus.emit('tick', this._tickPayload);
 
 		// Check game over
 		if (this.player.hp <= 0) {
@@ -1216,14 +1234,14 @@ export class Game {
 
 		this.drawBackground();
 
-		// Draw entities
-		this.particles.forEach((particle) => particle.draw(ctx));
-		
-		// Draw regular enemies first
-		this.enemies.forEach((enemy) => enemy.draw(ctx));
-	
-		
-		this.projectiles.forEach((projectile) => projectile.draw(ctx));
+		// Draw entities — indexed for-loops avoid closure/iterator overhead
+		// Particles: batch save/restore (individual particles no longer save/restore)
+		ctx.save();
+		for (let i = 0; i < this.particles.length; i++) this.particles[i].draw(ctx);
+		ctx.restore();
+
+		for (let i = 0; i < this.enemies.length; i++) this.enemies[i].draw(ctx);
+		for (let i = 0; i < this.projectiles.length; i++) this.projectiles[i].draw(ctx);
 		this.player.draw(ctx);
 
 		// Draw spawn warning if enemies are incoming
@@ -1237,6 +1255,9 @@ export class Game {
 		}
 
 		ctx.restore();
+
+		// Canvas-based screen flash overlay (replaces DOM flash element)
+		vfxHelper.renderFlash(ctx, canvasWidth, canvasHeight, this._lastDelta || 0.016);
 	}
 
 	/**
@@ -1275,32 +1296,60 @@ export class Game {
 	}
 
 	/**
-	 * Draw the background neon grid effect.
+	 * Rebuild the offscreen grid canvas (call on init and resize).
+	 * @private
 	 */
-	drawBackground() {
-		const ctx = this.ctx;
-		const gridSize = GameConfig.VFX.GRID_SIZE;
-
-		ctx.strokeStyle = `rgba(0, 255, 255, ${GameConfig.VFX.GRID_ALPHA})`;
-		ctx.lineWidth = 1;
-
+	_rebuildGridCanvas() {
 		const canvasWidth = this.canvas.logicalWidth || this.canvas.width;
 		const canvasHeight = this.canvas.logicalHeight || this.canvas.height;
 
-		// Draw vertical lines
-		for (let x = 0; x < canvasWidth; x += gridSize) {
-			ctx.beginPath();
-			ctx.moveTo(x, 0);
-			ctx.lineTo(x, canvasHeight);
-			ctx.stroke();
+		// Skip rebuild if dimensions haven't changed
+		if (this._gridCanvas && this._gridWidth === canvasWidth && this._gridHeight === canvasHeight) {
+			return;
 		}
 
-		// Draw horizontal lines
+		this._gridWidth = canvasWidth;
+		this._gridHeight = canvasHeight;
+
+		if (!this._gridCanvas) {
+			this._gridCanvas = document.createElement('canvas');
+		}
+		this._gridCanvas.width = canvasWidth;
+		this._gridCanvas.height = canvasHeight;
+
+		const gctx = this._gridCanvas.getContext('2d');
+		const gridSize = GameConfig.VFX.GRID_SIZE;
+
+		gctx.strokeStyle = `rgba(0, 255, 255, ${GameConfig.VFX.GRID_ALPHA})`;
+		gctx.lineWidth = 1;
+
+		// Batch all grid lines into a single path + single stroke
+		gctx.beginPath();
+		for (let x = 0; x < canvasWidth; x += gridSize) {
+			gctx.moveTo(x, 0);
+			gctx.lineTo(x, canvasHeight);
+		}
 		for (let y = 0; y < canvasHeight; y += gridSize) {
-			ctx.beginPath();
-			ctx.moveTo(0, y);
-			ctx.lineTo(canvasWidth, y);
-			ctx.stroke();
+			gctx.moveTo(0, y);
+			gctx.lineTo(canvasWidth, y);
+		}
+		gctx.stroke();
+	}
+
+	/**
+	 * Draw the background neon grid effect (single drawImage blit).
+	 */
+	drawBackground() {
+		const canvasWidth = this.canvas.logicalWidth || this.canvas.width;
+		const canvasHeight = this.canvas.logicalHeight || this.canvas.height;
+
+		// Rebuild grid if canvas was resized
+		if (this._gridWidth !== canvasWidth || this._gridHeight !== canvasHeight) {
+			this._rebuildGridCanvas();
+		}
+
+		if (this._gridCanvas) {
+			this.ctx.drawImage(this._gridCanvas, 0, 0);
 		}
 	}
 

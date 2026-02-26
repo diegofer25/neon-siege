@@ -16,6 +16,11 @@
  * Lightweight singleton for DOM-based visual effects.
  */
 class VFXHelper {
+    constructor() {
+        /** Canvas-based screen flash state (replaces DOM flash element) */
+        this._flashAlpha = 0;
+    }
+
     /**
      * Create a floating text element that auto-removes after its CSS animation.
      *
@@ -43,16 +48,29 @@ class VFXHelper {
     }
 
     /**
-     * Flash the screen white for a brief dramatic moment.
+     * Flash the screen white for a brief dramatic moment (canvas-based).
+     * Sets flash alpha; call renderFlash() in the render loop.
      */
     screenFlash() {
-        const flash = document.createElement('div');
-        flash.className = 'screen-flash';
-        document.getElementById('gameContainer').appendChild(flash);
+        this._flashAlpha = 0.4;
+    }
 
-        setTimeout(() => {
-            if (flash.parentNode) flash.parentNode.removeChild(flash);
-        }, 200);
+    /**
+     * Update and render the canvas flash overlay. Call at the end of the frame.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} width
+     * @param {number} height
+     * @param {number} dt - delta time in seconds
+     */
+    renderFlash(ctx, width, height, dt) {
+        if (this._flashAlpha <= 0) return;
+        ctx.globalAlpha = this._flashAlpha;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.globalAlpha = 1;
+        // Fade out quickly (~200ms at 60fps)
+        this._flashAlpha -= dt * 5;
+        if (this._flashAlpha < 0.01) this._flashAlpha = 0;
     }
 }
 

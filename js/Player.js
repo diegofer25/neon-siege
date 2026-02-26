@@ -699,7 +699,8 @@ export class Player {
         let bestTarget = null;
         let bestPriority = Infinity;
         
-        for (const enemy of enemies) {
+        for (let eIdx = 0; eIdx < enemies.length; eIdx++) {
+            const enemy = enemies[eIdx];
             if (enemy.dying) continue; // Skip enemies already dying
             
             // Skip enemies outside the visible targeting area
@@ -707,10 +708,10 @@ export class Player {
                 continue;
             }
             
-            const distance = this._calculateDistanceTo(enemy);
+            const distance = this._calculateDistanceSqTo(enemy);
             // Lower health enemies get higher priority (lower score)
             const healthFactor = (enemy.maxHealth - enemy.health) * 0.1;
-            const priority = distance - healthFactor;
+            const priority = distance - healthFactor * healthFactor;
             
             if (priority < bestPriority) {
                 bestPriority = priority;
@@ -732,6 +733,16 @@ export class Player {
      */
     _calculateDistanceTo(entity) {
         return MathUtils.distance(this.x, this.y, entity.x, entity.y);
+    }
+
+    /**
+     * Calculate squared distance to another entity (avoids sqrt — use for comparisons only)
+     * @private
+     * @param {Object} entity
+     * @returns {number}
+     */
+    _calculateDistanceSqTo(entity) {
+        return MathUtils.distanceSquared(this.x, this.y, entity.x, entity.y);
     }
     
     /**

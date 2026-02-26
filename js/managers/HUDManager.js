@@ -188,8 +188,13 @@ class HUDManager {
 
         // Health bar
         const healthPct = Math.max(0, (g.player.hp / g.player.maxHp) * 100);
-        this._healthFill.style.width = healthPct.toFixed(1) + '%';
-        this._healthText.textContent = `${Math.max(0, Math.floor(g.player.hp))}/${g.player.maxHp}`;
+        const healthW = healthPct.toFixed(1) + '%';
+        if (this._lastHealthW !== healthW) {
+            this._lastHealthW = healthW;
+            this._healthFill.style.width = healthW;
+        }
+        const healthStr = `${Math.max(0, Math.floor(g.player.hp))}/${g.player.maxHp}`;
+        if (this._healthText.textContent !== healthStr) this._healthText.textContent = healthStr;
 
         // Defense / shield bar
         if (g.player.hasShield) {
@@ -206,13 +211,15 @@ class HUDManager {
         // Wave progress
         const wp = g.getWaveProgress();
         const remaining = g.enemies.length + wp.enemiesToSpawn;
-        this._waveEl.textContent = `Wave: ${g.wave} (${remaining}/${wp.totalEnemies})`;
+        const waveStr = `Wave: ${g.wave} (${remaining}/${wp.totalEnemies})`;
+        if (this._waveEl.textContent !== waveStr) this._waveEl.textContent = waveStr;
 
         // Stats
         this._updateStatsDisplay(g);
 
         // Score + multiplier
-        this._scoreValue.textContent = g.score.toLocaleString();
+        const scoreStr = g.score.toLocaleString();
+        if (this._scoreValue.textContent !== scoreStr) this._scoreValue.textContent = scoreStr;
         const mult = g.comboSystem.getScoreMultiplier();
         if (mult > 1) {
             this._scoreMultiplier.style.display = 'inline';
@@ -242,13 +249,18 @@ class HUDManager {
             this._comboCounter.style.display = 'none';
         }
 
-        // Challenge display
+        // Challenge display — dirty check to avoid per-frame innerHTML rebuild
         if (g.challengeSystem.activeChallenges.length > 0) {
             this._challengeDisplay.style.display = 'block';
-            this._challengeDisplay.innerHTML = g.challengeSystem.activeChallenges.map(c => {
-                const cls = c.completed ? 'challenge-item completed' : 'challenge-item';
-                return `<div class="${cls}"><span class="challenge-icon">${c.icon}</span><span class="challenge-progress">${c.progress}/${c.target}</span></div>`;
-            }).join('');
+            // Build a cheap fingerprint: progress values joined
+            const challengeKey = g.challengeSystem.activeChallenges.map(c => `${c.completed ? 1 : 0}:${c.progress}`).join(',');
+            if (challengeKey !== this._lastChallengeKey) {
+                this._lastChallengeKey = challengeKey;
+                this._challengeDisplay.innerHTML = g.challengeSystem.activeChallenges.map(c => {
+                    const cls = c.completed ? 'challenge-item completed' : 'challenge-item';
+                    return `<div class="${cls}"><span class="challenge-icon">${c.icon}</span><span class="challenge-progress">${c.progress}/${c.target}</span></div>`;
+                }).join('');
+            }
         }
 
         // QERT skill slots
