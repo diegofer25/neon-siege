@@ -193,7 +193,7 @@ export const GameConfig = {
         BASE_DAMAGE: 25,
         
         /** @type {number} Boss movement speed in pixels per second */
-        SPEED: 20,
+        SPEED: 35,
         
         /** @type {number} Boss collision radius in pixels */
         RADIUS: 50,
@@ -254,11 +254,13 @@ export const GameConfig = {
             /** @type {number} HP fraction that triggers a split */
             SPLIT_THRESHOLD: 0.5,
             /** @type {number} Number of copies produced per split */
-            SPLIT_COUNT: 2,
+            SPLIT_COUNT: 3,
             /** @type {number} Scale factor applied to radius on each split */
             SPLIT_SCALE: 0.65,
             /** @type {number} Max number of active split copies to prevent runaway */
-            MAX_COPIES: 4
+            MAX_COPIES: 9,
+            /** @type {number} Speed multiplier applied to split children */
+            CHILD_SPEED_MULTIPLIER: 1.6
         },
 
         /**
@@ -266,17 +268,17 @@ export const GameConfig = {
          */
         VORTEX_BOSS: {
             /** @type {number} Gravity pull strength (px/s²) applied to the player */
-            PULL_STRENGTH: 40,
+            PULL_STRENGTH: 90,
             /** @type {number} Max range for gravity pull */
-            PULL_RANGE: 400,
+            PULL_RANGE: 500,
             /** @type {number} Cooldown between mine spawns in ms */
-            MINE_COOLDOWN: 4000,
+            MINE_COOLDOWN: 2200,
             /** @type {number} Number of orbiting mines */
-            MINE_COUNT: 3,
+            MINE_COUNT: 5,
             /** @type {number} Shockwave expansion speed (px/s) */
-            SHOCKWAVE_SPEED: 250,
+            SHOCKWAVE_SPEED: 400,
             /** @type {number} Cooldown between shockwave attacks in ms */
-            SHOCKWAVE_COOLDOWN: 6000
+            SHOCKWAVE_COOLDOWN: 3500
         },
 
         /**
@@ -284,15 +286,17 @@ export const GameConfig = {
          */
         CHRONO_BOSS: {
             /** @type {number} Duration of the speed-burst phase in ms */
-            SPEED_PHASE_DURATION: 4000,
+            SPEED_PHASE_DURATION: 3000,
             /** @type {number} Duration of the slow-field phase in ms */
-            SLOW_PHASE_DURATION: 5000,
+            SLOW_PHASE_DURATION: 3500,
             /** @type {number} Player speed multiplier during slow phase */
-            SLOW_FIELD_FACTOR: 0.5,
+            SLOW_FIELD_FACTOR: 0.35,
             /** @type {number} Boss speed multiplier during speed phase */
-            SPEED_BURST_FACTOR: 2.5,
+            SPEED_BURST_FACTOR: 3.5,
             /** @type {number} Projectile count in combined burst pattern */
-            COMBO_BURST_COUNT: 24
+            COMBO_BURST_COUNT: 32,
+            /** @type {number} Radius of the slow field */
+            SLOW_FIELD_RADIUS: 450
         }
     },
 

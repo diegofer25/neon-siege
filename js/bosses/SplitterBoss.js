@@ -34,14 +34,18 @@ export class SplitterBoss extends Boss {
         if (generation > 0) {
             const scale = Math.pow(cfg.SPLIT_SCALE, generation);
             this.setBaseRadius(GameConfig.BOSS.RADIUS * scale);
-            // Sub-copies are not tracked as full bosses for health bar
+            // Sub-copies are faster and more aggressive
+            this.speed *= cfg.CHILD_SPEED_MULTIPLIER || 1.6;
+            this.attackCooldown *= 0.6; // Attack more often
             this._isSubCopy = true;
         }
     }
 
     update(delta, player) {
-        // Use base Boss movement/attacks
-        super.update(delta, player);
+        // Use base Boss movement/attacks but with tighter pursuit
+        // Override the keep-distance threshold so Splitter gets closer
+        const oldUpdate = super.update.bind(this);
+        oldUpdate(delta, player);
 
         // Check split threshold
         if (!this._hasSplit && this.generation < 2 &&
@@ -57,12 +61,12 @@ export class SplitterBoss extends Boss {
         this.game.addScreenShake(10, 300);
 
         const newGen = this.generation + 1;
-        const childHealth = this.health * 0.6;
-        const childDamage = this.damage * 0.8;
+        const childHealth = this.health * 0.7;
+        const childDamage = this.damage * 0.9;
 
         for (let i = 0; i < this.splitCount; i++) {
             const angle = (Math.PI * 2 / this.splitCount) * i + Math.random() * 0.5;
-            const dist = 80;
+            const dist = 60;
             const sx = this.x + Math.cos(angle) * dist;
             const sy = this.y + Math.sin(angle) * dist;
             const copy = new SplitterBoss(sx, sy, childHealth, childDamage, this.game, newGen);

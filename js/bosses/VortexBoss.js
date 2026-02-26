@@ -36,20 +36,16 @@ export class VortexBoss extends Boss {
         this.prevX = this.x;
         this.prevY = this.y;
 
-        // Move slowly toward center of arena
-        const canvasW = this.game.canvas.logicalWidth || this.game.canvas.width;
-        const canvasH = this.game.canvas.logicalHeight || this.game.canvas.height;
-        const centerX = canvasW / 2;
-        const centerY = canvasH / 2;
-        const toCenterDist = MathUtils.distance(this.x, this.y, centerX, centerY);
+        // Pursue the player aggressively instead of drifting to center
+        const distToPlayer = MathUtils.distance(this.x, this.y, player.x, player.y);
 
         const speedMult = (this.game?.modifierState?.enemySpeedMultiplier) || 1;
         const arenaScale = this.game?.getArenaScale?.() || 1;
 
-        if (toCenterDist > 50) {
-            const moveSpeed = this.speed * 0.4 * arenaScale * speedMult * deltaSeconds;
-            this.x += ((centerX - this.x) / toCenterDist) * moveSpeed;
-            this.y += ((centerY - this.y) / toCenterDist) * moveSpeed;
+        if (distToPlayer > 100) {
+            const moveSpeed = this.speed * 0.8 * arenaScale * speedMult * deltaSeconds;
+            this.x += ((player.x - this.x) / distToPlayer) * moveSpeed;
+            this.y += ((player.y - this.y) / distToPlayer) * moveSpeed;
         }
 
         // Calculate velocity
@@ -58,19 +54,19 @@ export class VortexBoss extends Boss {
             this.vy = (this.y - this.prevY) / deltaSeconds;
         }
 
-        // Gravitational pull on player
-        const distToPlayer = MathUtils.distance(this.x, this.y, player.x, player.y);
-        if (distToPlayer < this.pullRange && distToPlayer > 0) {
-            const pullForce = this.pullStrength * (1 - distToPlayer / this.pullRange) * deltaSeconds;
+        // Gravitational pull on player (re-measure after movement)
+        const pullDist = MathUtils.distance(this.x, this.y, player.x, player.y);
+        if (pullDist < this.pullRange && pullDist > 0) {
+            const pullForce = this.pullStrength * (1 - pullDist / this.pullRange) * deltaSeconds;
             const pdx = this.x - player.x;
             const pdy = this.y - player.y;
-            player.x += (pdx / distToPlayer) * pullForce;
-            player.y += (pdy / distToPlayer) * pullForce;
+            player.x += (pdx / pullDist) * pullForce;
+            player.y += (pdy / pullDist) * pullForce;
         }
 
-        // Regular attacks
+        // Regular attacks — faster cadence
         this.attackTimer += delta;
-        if (this.attackTimer >= this.attackCooldown * 1.2) {
+        if (this.attackTimer >= this.attackCooldown * 0.8) {
             this.projectileBurst();
             this.attackTimer = 0;
         }
@@ -82,8 +78,8 @@ export class VortexBoss extends Boss {
             this.mineTimer = 0;
         }
 
-        // Update orbiting mines
-        this._orbitAngle += deltaSeconds * 1.5;
+        // Update orbiting mines — faster orbit
+        this._orbitAngle += deltaSeconds * 2.5;
         this._updateMines(delta, player);
 
         // Shockwave

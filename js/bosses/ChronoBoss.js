@@ -25,6 +25,7 @@ export class ChronoBoss extends Boss {
         this.slowFieldFactor = cfg.SLOW_FIELD_FACTOR;
         this.speedBurstFactor = cfg.SPEED_BURST_FACTOR;
         this.comboBurstCount = cfg.COMBO_BURST_COUNT;
+        this.slowFieldRadius = cfg.SLOW_FIELD_RADIUS || 450;
 
         this._phase = 'speed'; // 'speed' or 'slow'
         this._phaseTimer = 0;
@@ -55,8 +56,8 @@ export class ChronoBoss extends Boss {
         const distance = MathUtils.distance(this.x, this.y, player.x, player.y);
         const speedMult = (this.game?.modifierState?.enemySpeedMultiplier) || 1;
         const arenaScale = this.game?.getArenaScale?.() || 1;
-        const phaseFactor = this._phase === 'speed' ? this.speedBurstFactor : 0.5;
-        const keepDist = this._phase === 'speed' ? 120 : 250;
+        const phaseFactor = this._phase === 'speed' ? this.speedBurstFactor : 0.6;
+        const keepDist = this._phase === 'speed' ? 60 : 180;
 
         if (distance > keepDist) {
             const actualSpeed = this.speed * phaseFactor * arenaScale * speedMult * deltaSeconds;
@@ -72,7 +73,7 @@ export class ChronoBoss extends Boss {
         // Apply slow field to player during slow phase
         if (this._phase === 'slow') {
             const dist = MathUtils.distance(this.x, this.y, player.x, player.y);
-            if (dist < 350) {
+            if (dist < this.slowFieldRadius) {
                 if (!this._playerSlowed) {
                     player._chronoSlowBackup = player.speed;
                     player.speed *= this.slowFieldFactor;
@@ -85,9 +86,9 @@ export class ChronoBoss extends Boss {
             this._restorePlayerSpeed(player);
         }
 
-        // Attacks — cycle through patterns
+        // Attacks — cycle through patterns, much faster cadence
         this.attackTimer += delta;
-        const cd = this._phase === 'speed' ? this.attackCooldown * 0.6 : this.attackCooldown * 1.2;
+        const cd = this._phase === 'speed' ? this.attackCooldown * 0.45 : this.attackCooldown * 0.8;
         if (this.attackTimer >= cd) {
             this._executePatternAttack(player);
             this.attackTimer = 0;
@@ -148,14 +149,14 @@ export class ChronoBoss extends Boss {
     }
 
     _spiralWave() {
-        const count = 10;
+        const count = 14;
         const damage = 12 * this.getDifficultyDamageMultiplier();
-        const baseAngle = Date.now() / 150;
+        const baseAngle = Date.now() / 120;
         for (let i = 0; i < count; i++) {
             const angle = baseAngle + (Math.PI * 2 / count) * i;
             const p = new Projectile(this.x, this.y, angle, damage);
             p.isEnemyProjectile = true;
-            p.speed = GameConfig.BOSS.PROJECTILE_SPEED * 0.7;
+            p.speed = GameConfig.BOSS.PROJECTILE_SPEED * 0.9;
             this.game.projectiles.push(p);
         }
     }
@@ -163,11 +164,11 @@ export class ChronoBoss extends Boss {
     _rapidSalvo(player) {
         const baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
         const damage = 14 * this.getDifficultyDamageMultiplier();
-        for (let i = 0; i < 7; i++) {
-            const angle = baseAngle + (0.08 * (i - 3));
+        for (let i = 0; i < 9; i++) {
+            const angle = baseAngle + (0.07 * (i - 4));
             const p = new Projectile(this.x, this.y, angle, damage);
             p.isEnemyProjectile = true;
-            p.speed = GameConfig.BOSS.PROJECTILE_SPEED * 1.4;
+            p.speed = GameConfig.BOSS.PROJECTILE_SPEED * 1.6;
             this.game.projectiles.push(p);
         }
     }
@@ -181,7 +182,7 @@ export class ChronoBoss extends Boss {
             ctx.globalAlpha = alpha;
             ctx.fillStyle = '#4488ff';
             ctx.beginPath();
-            ctx.arc(this.x, this.y, 350, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, this.slowFieldRadius, 0, Math.PI * 2);
             ctx.fill();
             ctx.globalAlpha = 1;
         }
