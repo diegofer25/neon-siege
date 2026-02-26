@@ -53,12 +53,8 @@
                     <span class="skill-slot-name" id="skillName3">🔒</span>
                 </div>
             </div>
-            <div id="passiveSlots" class="passive-slots">
-                <div class="passive-slot" data-passive-slot="0" data-tooltip-type="passive"><span id="passiveName0">—</span></div>
-                <div class="passive-slot" data-passive-slot="1" data-tooltip-type="passive"><span id="passiveName1">—</span></div>
-                <div class="passive-slot" data-passive-slot="2" data-tooltip-type="passive"><span id="passiveName2">—</span></div>
-                <div class="passive-slot" data-passive-slot="3" data-tooltip-type="passive"><span id="passiveName3">—</span></div>
-            </div>
+            <!-- Passive skill icons (dynamically populated) -->
+            <div id="passiveSlots" class="passive-slots"></div>
             <!-- Ascension Modifier Badges -->
             <div id="ascensionSlots" class="ascension-slots"></div>
             <div id="waveCounter" class="hud-element">
@@ -215,6 +211,9 @@
                 <div class="settings-actions">
                     <button id="resetSettingsBtn">Reset Defaults</button>
                     <button id="closeSettingsBtn" class="primary">Close</button>
+                </div>
+                <div id="devPanelSettingsRow" class="settings-actions" style="display:none">
+                    <button id="devPanelToggleBtn" class="danger">⚙ Admin Panel</button>
                 </div>
             </div>
         </div>

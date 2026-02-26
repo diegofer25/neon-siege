@@ -116,7 +116,7 @@ export const LEVEL_CONFIG = {
 // ─── SKILL SLOT LIMITS ─────────────────────────────────────────────────────────
 
 export const SKILL_SLOTS = {
-	PASSIVE_MAX: 4,
+	PASSIVE_MAX: Infinity,
 	ACTIVE_MAX: 3,
 	ULTIMATE_MAX: 1,
 	ULTIMATE_UNLOCK_WAVE: 10,  // unlocks after first boss

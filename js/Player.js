@@ -232,6 +232,9 @@ export class Player {
         /** @type {number} */ this._xpMultiplier = d._xpMultiplier;
         /** @type {boolean} */ this._shieldJustBroke = d._shieldJustBroke;
 
+		/** @type {boolean} God mode — blocks all damage (set by LootSystem buff or DevPanel) */
+		this._godModeActive = false;
+
 		// ── Active skill buff state ──
 		/** @type {Object} Active skill buffs keyed by name, each with its own timer/state */
 		this._skillBuffs = {};
@@ -1024,6 +1027,11 @@ export class Player {
         // Check if Barrier Phase is active (invulnerability)
         if (this.barrierPhaseActive) {
             return; // No damage taken during barrier phase
+        }
+
+        // God mode — set by LootSystem legendary buff or DevPanel
+        if (this._godModeActive) {
+            return;
         }
 
         // Apply ascension damage modifiers (Overclock: damageTaken multiplier, Resilience: damage reduction)

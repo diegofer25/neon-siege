@@ -13,6 +13,7 @@ import { audioManager } from './managers/AudioManager.js';
 import { vfxHelper } from './managers/VFXHelper.js';
 import { hudManager } from './managers/HUDManager.js';
 import { skillUI } from './ui/SkillUIController.js';
+import { DevPanel } from './ui/DevPanel.js';
 
 //=============================================================================
 // GLOBAL STATE AND CONFIGURATION
@@ -291,6 +292,10 @@ function init() {
     audioManager.game = game;
     hudManager.game = game;
     skillUI.game = game;
+
+    // Developer panel (gated by ?dev=true)
+    const devPanel = new DevPanel(game);
+    appRuntime.devPanel = devPanel;
     
     // Configure all input event listeners
     setupInputHandlers();
@@ -353,6 +358,16 @@ function init() {
     document.getElementById('loadAfterGameOverBtn').addEventListener('click', () => loadGameFromSave('game_over'));
     document.getElementById('continueEndlessBtn').addEventListener('click', continueToEndless);
     document.getElementById('victoryRestartBtn').addEventListener('click', restartFromVictory);
+
+    // Show Admin Panel button in settings if ?dev=true
+    if (appRuntime.devPanel?.enabled) {
+        const devRow = document.getElementById('devPanelSettingsRow');
+        if (devRow) devRow.style.display = '';
+        document.getElementById('devPanelToggleBtn')?.addEventListener('click', () => {
+            appRuntime.devPanel.toggle();
+            closeSettingsModal();
+        });
+    }
 
     setupSettingsControls();
     setupStartDifficultyControls();
@@ -462,7 +477,12 @@ function setupInputHandlers() {
     // Keyboard input handling
     document.addEventListener('keydown', (e) => {
         input.keys[e.code] = true;
-        
+
+        // Toggle developer panel (semicolon key)
+        if (e.code === 'Semicolon' && appRuntime.devPanel?.enabled) {
+            appRuntime.devPanel.toggle();
+        }
+
         // Game pause toggle
         if (e.code === 'KeyP' && (game && game.gameState === 'playing' || game.gameState === 'paused')) {
             togglePause();

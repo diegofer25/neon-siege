@@ -106,7 +106,7 @@
 .coin-display {
   position: absolute;
   top: 52px;
-  left: 0;
+  left: 120px;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -122,6 +122,7 @@
 
 .coin-display.with-shield {
   top: 100px;
+  left: 120px;
 }
 
 .coin-icon {

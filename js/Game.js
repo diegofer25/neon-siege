@@ -294,6 +294,9 @@ export class Game {
 		// XP/level now owned by skillManager; keep accessors for compatibility
 		this._waveStartTime = 0;
 		this._waveCountdownTimeouts = [];
+
+		/** @type {boolean} DevPanel: draw collision radii overlay */
+		this.debugHitboxes = false;
 	}
 
 	_clearWaveCountdownTimeouts() {
@@ -1236,6 +1239,46 @@ export class Game {
 		// Draw spawn warning if enemies are incoming
 		if (this.waveManager.enemiesToSpawn > 0) {
 			this.drawSpawnWarning(ctx);
+		}
+
+		// Debug hitbox overlay (toggled via DevPanel)
+		if (this.debugHitboxes) {
+			this._drawHitboxes(ctx);
+		}
+
+		ctx.restore();
+	}
+
+	/**
+	 * Draw collision radii for all entities (debug overlay).
+	 * @param {CanvasRenderingContext2D} ctx
+	 */
+	_drawHitboxes(ctx) {
+		ctx.save();
+		ctx.lineWidth = 1;
+
+		// Player — green
+		if (this.player) {
+			ctx.strokeStyle = '#0f0';
+			ctx.beginPath();
+			ctx.arc(this.player.x, this.player.y, this.player.radius, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+
+		// Enemies — red
+		ctx.strokeStyle = '#f44';
+		for (const e of this.enemies) {
+			ctx.beginPath();
+			ctx.arc(e.x, e.y, e.radius || e.size || 10, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+
+		// Projectiles — cyan
+		ctx.strokeStyle = '#0ff';
+		for (const p of this.projectiles) {
+			ctx.beginPath();
+			ctx.arc(p.x, p.y, p.radius || 4, 0, Math.PI * 2);
+			ctx.stroke();
 		}
 
 		ctx.restore();

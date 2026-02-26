@@ -16,13 +16,19 @@
 
 .passive-slots {
     display: flex;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 4px;
     position: absolute;
-    bottom: 136px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 90px;
+    left: 0;
+    max-width: 220px;
     z-index: 10;
     pointer-events: auto;
+    transition: top var(--transition-normal);
+}
+
+.passive-slots.with-shield {
+    top: 138px;
 }
 
 .passive-slot {

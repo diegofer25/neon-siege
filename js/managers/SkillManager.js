@@ -185,9 +185,6 @@ export class SkillManager {
 
 		// Slot capacity check for first rank
 		if (currentRank === 0) {
-			if (skill.type === 'passive' && this.equippedPassives.length >= SKILL_SLOTS.PASSIVE_MAX) {
-				return { allowed: false, reason: `Max ${SKILL_SLOTS.PASSIVE_MAX} passives equipped.` };
-			}
 			if (skill.type === 'active' && this.equippedActives.length >= SKILL_SLOTS.ACTIVE_MAX) {
 				return { allowed: false, reason: `Max ${SKILL_SLOTS.ACTIVE_MAX} actives equipped.` };
 			}

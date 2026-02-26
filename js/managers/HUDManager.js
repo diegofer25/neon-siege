@@ -11,8 +11,6 @@
  *   hudManager.update();               // call each frame
  */
 
-import { SKILL_SLOTS } from '../config/SkillConfig.js';
-
 // ---------------------------------------------------------------------------
 // DOM-ref helper – returns element or a stub so we never null-check in hot path
 // ---------------------------------------------------------------------------
@@ -126,13 +124,8 @@ class HUDManager {
             this._skillSlots.push(nameEl !== NOOP_EL ? nameEl.closest('.skill-slot') : null);
         }
 
-        this._passiveNames = [];
-        this._passiveSlots = [];
-        for (let i = 0; i < SKILL_SLOTS.PASSIVE_MAX; i++) {
-            const nameEl = $(`passiveName${i}`);
-            this._passiveNames.push(nameEl);
-            this._passiveSlots.push(nameEl !== NOOP_EL ? nameEl.closest('.passive-slot') : null);
-        }
+        this._passiveSlotsContainer = $('passiveSlots');
+        this._passiveSlotCount = 0; // tracks how many DOM children exist
 
         this._ascensionSlots = $('ascensionSlots');
 
@@ -249,30 +242,8 @@ class HUDManager {
                 }
             }
 
-            // Passive slots
-            for (let i = 0; i < SKILL_SLOTS.PASSIVE_MAX; i++) {
-                const nameEl = this._passiveNames[i];
-                const slotEl = this._passiveSlots[i];
-                if (nameEl === NOOP_EL || !slotEl) continue;
-
-                const skillId = g.skillManager.equippedPassives[i] || null;
-                if (!skillId) {
-                    nameEl.textContent = '—';
-                    slotEl.classList.remove('filled');
-                    continue;
-                }
-
-                const skill = g.skillManager.getSkillDef(skillId);
-                const rank = g.skillManager.getSkillRank(skillId);
-                if (!skill) {
-                    nameEl.textContent = '—';
-                    slotEl.classList.remove('filled');
-                    continue;
-                }
-
-                nameEl.textContent = `${skill.icon || '✨'} ${rank}`;
-                slotEl.classList.add('filled');
-            }
+            // Passive slots – dynamic
+            this._syncPassiveSlots(g);
         }
 
         // Ascension modifier badges
@@ -329,6 +300,52 @@ class HUDManager {
             el.style.textShadow = '0 0 3px #fff';
             el.style.transform = 'scale(1)';
         }, 500);
+    }
+
+    // ------------------------------------------------------------------
+    // Dynamic passive-slot sync
+    // ------------------------------------------------------------------
+    /** @param {import('../Game.js').Game} g */
+    _syncPassiveSlots(g) {
+        const container = this._passiveSlotsContainer;
+        if (!container || container === NOOP_EL) return;
+
+        const equipped = g.skillManager.equippedPassives;
+        const count = equipped.length;
+
+        // Toggle with-shield class so CSS shifts position down when shield bar is visible
+        container.classList.toggle('with-shield', !!g.player.hasShield);
+
+        // Add/remove DOM children to match count
+        while (this._passiveSlotCount < count) {
+            const idx = this._passiveSlotCount;
+            const div = document.createElement('div');
+            div.className = 'passive-slot filled';
+            div.dataset.passiveSlot = String(idx);
+            div.dataset.tooltipType = 'passive';
+            const span = document.createElement('span');
+            div.appendChild(span);
+            container.appendChild(div);
+            this._passiveSlotCount++;
+        }
+        while (this._passiveSlotCount > count) {
+            container.removeChild(container.lastChild);
+            this._passiveSlotCount--;
+        }
+
+        // Update text for each slot
+        for (let i = 0; i < count; i++) {
+            const skillId = equipped[i];
+            const slotEl = container.children[i];
+            const span = slotEl.firstChild;
+            const skill = g.skillManager.getSkillDef(skillId);
+            const rank = g.skillManager.getSkillRank(skillId);
+            if (skill) {
+                span.textContent = `${skill.icon || '✨'} ${rank}`;
+                slotEl.classList.add('filled');
+                slotEl.dataset.passiveSlot = String(i);
+            }
+        }
     }
 
     // ------------------------------------------------------------------
