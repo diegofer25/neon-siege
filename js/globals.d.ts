@@ -39,7 +39,7 @@ declare global {
     }
 
     interface FloatingTextsElement extends HTMLElement {
-        addText(text: string, className: string, x: number, y: number): void;
+        addText(text: string, x: number, y: number, className?: string): void;
     }
 
     interface GameOverScreenElement extends HTMLElement {

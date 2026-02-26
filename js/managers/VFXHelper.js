@@ -38,7 +38,7 @@ class VFXHelper {
 
         const container = document.querySelector('floating-texts');
         if (container) {
-            container.addText(text, className, x, y);
+            container.addText(text, x, y, className);
         }
     }
 
