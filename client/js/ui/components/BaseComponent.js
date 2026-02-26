@@ -62,6 +62,15 @@ export class BaseComponent extends HTMLElement {
     }
 
     /**
+     * Whether the overlay is currently visible.
+     * @returns {boolean}
+     */
+    isVisible() {
+        const root = this._$('.overlay') || this.shadowRoot.firstElementChild;
+        return root?.classList.contains('show') ?? false;
+    }
+
+    /**
      * Dispatch a composed, bubbling CustomEvent.
      * @param {string} name
      * @param {any}    [detail]

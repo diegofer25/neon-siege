@@ -137,12 +137,43 @@ const btnSheet = createSheet(/* css */`
     transform: none;
   }
 
+  /* --- Loading state --- */
+  :host([loading]) button {
+    pointer-events: none;
+    opacity: 0.7;
+    cursor: wait;
+  }
+  :host([loading]) button slot,
+  :host([loading]) button .label-text {
+    visibility: hidden;
+  }
+  :host([loading]) button::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 20px; height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: btnSpin 0.6s linear infinite;
+  }
+  :host([loading]) button:hover {
+    animation: none;
+    transform: none;
+  }
+  :host([loading]) button::before { display: none; }
+
   /* --- Ready state (confirm pulse) --- */
   :host([ready]) button {
     border-color: #00ff88;
     color: #00ff88;
     box-shadow: 0 0 18px rgba(0, 255, 136, 0.5);
     animation: confirmPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes btnSpin {
+    to { transform: rotate(360deg); }
   }
 
   @keyframes buttonHover {
@@ -161,7 +192,7 @@ const btnSheet = createSheet(/* css */`
 
 class NeonButton extends BaseComponent {
     static get observedAttributes() {
-        return ['label', 'disabled', 'variant', 'ready'];
+        return ['label', 'disabled', 'variant', 'ready', 'loading'];
     }
 
     connectedCallback() {
@@ -183,12 +214,15 @@ class NeonButton extends BaseComponent {
         if (name === 'disabled') {
             this._syncDisabled();
         }
+        if (name === 'loading') {
+            this._syncDisabled();
+        }
     }
 
     /** @private */
     _syncDisabled() {
         const btn = /** @type {HTMLButtonElement|null} */ (this._$('button'));
-        if (btn) btn.disabled = this.hasAttribute('disabled');
+        if (btn) btn.disabled = this.hasAttribute('disabled') || this.hasAttribute('loading');
     }
 }
 

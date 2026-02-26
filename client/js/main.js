@@ -252,7 +252,17 @@ function init() {
     const settingsModalEl = document.querySelector('settings-modal');
     const gameHudEl = document.querySelector('game-hud');
 
-    startScreen.addEventListener('start-game', startGame);
+    // Gate game start behind authentication
+    let pendingStartGame = false;
+    startScreen.addEventListener('start-game', () => {
+        if (authService.isAuthenticated()) {
+            startGame();
+        } else {
+            pendingStartGame = true;
+            loginScreen.setUser(null);
+            loginScreen.show();
+        }
+    });
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('load-save', () => loadGameFromSave('game_over'));
     victoryScreen.addEventListener('continue-endless', continueToEndless);
@@ -291,12 +301,23 @@ function init() {
     });
 
     // Auth events
+    /** After successful auth, auto-start if the user clicked "Start" before logging in */
+    const _onAuthSuccess = () => {
+        loginScreen.hide();
+        if (pendingStartGame) {
+            pendingStartGame = false;
+            startGame();
+        }
+    };
+
     loginScreen.addEventListener('auth-login-anonymous', async (e) => {
         try {
             loginScreen.setError(null);
+            loginScreen.setLoading(true);
             await authService.loginAnonymous(e.detail.displayName);
+            loginScreen.setLoading(false);
             loginScreen.setUser(authService.getCurrentUser());
-            loginScreen.hide();
+            _onAuthSuccess();
         } catch (err) {
             loginScreen.setError(err.message);
         }
@@ -305,9 +326,11 @@ function init() {
     loginScreen.addEventListener('auth-login-email', async (e) => {
         try {
             loginScreen.setError(null);
+            loginScreen.setLoading(true);
             await authService.loginEmail(e.detail.email, e.detail.password);
+            loginScreen.setLoading(false);
             loginScreen.setUser(authService.getCurrentUser());
-            loginScreen.hide();
+            _onAuthSuccess();
         } catch (err) {
             loginScreen.setError(err.message);
         }
@@ -316,12 +339,18 @@ function init() {
     loginScreen.addEventListener('auth-register-email', async (e) => {
         try {
             loginScreen.setError(null);
+            loginScreen.setLoading(true);
             await authService.registerEmail(e.detail.email, e.detail.password, e.detail.displayName);
+            loginScreen.setLoading(false);
             loginScreen.setUser(authService.getCurrentUser());
-            loginScreen.hide();
+            _onAuthSuccess();
         } catch (err) {
             loginScreen.setError(err.message);
         }
+    });
+
+    loginScreen.addEventListener('login-close', () => {
+        pendingStartGame = false;
     });
 
     loginScreen.addEventListener('auth-logout', async () => {
@@ -452,6 +481,13 @@ function setupInputHandlers() {
         }
 
         if (e.code === 'Escape') {
+            // Close login screen first if visible
+            const loginEl = /** @type {any} */ (document.querySelector('login-screen'));
+            if (loginEl?.isVisible()) {
+                loginEl.hide();
+                loginEl.dispatchEvent(new CustomEvent('login-close', { bubbles: true, composed: true }));
+                return;
+            }
             const settingsModalEl = /** @type {SettingsModalElement} */ (document.querySelector('settings-modal'));
             if (settingsModalEl.isVisible()) {
                 closeSettingsModal();
