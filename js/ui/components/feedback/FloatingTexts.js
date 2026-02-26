@@ -5,8 +5,8 @@
  *   addText(text, className, x, y)  — create a floating text element
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { createSheet } from '../shared-styles.js';
 
 const styles = createSheet(/* css */ `
   :host {

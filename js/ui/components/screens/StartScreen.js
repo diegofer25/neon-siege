@@ -14,8 +14,8 @@
  *   'difficulty-change'  — difficulty option clicked, detail: { difficulty }
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { overlayStyles, createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { overlayStyles, createSheet } from '../shared-styles.js';
 
 const RUN_DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
 
@@ -135,8 +135,8 @@ class StartScreen extends BaseComponent {
                         <button type="button" role="radio" class="start-difficulty-option" data-difficulty="hard" aria-checked="false" tabindex="-1">Hard</button>
                     </div>
                 </div>
-                <button id="startBtn">CLICK TO START</button>
-                <button id="loadBtn" style="display: none;">LOAD LAST SAVE</button>
+                <neon-button id="startBtn" variant="primary">CLICK TO START</neon-button>
+                <neon-button id="loadBtn" style="display: none;">LOAD LAST SAVE</neon-button>
                 <div id="lastRunStats" class="last-run-stats" style="display: none;">
                     <div class="last-run-row"><span>Last Run: </span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
                     <div class="last-run-row best"><span>Best: </span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>

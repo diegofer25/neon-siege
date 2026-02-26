@@ -10,8 +10,8 @@
  *   'select-ascension'  detail: { modId }
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { createSheet, overlayStyles } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { createSheet, overlayStyles } from '../shared-styles.js';
 
 // -------------------------------------------------------------------
 // Styles

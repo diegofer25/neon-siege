@@ -6,8 +6,8 @@
  *   hideToast()           — immediately hide
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { createSheet } from '../shared-styles.js';
 
 const styles = createSheet(/* css */ `
   .achievement-toast {

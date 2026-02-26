@@ -9,8 +9,8 @@
  *   isShown                      – read-only visibility flag
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { createSheet } from '../shared-styles.js';
 
 // -------------------------------------------------------------------
 // Styles

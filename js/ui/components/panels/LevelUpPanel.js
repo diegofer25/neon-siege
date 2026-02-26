@@ -18,8 +18,8 @@
  *   'onboarding-close'
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { createSheet, overlayStyles } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { createSheet, overlayStyles } from '../shared-styles.js';
 
 // -------------------------------------------------------------------
 // Styles  (skill tree panel + all tree node/edge/tooltip CSS)

@@ -7,22 +7,25 @@
  * BaseComponent and shared-styles are pulled in transitively.
  */
 
-// Phase 1 – leaf components
-import './PauseScreen.js';
-import './WaveCountdown.js';
-import './AchievementToast.js';
-import './FloatingTexts.js';
+// Global primitives
+import './global/NeonButton.js';
 
-// Phase 2 – overlay components
-import './GameOverScreen.js';
-import './VictoryScreen.js';
-import './StartScreen.js';
-import './SettingsModal.js';
+// Feedback components
+import './feedback/AchievementToast.js';
+import './feedback/FloatingTexts.js';
+import './feedback/WaveCountdown.js';
+import './feedback/HudTooltip.js';
 
-// Phase 3 – complex overlays
-import './LevelUpPanel.js';
-import './AscensionPanel.js';
-import './HudTooltip.js';
+// Screen overlays
+import './screens/PauseScreen.js';
+import './screens/GameOverScreen.js';
+import './screens/VictoryScreen.js';
+import './screens/StartScreen.js';
+import './screens/SettingsModal.js';
 
-// Phase 4 – HUD
+// Panel overlays
+import './panels/LevelUpPanel.js';
+import './panels/AscensionPanel.js';
+
+// HUD (imports its own sub-components from ./hud/)
 import './GameHud.js';

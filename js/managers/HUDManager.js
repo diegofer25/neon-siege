@@ -12,7 +12,7 @@
  */
 
 import { skillIconHtml } from '../utils/IconUtils.js';
-import '../ui/components/HudTooltip.js';
+import '../ui/components/feedback/HudTooltip.js';
 import '../ui/components/GameHud.js';
 
 // ---------------------------------------------------------------------------
@@ -105,52 +105,75 @@ class HUDManager {
         const hudEl = document.querySelector('game-hud');
         const root = hudEl?.shadowRoot || document;
 
-        this._healthFill = $('healthFill', root);
-        this._healthText = $('healthText', root);
+        /**
+         * Get a sub-component's shadow root inside the HUD.
+         * @param {string} tag
+         * @returns {ShadowRoot|Document}
+         */
+        const sub = (tag) => root.querySelector(tag)?.shadowRoot || root;
 
-        this._defenseBar = $('defenseBar', root);
-        this._defenseFill = $('defenseFill', root);
-        this._defenseText = $('defenseText', root);
+        // Health / defense / coins — inside <hud-health-bars>
+        const healthRoot = sub('hud-health-bars');
+        this._healthFill = $('healthFill', healthRoot);
+        this._healthText = $('healthText', healthRoot);
+        this._defenseBar = $('defenseBar', healthRoot);
+        this._defenseFill = $('defenseFill', healthRoot);
+        this._defenseText = $('defenseText', healthRoot);
 
-        this._waveEl = $('wave', root);
-        this._scoreValue = $('scoreValue', root);
-        this._scoreMultiplier = $('scoreMultiplier', root);
-        this._xpFill = $('xpFill', root);
-        this._xpLevel = $('xpLevel', root);
+        // Wave / XP — inside <hud-wave-counter>
+        const waveRoot = sub('hud-wave-counter');
+        this._waveEl = $('wave', waveRoot);
+        this._xpFill = $('xpFill', waveRoot);
+        this._xpLevel = $('xpLevel', waveRoot);
 
-        this._comboCounter = $('comboCounter', root);
-        this._comboLabel = $('comboLabel', root);
-        this._comboCount = $('comboCount', root);
-        this._comboTimerFill = $('comboTimerFill', root);
+        // Score — inside <hud-score>
+        const scoreRoot = sub('hud-score');
+        this._scoreValue = $('scoreValue', scoreRoot);
+        this._scoreMultiplier = $('scoreMultiplier', scoreRoot);
 
-        this._challengeDisplay = $('challengeDisplay', root);
+        // Combo — inside <hud-combo>
+        const comboRoot = sub('hud-combo');
+        this._comboCounter = $('comboCounter', comboRoot);
+        this._comboLabel = $('comboLabel', comboRoot);
+        this._comboCount = $('comboCount', comboRoot);
+        this._comboTimerFill = $('comboTimerFill', comboRoot);
 
-        // Skill / passive slot arrays
+        // Challenges — inside <hud-challenges>
+        this._challengeDisplay = $('challengeDisplay', sub('hud-challenges'));
+
+        // Skill / passive slot arrays — inside <hud-skill-bar>
+        const skillRoot = sub('hud-skill-bar');
         this._skillNames = [];
         this._skillCds = [];
         this._skillSlots = [];
         for (let i = 0; i < 4; i++) {
-            const nameEl = $(`skillName${i}`, root);
+            const nameEl = $(`skillName${i}`, skillRoot);
             this._skillNames.push(nameEl);
-            this._skillCds.push($(`skillCd${i}`, root));
+            this._skillCds.push($(`skillCd${i}`, skillRoot));
             this._skillSlots.push(nameEl !== NOOP_EL ? nameEl.closest('.skill-slot') : null);
         }
 
-        this._passiveSlotsContainer = $('passiveSlots', root);
-        this._passiveSlotCount = 0; // tracks how many DOM children exist
+        // Passive slots — inside <hud-passive-slots>
+        this._passiveSlotsContainer = $('passiveSlots', sub('hud-passive-slots'));
+        this._passiveSlotCount = 0;
 
-        this._ascensionSlots = $('ascensionSlots', root);
+        // Ascension — inside <hud-ascension-badges>
+        this._ascensionSlots = $('ascensionSlots', sub('hud-ascension-badges'));
 
-        this._perfContainer = $('performanceStats', root);
-        this._fpsValue = $('fpsValue', root);
-        this._frameTimeValue = $('frameTimeValue', root);
-        this._avgFpsValue = $('avgFpsValue', root);
-        this._optimizedValue = $('optimizedValue', root);
+        // Performance — inside <hud-performance>
+        const perfRoot = sub('hud-performance');
+        this._perfContainer = $('performanceStats', perfRoot);
+        this._fpsValue = $('fpsValue', perfRoot);
+        this._frameTimeValue = $('frameTimeValue', perfRoot);
+        this._avgFpsValue = $('avgFpsValue', perfRoot);
+        this._optimizedValue = $('optimizedValue', perfRoot);
 
-        this._attackValue = $('attackValue', root);
-        this._speedValue = $('speedValue', root);
-        this._regenValue = $('regenValue', root);
-        this._hpsValue = $('hpsValue', root);
+        // Stats — inside <hud-stats>
+        const statsRoot = sub('hud-stats');
+        this._attackValue = $('attackValue', statsRoot);
+        this._speedValue = $('speedValue', statsRoot);
+        this._regenValue = $('regenValue', statsRoot);
+        this._hpsValue = $('hpsValue', statsRoot);
 
         this._cached = true;
     }

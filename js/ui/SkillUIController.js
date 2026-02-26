@@ -19,8 +19,8 @@ import { vfxHelper } from '../managers/VFXHelper.js';
 import { audioManager } from '../managers/AudioManager.js';
 
 // Side-effect imports — register custom elements
-import './components/LevelUpPanel.js';
-import './components/AscensionPanel.js';
+import './components/panels/LevelUpPanel.js';
+import './components/panels/AscensionPanel.js';
 
 // ---------------------------------------------------------------------------
 // Constants

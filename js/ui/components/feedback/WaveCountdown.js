@@ -9,8 +9,8 @@
  *   restartAnimation() — retrigger the pulse CSS animation
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { createSheet } from '../shared-styles.js';
 
 const styles = createSheet(/* css */ `
   .wave-countdown {

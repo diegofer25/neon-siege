@@ -2,8 +2,8 @@
  * @fileoverview <pause-screen> — simple pause overlay.
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { overlayStyles } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { overlayStyles } from '../shared-styles.js';
 
 class PauseScreen extends BaseComponent {
     connectedCallback() {

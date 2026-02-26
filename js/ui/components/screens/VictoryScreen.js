@@ -11,8 +11,8 @@
  *   'return-to-menu'    — "Return to Menu" button clicked
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { overlayStyles, createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { overlayStyles, createSheet } from '../shared-styles.js';
 
 const styles = createSheet(/* css */ `
   :host { display: contents; }
@@ -81,8 +81,8 @@ class VictoryScreen extends BaseComponent {
                     <div class="go-stat-row"><span>Level Reached</span><span id="level">1</span></div>
                     <div class="go-stat-row"><span>Enemies Defeated</span><span id="kills">0</span></div>
                 </div>
-                <button id="continueBtn" class="primary">CONTINUE TO ENDLESS</button>
-                <button id="menuBtn">RETURN TO MENU</button>
+                <neon-button id="continueBtn" variant="primary">CONTINUE TO ENDLESS</neon-button>
+                <neon-button id="menuBtn">RETURN TO MENU</neon-button>
             </div>
         `, overlayStyles, styles);
 

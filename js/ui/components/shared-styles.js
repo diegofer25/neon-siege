@@ -215,6 +215,10 @@ export const overlayStyles = createSheet(/* css */ `
       0 0 10px var(--color-accent-red),
       0 0 var(--spacing-xl) rgba(255, 0, 0, 0.3);
   }
+  /* NeonButton in overlay context — match layout spacing */
+  .overlay neon-button {
+    margin: 10px;
+  }
   /* Keyframes */
   @keyframes fadeInUp {
     0% { opacity: 0; transform: translateY(30px); }

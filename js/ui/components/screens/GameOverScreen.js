@@ -13,8 +13,8 @@
  *   'load-save'  — "Load Last Save" button clicked
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { overlayStyles, createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { overlayStyles, createSheet } from '../shared-styles.js';
 
 const styles = createSheet(/* css */ `
   :host { display: contents; }
@@ -33,8 +33,8 @@ class GameOverScreen extends BaseComponent {
                     <div class="go-stat-row"><span>Level Reached</span><span id="level">1</span></div>
                 </div>
                 <div id="nearMiss" class="near-miss" style="display: none;"></div>
-                <button id="loadBtn" style="display: none;">LOAD LAST SAVE</button>
-                <button id="restartBtn">START AGAIN</button>
+                <neon-button id="loadBtn" style="display: none;">LOAD LAST SAVE</neon-button>
+                <neon-button id="restartBtn" variant="primary">START AGAIN</neon-button>
             </div>
         `, overlayStyles, styles);
 

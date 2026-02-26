@@ -19,8 +19,8 @@
  *   'toggle-dev-panel'
  */
 
-import { BaseComponent } from './BaseComponent.js';
-import { overlayStyles, createSheet } from './shared-styles.js';
+import { BaseComponent } from '../BaseComponent.js';
+import { overlayStyles, createSheet } from '../shared-styles.js';
 
 const styles = createSheet(/* css */ `
   :host { display: contents; }
@@ -227,16 +227,16 @@ class SettingsModal extends BaseComponent {
                     </div>
                     <p id="keybindHintsText" class="settings-help">Keyboard: WASD/Arrows move &bull; Q/E/R/T cast skills &bull; P pause/resume</p>
                     <div class="settings-actions">
-                        <button id="saveBtn">Save Game</button>
-                        <button id="loadBtn">Load Save</button>
-                        <button id="clearBtn" class="danger">Delete Save</button>
+                        <neon-button id="saveBtn">Save Game</neon-button>
+                        <neon-button id="loadBtn">Load Save</neon-button>
+                        <neon-button id="clearBtn" variant="danger">Delete Save</neon-button>
                     </div>
                     <div class="settings-actions">
-                        <button id="resetBtn">Reset Defaults</button>
-                        <button id="closeBtn" class="primary">Close</button>
+                        <neon-button id="resetBtn">Reset Defaults</neon-button>
+                        <neon-button id="closeBtn" variant="primary">Close</neon-button>
                     </div>
                     <div id="devRow" class="settings-actions" style="display:none">
-                        <button id="devBtn" class="danger">⚙ Admin Panel</button>
+                        <neon-button id="devBtn" variant="danger">⚙ Admin Panel</neon-button>
                     </div>
                 </div>
             </div>

@@ -102,8 +102,29 @@ declare global {
     }
 
     interface GameHudElement extends HTMLElement {
-        // No public API — HUDManager accesses shadowRoot directly
+        // No public API — HUDManager accesses nested sub-component shadowRoots directly
     }
+
+    // ── Global primitives ──
+    interface NeonButtonElement extends HTMLElement {
+        variant: string;
+        disabled: boolean;
+        ready: boolean;
+        label: string;
+    }
+
+    // ── HUD sub-components (no public API — accessed via HUDManager) ──
+    interface HudHealthBarsElement extends HTMLElement {}
+    interface HudSkillBarElement extends HTMLElement {}
+    interface HudPassiveSlotsElement extends HTMLElement {}
+    interface HudAscensionBadgesElement extends HTMLElement {}
+    interface HudWaveCounterElement extends HTMLElement {}
+    interface HudScoreElement extends HTMLElement {}
+    interface HudComboElement extends HTMLElement {}
+    interface HudStatsElement extends HTMLElement {}
+    interface HudChallengesElement extends HTMLElement {}
+    interface HudPerformanceElement extends HTMLElement {}
+    interface HudSettingsElement extends HTMLElement {}
 
     interface HTMLElementTagNameMap {
         'pause-screen': PauseScreenElement;
@@ -118,6 +139,18 @@ declare global {
         'ascension-panel': AscensionPanelElement;
         'hud-tooltip': HudTooltipElement;
         'game-hud': GameHudElement;
+        'neon-button': NeonButtonElement;
+        'hud-health-bars': HudHealthBarsElement;
+        'hud-skill-bar': HudSkillBarElement;
+        'hud-passive-slots': HudPassiveSlotsElement;
+        'hud-ascension-badges': HudAscensionBadgesElement;
+        'hud-wave-counter': HudWaveCounterElement;
+        'hud-score': HudScoreElement;
+        'hud-combo': HudComboElement;
+        'hud-stats': HudStatsElement;
+        'hud-challenges': HudChallengesElement;
+        'hud-performance': HudPerformanceElement;
+        'hud-settings': HudSettingsElement;
     }
 }
 
