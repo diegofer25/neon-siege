@@ -62,7 +62,8 @@ export async function requestContinue() {
 
 /**
  * Redeem (consume) a continue token after the game has restored.
- * This deletes the old save server-side.
+ * The server marks the token as used but keeps the save intact so the player
+ * can continue again if they die before the next wave auto-save fires.
  *
  * @param {string} continueToken
  * @returns {Promise<{ ok: boolean }>}

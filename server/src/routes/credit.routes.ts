@@ -90,7 +90,7 @@ const authedRoutes = new Elysia({ prefix: '/api/credits' })
 
   /**
    * POST /api/credits/redeem
-   * Consume a continue token and delete the old save.
+   * Consume a continue token (marks it used; save is kept on server for re-continuation).
    */
   .post(
     '/redeem',

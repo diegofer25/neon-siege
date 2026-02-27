@@ -13,7 +13,6 @@
 import { pool } from '../config/database';
 import { env } from '../config/env';
 import * as CreditModel from '../models/credit.model';
-import * as SaveModel from '../models/save.model';
 
 /** Continue token TTL — 5 minutes. */
 const TOKEN_TTL_MS = 5 * 60 * 1000;
@@ -140,9 +139,12 @@ export async function requestContinue(
 }
 
 /**
- * Redeem a continue token: validate + consume it, then delete the old save
- * so the player can't replay it. The client must create a new save checkpoint
- * after the wave starts.
+ * Redeem a continue token: validate + consume it.
+ * The save is intentionally NOT deleted here — if the player dies during the
+ * same wave they resumed (before the next wave's auto-save fires), the server
+ * save must still be present so they can spend another credit to continue again.
+ * Each continuation already costs a credit, so replay protection is credit-gated.
+ * The save is naturally overwritten by the wave auto-save in continueToNextWave().
  */
 export async function redeemContinue(userId: string, continueToken: string): Promise<boolean> {
   // Consume the token (atomic — UPDATE … WHERE consumed = FALSE)
@@ -150,9 +152,6 @@ export async function redeemContinue(userId: string, continueToken: string): Pro
   if (!result) {
     throw new CreditModel.CreditError('Invalid, expired, or already-used continue token', 403);
   }
-
-  // Delete the old save — prevents save-scum replays
-  await SaveModel.deleteSave(userId);
 
   return true;
 }
