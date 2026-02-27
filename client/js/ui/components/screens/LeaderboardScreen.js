@@ -45,7 +45,8 @@ const styles = createSheet(/* css */ `
   .lb-container {
     position: relative;
     width: min(720px, 92vw);
-    max-height: 80vh;
+    height: calc(100vh - 40px);
+    max-height: calc(100vh - 40px);
     display: flex;
     flex-direction: column;
     padding: var(--spacing-xl) var(--spacing-xxl);
@@ -532,7 +533,7 @@ const styles = createSheet(/* css */ `
 
   /* ── Responsive ───────────────────────────────────────────────────────── */
   @media (max-width: 600px) {
-    .lb-container { width: 96vw; padding: var(--spacing-md) var(--spacing-md); border-radius: var(--radius-lg); }
+    .lb-container { width: 96vw; height: calc(100vh - 24px); max-height: calc(100vh - 24px); padding: var(--spacing-md) var(--spacing-md); border-radius: var(--radius-lg); }
     .lb-heading { font-size: 16px; letter-spacing: 2px; }
     .lb-tab { padding: 6px 14px !important; font-size: 10px; }
     th { padding: 8px 8px; font-size: 9px; }
