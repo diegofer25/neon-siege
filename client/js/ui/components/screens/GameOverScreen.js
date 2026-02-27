@@ -76,7 +76,7 @@ class GameOverScreen extends BaseComponent {
                     <neon-button id="continueBtn" variant="primary" style="display: none;">CONTINUE</neon-button>
                     <span id="creditBadge" class="credit-badge"></span>
                     <span id="continueError" class="continue-error"></span>
-                    <neon-button id="buyBtn" style="display: none;">BUY 10 CREDITS — ${GameConfig.CONTINUE.PRICE_DISPLAY}</neon-button>
+                    <neon-button id="buyBtn" style="display: none;">BUY 10 CONTINUES — ${GameConfig.CONTINUE.PRICE_DISPLAY}</neon-button>
                 </div>
 
                 <neon-button id="leaderboardBtn">VIEW LEADERBOARD</neon-button>
@@ -136,13 +136,13 @@ class GameOverScreen extends BaseComponent {
             continueBtn.textContent = `CONTINUE (${credits.total} left)`;
             badge.textContent = credits.freeRemaining > 0
                 ? `${credits.freeRemaining} free + ${credits.purchased} purchased`
-                : `${credits.purchased} purchased credits`;
+                : `${credits.purchased} purchased continues`;
             badge.classList.toggle('empty', false);
             buyBtn.style.display = 'none';
         } else if (hasSave && credits.total === 0) {
-            // No credits — show buy button, hide continue
+            // No continues — show buy button, hide continue
             continueBtn.style.display = 'none';
-            badge.textContent = 'NO CREDITS REMAINING';
+            badge.textContent = 'NO CONTINUES REMAINING';
             badge.classList.toggle('empty', true);
             buyBtn.style.display = 'inline-block';
         } else {

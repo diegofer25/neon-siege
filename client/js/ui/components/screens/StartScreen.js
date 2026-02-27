@@ -181,7 +181,7 @@ class StartScreen extends BaseComponent {
                     <neon-button id="continueBtn" style="display: none;">CONTINUE</neon-button>
                     <span id="creditBadge" class="credit-badge"></span>
                     <span id="continueError" class="continue-error"></span>
-                    <neon-button id="buyBtn" style="display: none;">BUY CREDITS</neon-button>
+                    <neon-button id="buyBtn" style="display: none;">BUY CONTINUES</neon-button>
                 </div>
                 <div style="display: flex; gap: 8px; margin-top: var(--spacing-sm); justify-content: center;">
                     <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
@@ -304,25 +304,25 @@ class StartScreen extends BaseComponent {
 
         if (saveData && credits.total > 0) {
             const wave = saveData.checkpointWave ?? saveData.wave ?? '?';
-            const creditLabel = credits.total === 1 ? '1 credit' : `${credits.total} credits`;
+            const creditLabel = credits.total === 1 ? '1 continue' : `${credits.total} continues`;
             continueBtn.textContent = `CONTINUE — WAVE ${wave} (${creditLabel})`;
             continueBtn.style.display = '';
             continueBtn.removeAttribute('disabled');
             if (badge) {
                 badge.textContent = credits.freeRemaining > 0
                     ? `${credits.freeRemaining} free + ${credits.purchased} purchased`
-                    : `${credits.purchased} purchased credit${credits.purchased !== 1 ? 's' : ''}`;
+                    : `${credits.purchased} purchased continue${credits.purchased !== 1 ? 's' : ''}`;
                 badge.classList.remove('empty');
             }
             if (buyBtn) buyBtn.style.display = 'none';
         } else if (saveData && credits.total === 0) {
             continueBtn.style.display = 'none';
             if (badge) {
-                badge.textContent = 'NO CREDITS — BUY TO CONTINUE';
+                badge.textContent = 'NO CONTINUES REMAINING';
                 badge.classList.add('empty');
             }
             if (buyBtn) {
-                buyBtn.textContent = `BUY 10 CREDITS — ${GameConfig.CONTINUE.PRICE_DISPLAY}`;
+                buyBtn.textContent = `BUY 10 CONTINUES — ${GameConfig.CONTINUE.PRICE_DISPLAY}`;
                 buyBtn.style.display = 'inline-block';
             }
         } else {

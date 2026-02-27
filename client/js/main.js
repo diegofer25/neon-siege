@@ -756,7 +756,7 @@ async function continueLastGame() {
     } catch (err) {
         console.error('[main] continueLastGame failed:', err);
         const message = err?.status === 402
-            ? 'No credits remaining.'
+            ? 'No continues remaining.'
             : err?.status === 404
                 ? 'No save found to continue from.'
                 : 'Continue failed. Please try again.';
@@ -771,12 +771,6 @@ async function continueLastGame() {
  */
 async function handleBuyCreditsFromMenu() {
     const startScreenEl = /** @type {any} */ (document.querySelector('start-screen'));
-
-    const user = authService.getCurrentUser();
-    if (!user || user.auth_provider === 'anonymous') {
-        startScreenEl.showContinueError('Create an account to purchase credits.');
-        return;
-    }
 
     try {
         const result = await creditService.openCheckout();
@@ -1157,13 +1151,6 @@ async function handleContinue() {
  */
 async function handleBuyCredits() {
     const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
-
-    // Block anonymous users from purchasing
-    const user = authService.getCurrentUser();
-    if (!user || user.auth_provider === 'anonymous') {
-        goScreen.showContinueError('Create an account to purchase credits.');
-        return;
-    }
 
     try {
         const result = await creditService.openCheckout();
