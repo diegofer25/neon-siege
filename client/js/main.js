@@ -13,7 +13,9 @@ import { audioManager } from './managers/AudioManager.js';
 import { hudManager } from './managers/HUDManager.js';
 import { skillUI } from './ui/SkillUIController.js';
 import { DevPanel } from './ui/DevPanel.js';
+import { AdminPanel } from './ui/AdminPanel.js';
 import * as authService from './services/AuthService.js';
+import * as creditService from './services/CreditService.js';
 
 // Web Components (side-effect: registers all custom elements)
 import './ui/components/index.js';
@@ -196,6 +198,10 @@ async function init() {
     // Developer panel (gated by ?dev=true)
     const devPanel = new DevPanel(game);
     appRuntime.devPanel = devPanel;
+
+    // Admin panel (always available, password-protected)
+    const adminPanel = new AdminPanel(game);
+    appRuntime.adminPanel = adminPanel;
     
     // Configure all input event listeners
     setupInputHandlers();
@@ -252,19 +258,14 @@ async function init() {
     const settingsModalEl = document.querySelector('settings-modal');
     const gameHudEl = document.querySelector('game-hud');
 
-    // Gate game start behind authentication
-    let pendingStartGame = false;
+    // Start game — no auth required, anyone can play
     startScreen.addEventListener('start-game', () => {
-        if (authService.isAuthenticated()) {
-            startGame();
-        } else {
-            pendingStartGame = true;
-            loginScreen.setUser(null);
-            loginScreen.show();
-        }
+        startGame();
     });
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('load-save', () => loadGameFromSave('game_over'));
+    gameOverScreen.addEventListener('continue', handleContinue);
+    gameOverScreen.addEventListener('buy-credits', handleBuyCredits);
     victoryScreen.addEventListener('continue-endless', continueToEndless);
     victoryScreen.addEventListener('return-to-menu', restartFromVictory);
 
@@ -301,16 +302,11 @@ async function init() {
     });
 
     // Auth events
-    /** After successful auth, auto-start if the user clicked "Start" before logging in.
-     *  Also pull the server's save state so the save button reflects the server copy. */
+    /** After successful auth, sync save state from server. */
     const _onAuthSuccess = () => {
         loginScreen.hide();
         // Sync save from server after login so save buttons update correctly
         saveStateManager.init().then(syncSaveButtons);
-        if (pendingStartGame) {
-            pendingStartGame = false;
-            startGame();
-        }
     };
 
     loginScreen.addEventListener('auth-login-anonymous', async (e) => {
@@ -356,7 +352,7 @@ async function init() {
     });
 
     loginScreen.addEventListener('login-close', () => {
-        pendingStartGame = false;
+        // no-op — kept for future use
     });
 
     loginScreen.addEventListener('auth-logout', async () => {
@@ -477,9 +473,16 @@ function setupInputHandlers() {
     document.addEventListener('keydown', (e) => {
         input.keys[e.code] = true;
 
-        // Toggle developer panel (semicolon key)
-        if (e.code === 'Semicolon' && appRuntime.devPanel?.enabled) {
+        // Toggle admin panel (semicolon key — always available, password-protected)
+        if (e.code === 'Semicolon') {
+            appRuntime.adminPanel?.toggle();
+            return;
+        }
+
+        // Toggle developer panel (backtick key, requires ?dev=true)
+        if (e.code === 'Backquote' && appRuntime.devPanel?.enabled) {
             appRuntime.devPanel.toggle();
+            return;
         }
 
         // Game pause toggle
@@ -741,6 +744,9 @@ function showGameOver() {
     goScreen.show();
     syncSaveButtons();
 
+    // Refresh credit balance from server and update continue UI
+    refreshCreditInfo();
+
     playSFX('game_over');
 
     telemetry.endSession('game_over', {
@@ -899,6 +905,122 @@ function closeSettingsModal() {
     }
 
     settingsModalWasPlaying = false;
+}
+
+//=============================================================================
+// CONTINUE / CREDIT SYSTEM
+//=============================================================================
+
+/**
+ * Refresh credit balance from server and update the GameOverScreen UI.
+ */
+async function refreshCreditInfo() {
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    if (!goScreen) return;
+
+    try {
+        const balance = await creditService.getBalance();
+        const hasSave = saveStateManager.hasSave();
+        goScreen.setCreditInfo(balance, hasSave);
+    } catch (err) {
+        console.warn('[main] Failed to refresh credit info:', err.message);
+        // Fall back to cached balance
+        const balance = creditService.getCachedBalance();
+        const hasSave = saveStateManager.hasSave();
+        goScreen.setCreditInfo(balance, hasSave);
+    }
+}
+
+/**
+ * Handle "Continue" button — spend 1 credit, restore from server save.
+ */
+async function handleContinue() {
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    if (!game) return;
+
+    goScreen.setContinueLoading(true);
+
+    try {
+        // 1. Request continue from server (deducts credit, returns token + save)
+        const { continueToken, save } = await creditService.requestContinue();
+
+        // 2. Restore game state from the server-provided save
+        const restored = game.restoreFromContinue(save, continueToken);
+        if (!restored) {
+            goScreen.showContinueError('Failed to restore save data.');
+            goScreen.setContinueLoading(false);
+            return;
+        }
+
+        // 3. Hide overlays and resume the game loop
+        playSFX('ui_click');
+        goScreen.hide();
+        document.querySelector('pause-screen')?.hide();
+
+        telemetry.track('continue_used', {
+            fromWave: save.wave || 0,
+            continuesUsed: game.store.get('run', 'continuesUsed'),
+        });
+
+        if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+
+        syncMusicTrack();
+        syncSaveButtons();
+
+        // 4. Redeem the continue token server-side (deletes the old save)
+        //    This is fire-and-forget — game is already restored.
+        const token = game.consumePendingContinueToken();
+        if (token) {
+            creditService.redeemContinue(token).catch(err => {
+                console.warn('[main] Failed to redeem continue token:', err.message);
+            });
+        }
+    } catch (err) {
+        console.error('[main] Continue failed:', err);
+        const message = err?.status === 402
+            ? 'No credits remaining.'
+            : err?.status === 404
+                ? 'No save found to continue from.'
+                : 'Continue failed. Please try again.';
+        goScreen.showContinueError(message);
+        goScreen.setContinueLoading(false);
+        // Refresh credit info in case it changed
+        refreshCreditInfo();
+    }
+}
+
+/**
+ * Handle "Buy Credits" button — open Stripe Checkout popup.
+ */
+async function handleBuyCredits() {
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+
+    // Block anonymous users from purchasing
+    const user = authService.getCurrentUser();
+    if (!user || user.provider === 'anonymous') {
+        goScreen.showContinueError('Create an account to purchase credits.');
+        return;
+    }
+
+    try {
+        const result = await creditService.openCheckout();
+        if (result.success) {
+            playSFX('ui_click');
+            telemetry.track('credits_purchased', {
+                newBalance: result.balance.total,
+            });
+        }
+        // Always refresh credit info after checkout flow
+        refreshCreditInfo();
+    } catch (err) {
+        console.error('[main] Checkout failed:', err);
+        goScreen.showContinueError('Purchase failed. Please try again.');
+    }
 }
 
 function loadGameFromSave(source = 'unknown') {

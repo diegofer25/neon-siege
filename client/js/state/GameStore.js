@@ -86,9 +86,9 @@ export class GameStore {
 		}
 
 		if (key === undefined) {
-			// Return a shallow copy (frozen in dev mode)
+			// Return a frozen shallow copy to prevent external mutation
 			const snapshot = { ...state };
-			return __DEV__ ? Object.freeze(snapshot) : snapshot;
+			return Object.freeze(snapshot);
 		}
 
 		return state[key];

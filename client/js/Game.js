@@ -299,6 +299,9 @@ export class Game {
 		/** @type {Function|null} Saved onGo callback when countdown is interrupted by pause */
 		this._pendingCountdownOnGo = null;
 
+		/** @type {string|null} Continue token pending redemption after wave starts */
+		this._pendingContinueToken = null;
+
 		/** @type {boolean} DevPanel: draw collision radii overlay */
 		this.debugHitboxes = false;
 	}
@@ -764,6 +767,7 @@ export class Game {
 			runDetails: buildRunDetails(this.store),
 			gameDurationMs: Date.now() - (this._runStartTimestamp || Date.now()),
 			startWave: this._saveLoadWave || 1,
+			continuesUsed: this.store.get('run', 'continuesUsed') || 0,
 		});
 	}
 
@@ -1551,6 +1555,43 @@ export class Game {
 		});
 
 		return true;
+	}
+
+	/**
+	 * Restore the game from a server-provided save after spending a continue credit.
+	 * This is distinct from restoreFromSave() — it dispatches RUN_USE_CONTINUE
+	 * and stores the continue token for later redemption.
+	 *
+	 * @param {object} save — the save payload from the server
+	 * @param {string} continueToken — one-time server-issued token
+	 * @returns {boolean} true if restore succeeded
+	 */
+	restoreFromContinue(save, continueToken) {
+		const restored = this.restoreFromSave(save);
+		if (!restored) return false;
+
+		// Track the continue usage in the run state
+		this.dispatcher.dispatch({ type: ActionTypes.RUN_USE_CONTINUE, payload: {} });
+
+		// Store the token — main.js will call redeemContinue() after wave starts
+		this._pendingContinueToken = continueToken;
+
+		telemetry.track("continue_used", {
+			wave: this.wave,
+			continuesUsed: this.store.get('run', 'continuesUsed') || 1,
+		});
+
+		return true;
+	}
+
+	/**
+	 * Consume and clear the pending continue token (called after wave resumes).
+	 * @returns {string|null} the token to redeem, or null if none pending
+	 */
+	consumePendingContinueToken() {
+		const token = this._pendingContinueToken;
+		this._pendingContinueToken = null;
+		return token;
 	}
 
 	/**

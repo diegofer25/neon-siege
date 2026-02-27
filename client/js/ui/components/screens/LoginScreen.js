@@ -371,6 +371,83 @@ const styles = createSheet(/* css */ `
     background: rgba(255, 255, 255, 0.03);
   }
 
+  /* ── Avatar picker ────────────────────────────────────────────────────── */
+  .avatar-circle.clickable {
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .avatar-circle.clickable:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 24px rgba(0, 255, 255, 0.35);
+  }
+  .avatar-circle .avatar-edit-hint {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid var(--color-primary-neon);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .avatar-picker {
+    display: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: var(--spacing-sm) 0;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  .avatar-picker.open {
+    display: flex;
+    animation: avatarPickerIn 0.2s ease-out;
+  }
+  .avatar-option {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    padding: 0;
+  }
+  .avatar-option:hover {
+    border-color: var(--color-primary-neon);
+    transform: scale(1.12);
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+  }
+  .avatar-option.selected {
+    border-color: var(--color-primary-neon);
+    background: rgba(0, 255, 255, 0.12);
+    box-shadow: 0 0 16px rgba(0, 255, 255, 0.4);
+  }
+  .avatar-picker-label {
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  @keyframes avatarPickerIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   /* ── Keyframes ────────────────────────────────────────────────────────── */
   @keyframes errorShake {
     0%, 100% { transform: translateX(0); }
@@ -430,7 +507,12 @@ class LoginScreen extends BaseComponent {
                     <div id="userView" style="display:none;">
                         <h2 class="auth-heading">PROFILE</h2>
                         <div class="profile-card">
-                            <div class="avatar-circle" id="avatarInitials"></div>
+                            <div class="avatar-circle clickable" id="avatarInitials" title="Change avatar">
+                                <span class="avatar-edit-hint">✏️</span>
+                            </div>
+                            <div class="avatar-picker" id="avatarPicker">
+                                <div class="avatar-picker-label">Choose your avatar</div>
+                            </div>
                             <div class="profile-name" id="userName"></div>
                             <div class="profile-provider" id="userProvider"></div>
                         </div>
@@ -595,6 +677,9 @@ class LoginScreen extends BaseComponent {
             this.hide();
             this._emit('login-close');
         });
+
+        // Avatar picker
+        this._setupAvatarPicker();
     }
 
     /* ── Screen transitions ─────────────────────────────────────────────── */
@@ -723,6 +808,82 @@ class LoginScreen extends BaseComponent {
         }
     }
 
+    /* ── Avatar picker ──────────────────────────────────────────────────── */
+    static AVATAR_OPTIONS = [
+        '🤖', '👾', '🎯', '⚡', '🔥', '💀',
+        '🛡️', '🚀', '🎮', '👽', '🧬', '💎',
+        '🌟', '🦾', '🧛', '🐉', '☠️', '🎖️',
+        '🌀', '🔮', '💜', '🪵', '❤️‍🔥', '🪐',
+    ];
+    static AVATAR_STORAGE_KEY = 'neon_siege_avatar';
+
+    _setupAvatarPicker() {
+        const avatarCircle = this._$('#avatarInitials');
+        const picker = this._$('#avatarPicker');
+        if (!avatarCircle || !picker) return;
+
+        // Populate picker options
+        for (const emoji of LoginScreen.AVATAR_OPTIONS) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'avatar-option';
+            btn.dataset.avatar = emoji;
+            btn.textContent = emoji;
+            btn.title = `Select ${emoji}`;
+            picker.appendChild(btn);
+        }
+
+        // Toggle picker on avatar click
+        avatarCircle.addEventListener('click', () => {
+            const isOpen = picker.classList.contains('open');
+            picker.classList.toggle('open', !isOpen);
+            // Highlight current selection
+            if (!isOpen) this._highlightSelectedAvatar();
+        });
+
+        // Handle avatar selection
+        picker.addEventListener('click', (e) => {
+            const target = /** @type {HTMLElement} */ (e.target);
+            const btn = target.closest('.avatar-option');
+            if (!btn) return;
+            const emoji = btn.dataset.avatar;
+            this._setAvatarChoice(emoji);
+            this._applyAvatar(emoji);
+            picker.classList.remove('open');
+        });
+    }
+
+    _highlightSelectedAvatar() {
+        const saved = this._getAvatarChoice();
+        const picker = this._$('#avatarPicker');
+        if (!picker) return;
+        picker.querySelectorAll('.avatar-option').forEach(btn => {
+            btn.classList.toggle('selected', btn.dataset.avatar === saved);
+        });
+    }
+
+    _applyAvatar(emoji) {
+        const avatarEl = this._$('#avatarInitials');
+        if (!avatarEl) return;
+        // Clear any text nodes but keep the edit hint
+        const hint = avatarEl.querySelector('.avatar-edit-hint');
+        avatarEl.textContent = '';
+        // Set avatar as a text node
+        const textNode = document.createTextNode(emoji);
+        avatarEl.prepend(textNode);
+        if (hint) avatarEl.appendChild(hint);
+        // Make it larger for emoji display
+        avatarEl.style.fontSize = '30px';
+    }
+
+    _setAvatarChoice(emoji) {
+        try { localStorage.setItem(LoginScreen.AVATAR_STORAGE_KEY, emoji); } catch { /* ignore */ }
+    }
+
+    _getAvatarChoice() {
+        try { return localStorage.getItem(LoginScreen.AVATAR_STORAGE_KEY); } catch { return null; }
+    }
+
     /* ── Auth state ─────────────────────────────────────────────────────── */
     /** @param {{ id: string, display_name: string, auth_provider: string }|null} user */
     setUser(user) {
@@ -733,18 +894,31 @@ class LoginScreen extends BaseComponent {
             authView.style.display = 'none';
             userView.style.display = 'block';
 
-            // Avatar initials
-            const initials = (user.display_name || '?')
-                .split(/\s+/)
-                .map(w => w[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase();
-            this._$('#avatarInitials').textContent = initials;
+            // Check for saved avatar emoji; fall back to initials
+            const savedAvatar = this._getAvatarChoice();
+            if (savedAvatar) {
+                this._applyAvatar(savedAvatar);
+            } else {
+                const initials = (user.display_name || '?')
+                    .split(/\s+/)
+                    .map(w => w[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase();
+                const avatarEl = this._$('#avatarInitials');
+                const hint = avatarEl.querySelector('.avatar-edit-hint');
+                avatarEl.textContent = '';
+                avatarEl.prepend(document.createTextNode(initials));
+                if (hint) avatarEl.appendChild(hint);
+                avatarEl.style.fontSize = '22px';
+            }
             this._$('#userName').textContent = user.display_name;
 
             const providerLabels = { email: 'Email account', google: 'Google account', anonymous: 'Guest' };
             this._$('#userProvider').textContent = providerLabels[user.auth_provider] || user.auth_provider;
+
+            // Close picker when switching users
+            this._$('#avatarPicker')?.classList.remove('open');
         } else {
             authView.style.display = 'block';
             userView.style.display = 'none';

@@ -40,6 +40,7 @@ export async function submitScore(params) {
         runDetails: params.runDetails || {},
         gameDurationMs: params.gameDurationMs,
         startWave: params.startWave ?? 1,
+        continuesUsed: params.continuesUsed ?? 0,
       }),
     });
     return result;

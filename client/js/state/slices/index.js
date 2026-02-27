@@ -25,6 +25,7 @@ export const runSlice = {
 	wave: 0,
 	score: 0,
 	kills: 0,
+	continuesUsed: 0,
 	difficulty: 'normal',
 	waveModifierKey: null,
 	modifierState: {
@@ -199,6 +200,7 @@ export function registerAllReducers(dispatcher) {
 		wave: 1,
 		score: 0,
 		kills: 0,
+		continuesUsed: 0,
 		waveModifierKey: null,
 		modifierState: {
 			enemySpeedMultiplier: 1,
@@ -218,6 +220,10 @@ export function registerAllReducers(dispatcher) {
 
 	dispatcher.addReducer(ActionTypes.SET_DIFFICULTY, 'run', (state, action) => ({
 		difficulty: action.payload.difficulty || 'normal',
+	}));
+
+	dispatcher.addReducer(ActionTypes.RUN_USE_CONTINUE, 'run', (state) => ({
+		continuesUsed: (state.continuesUsed || 0) + 1,
 	}));
 
 	dispatcher.addReducer(ActionTypes.ENEMY_KILLED, 'run', (state, action) => ({
