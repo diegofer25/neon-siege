@@ -33,7 +33,7 @@ function getStripe(): Stripe {
  */
 export async function createCheckoutSession(
   userId: string,
-  email: string,
+  email: string | undefined,
   successUrl: string,
   cancelUrl: string
 ): Promise<{ url: string; sessionId: string }> {
@@ -45,7 +45,7 @@ export async function createCheckoutSession(
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
-    customer_email: email,
+    ...(email ? { customer_email: email } : {}),
     line_items: [
       {
         price: env.STRIPE_PRICE_ID,

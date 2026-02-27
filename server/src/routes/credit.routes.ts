@@ -124,20 +124,16 @@ const authedRoutes = new Elysia({ prefix: '/api/credits' })
       const limited = checkoutLimiter({ userId, set } as any);
       if (limited) return limited;
 
-      // Anonymous users cannot purchase — Stripe needs an email
       const user = await UserModel.findById(userId);
-      if (!user || user.auth_provider === 'anonymous') {
-        set.status = 403;
-        return {
-          error: 'Anonymous accounts cannot purchase credits. Please sign up with email or Google first.',
-          code: 'ANONYMOUS_PURCHASE_BLOCKED',
-        };
+      if (!user) {
+        set.status = 404;
+        return { error: 'User not found' };
       }
 
       try {
         const result = await stripeService.createCheckoutSession(
           userId,
-          user.email!,
+          user.email ?? undefined,
           body.successUrl,
           body.cancelUrl
         );
