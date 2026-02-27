@@ -234,6 +234,86 @@ const styles = createSheet(/* css */ `
     min-height: 16px;
   }
 
+  /* ── Hero subtitle ──────────────────────────────────────────────────── */
+  .auth-subtitle {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    line-height: 1.55;
+    margin: 0 0 var(--spacing-md) 0;
+  }
+
+  /* ── Primary CTA buttons row ─────────────────────────────────────────── */
+  .auth-cta-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+  }
+  .auth-cta-btn {
+    display: block;
+    max-width: 100%;
+    padding: 13px var(--spacing-md);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .auth-cta-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .auth-cta-btn:hover::before { opacity: 0.08; }
+  .auth-cta-btn.primary {
+    background: transparent;
+    border: 2px solid var(--color-primary-neon);
+    color: var(--color-primary-neon);
+    box-shadow: 0 0 14px rgba(0, 255, 255, 0.25), inset 0 0 14px rgba(0, 255, 255, 0.07);
+    text-shadow: 0 0 8px var(--color-primary-neon);
+  }
+  .auth-cta-btn.primary:hover {
+    box-shadow: 0 0 24px rgba(0, 255, 255, 0.45), inset 0 0 20px rgba(0, 255, 255, 0.12);
+    transform: translateY(-1px);
+  }
+  .auth-cta-btn.secondary {
+    background: transparent;
+    border: 2px solid var(--color-secondary-neon);
+    color: var(--color-secondary-neon);
+    box-shadow: 0 0 14px rgba(255, 45, 236, 0.2), inset 0 0 14px rgba(255, 45, 236, 0.06);
+    text-shadow: 0 0 8px var(--color-secondary-neon);
+  }
+  .auth-cta-btn.secondary:hover {
+    box-shadow: 0 0 24px rgba(255, 45, 236, 0.4), inset 0 0 20px rgba(255, 45, 236, 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* ── Guest section ────────────────────────────────────────────────────── */
+  .guest-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+  .guest-label {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .guest-form {
+    gap: var(--spacing-xs) !important;
+  }
+
   /* ── Divider ──────────────────────────────────────────────────────────── */
   .auth-divider {
     border: none;
@@ -529,20 +609,20 @@ class LoginScreen extends BaseComponent {
                             <!-- Screen 1: Quick Play (hero/default) -->
                             <div class="auth-screen active" id="screen-quick-play">
                                 <h2 class="auth-heading hero">ENTER THE SIEGE</h2>
-                                <form class="auth-form" id="anonForm">
-                                    <div class="input-wrapper">
-                                        <input type="text" name="displayName" placeholder="Your player name" required minlength="1" maxlength="50" autocomplete="off">
-                                    </div>
-                                    <neon-button type="submit" variant="primary" id="anonSubmit">PLAY AS GUEST</neon-button>
-                                </form>
-                                <hr class="auth-divider">
-                                <div class="auth-link-row">
-                                    Already have an account?
-                                    <button class="auth-link" data-goto="login">Sign In</button>
+                                <p class="auth-subtitle">Sign in to save your progress, climb the leaderboard, and carry upgrades across runs.</p>
+                                <div class="auth-cta-row">
+                                    <button class="auth-cta-btn primary" data-goto="login">SIGN IN</button>
+                                    <button class="auth-cta-btn secondary" data-goto="register">CREATE ACCOUNT</button>
                                 </div>
-                                <div class="auth-link-row">
-                                    New here?
-                                    <button class="auth-link secondary" data-goto="register">Create Account</button>
+                                <hr class="auth-divider">
+                                <div class="guest-section">
+                                    <div class="guest-label">Or jump in without an account</div>
+                                    <form class="auth-form guest-form" id="anonForm">
+                                        <div class="input-wrapper">
+                                            <input type="text" name="displayName" placeholder="Guest name" required minlength="1" maxlength="50" autocomplete="off">
+                                        </div>
+                                        <neon-button type="submit" variant="default" id="anonSubmit">PLAY AS GUEST</neon-button>
+                                    </form>
                                 </div>
                             </div>
 

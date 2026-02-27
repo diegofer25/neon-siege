@@ -258,9 +258,16 @@ async function init() {
     const settingsModalEl = document.querySelector('settings-modal');
     const gameHudEl = document.querySelector('game-hud');
 
-    // Start game — no auth required, anyone can play
+    // Start game — requires at least a guest login
+    let _pendingGameStart = false;
     startScreen.addEventListener('start-game', () => {
-        startGame();
+        if (!authService.isAuthenticated()) {
+            _pendingGameStart = true;
+            loginScreen.setUser(null);
+            loginScreen.show();
+        } else {
+            startGame();
+        }
     });
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('continue', handleContinue);
@@ -306,6 +313,10 @@ async function init() {
         await game.progressionManager.init();
         syncSaveButtons();
         populateLastRunStats();
+        if (_pendingGameStart) {
+            _pendingGameStart = false;
+            startGame();
+        }
     };
 
     loginScreen.addEventListener('auth-login-anonymous', async (e) => {
@@ -351,7 +362,7 @@ async function init() {
     });
 
     loginScreen.addEventListener('login-close', () => {
-        // no-op — kept for future use
+        _pendingGameStart = false;
     });
 
     loginScreen.addEventListener('auth-logout', async () => {
