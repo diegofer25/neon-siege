@@ -135,7 +135,7 @@ const styles = createSheet(/* css */ `
     font-size: 22px;
     letter-spacing: 3px;
     animation: neonFlicker 3s infinite alternate;
-    margin: 0;
+    margin: 0 !important;
   }
 
   /* ── Tabs ──────────────────────────────────────────────────────────────── */
