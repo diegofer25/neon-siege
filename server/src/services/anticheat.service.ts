@@ -22,8 +22,8 @@ interface ValidationResult {
 // Min duration: ~10 minutes for a decent run
 const MIN_GAME_DURATION_MS = 600_000;
 
-// Max plausible score per wave (generous upper bound)
-const MAX_SCORE_PER_WAVE = 15_000;
+// Max plausible score per wave (generous upper bound — high-combo explosive builds can exceed 15k/wave)
+const MAX_SCORE_PER_WAVE = 30_000;
 
 // Max wave in the game
 const MAX_WAVE = 30;

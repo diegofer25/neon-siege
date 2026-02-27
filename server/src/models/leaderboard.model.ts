@@ -132,13 +132,13 @@ export async function getLeaderboard(
         ROW_NUMBER() OVER (ORDER BY le.score DESC) AS rank
        FROM leaderboard_entries le
        JOIN users u ON u.id = le.user_id
-       WHERE le.difficulty = $1 AND le.flagged = FALSE
+       WHERE le.difficulty = $1
        ORDER BY le.score DESC
        LIMIT $2 OFFSET $3`,
       [difficulty, limit, offset]
     ),
     queryOne<{ count: string }>(
-      `SELECT COUNT(*) as count FROM leaderboard_entries WHERE difficulty = $1 AND flagged = FALSE`,
+      `SELECT COUNT(*) as count FROM leaderboard_entries WHERE difficulty = $1`,
       [difficulty]
     ),
   ]);
@@ -162,7 +162,7 @@ export async function getUserEntry(
       ) AS rank
      FROM leaderboard_entries le
      JOIN users u ON u.id = le.user_id
-     WHERE le.user_id = $1 AND le.difficulty = $2 AND le.flagged = FALSE`,
+     WHERE le.user_id = $1 AND le.difficulty = $2`,
     [userId, difficulty]
   );
 }
@@ -174,7 +174,7 @@ export async function getUserRank(userId: string, difficulty: string): Promise<n
         user_id,
         ROW_NUMBER() OVER (ORDER BY score DESC) AS rank
       FROM leaderboard_entries
-      WHERE difficulty = $1 AND flagged = FALSE
+      WHERE difficulty = $1
     ) ranked
     WHERE user_id = $2`,
     [difficulty, userId]
