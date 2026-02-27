@@ -1,0 +1,79 @@
+# Development environment — full hot-reload for server (bun --watch) and client (Vite HMR)
+#
+# Usage:
+#   1. cp .env.docker.dev.example .env.docker.dev  (fill in real secrets)
+#   2. npm run docker:dev
+#
+#   Client → http://localhost:8080
+#   Server → http://localhost:3000
+#   Postgres → localhost:5432
+
+services:
+
+  # ─── Database ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: neon-siege-db-dev
+    environment:
+      POSTGRES_USER: neon_siege
+      POSTGRES_PASSWORD: neon_siege
+      POSTGRES_DB: neon_siege
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neon_siege"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ─── API server (Bun + Elysia) — hot-reload via bun --watch ─────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: dev
+    container_name: neon-siege-server-dev
+    env_file:
+      - .env.docker.dev
+    environment:
+      # Override DATABASE_URL to use Docker service name, not localhost
+      DATABASE_URL: postgresql://neon_siege:neon_siege@postgres:5432/neon_siege
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount only the directories that change; node_modules stays in the image
+      - ./server/src:/app/src:delegated
+      - ./server/migrations:/app/migrations:delegated
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Client (Vite dev server) — HMR hot-reload ──────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: dev
+    container_name: neon-siege-client-dev
+    environment:
+      # Tells vite.config.js to proxy /api to the server service, not localhost
+      VITE_API_TARGET: http://server:3000
+      # Enable polling-based file watching (needed in some Docker / Linux setups)
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Full client source mount for HMR; anonymous volume protects node_modules
+      - ./client:/app:delegated
+      - /app/node_modules
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  pgdata_dev:

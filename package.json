@@ -12,7 +12,14 @@
     "dev:server": "npm run dev --workspace=server",
     "dev:all": "npm run dev --workspace=client & npm run dev --workspace=server",
     "build": "npm run build --workspace=client",
-    "lint": "npm run lint --workspace=client"
+    "lint": "npm run lint --workspace=client",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:dev:detach": "docker compose -f docker-compose.dev.yml up --build -d",
+    "docker:dev:down": "docker compose -f docker-compose.dev.yml down",
+    "docker:dev:logs": "docker compose -f docker-compose.dev.yml logs -f",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up --build -d",
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
+    "docker:prod:logs": "docker compose -f docker-compose.prod.yml logs -f"
   },
   "keywords": [
     "game",

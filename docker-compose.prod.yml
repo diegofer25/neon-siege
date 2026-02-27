@@ -1,0 +1,64 @@
+# Production environment — built images, no volume mounts
+#
+# Usage:
+#   1. cp .env.docker.dev.example .env.prod  (fill in REAL production secrets)
+#   2. npm run docker:prod
+#
+#   Client (nginx) → http://your-vps:80
+#   Server         → internal only (not exposed)
+#   Postgres       → internal only (not exposed)
+
+services:
+
+  # ─── Database ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: neon-siege-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neon_siege}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-neon_siege}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-neon_siege}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ─── API server ─────────────────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: prod
+    container_name: neon-siege-server
+    env_file:
+      - path: .env.prod
+        required: false  # set required: true or ensure file exists on the VPS
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-neon_siege}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-neon_siege}
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Client (nginx: serves built files + proxies API/WS to server) ──────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: prod
+    container_name: neon-siege-client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  pgdata:
