@@ -8,7 +8,7 @@ import { apiFetch, setAccessToken, tryRestoreSession } from './ApiClient.js';
 
 const STORAGE_KEY = 'neon_siege_auth';
 
-/** @type {{ id: string, display_name: string, auth_provider: string }|null} */
+/** @type {{ id: string, display_name: string, auth_provider: string, country?: string, country_code?: string, region?: string, city?: string }|null} */
 let _currentUser = null;
 
 /** @type {Set<function>} */
@@ -19,7 +19,7 @@ export function isAuthenticated() {
   return _currentUser !== null;
 }
 
-/** @returns {{ id: string, display_name: string, auth_provider: string }|null} */
+/** @returns {{ id: string, display_name: string, auth_provider: string, country?: string, country_code?: string, region?: string, city?: string }|null} */
 export function getCurrentUser() {
   return _currentUser;
 }
