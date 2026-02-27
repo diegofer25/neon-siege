@@ -114,22 +114,30 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
 
   .post(
     '/anonymous',
-    async ({ body, accessJwt, refreshJwt, cookie: { refreshToken } }) => {
-      const user = await authService.createAnonymous(body.displayName);
+    async ({ body, accessJwt, refreshJwt, cookie: { refreshToken }, set }) => {
+      try {
+        const user = await authService.createAnonymous(body.displayName);
 
-      const accessToken = await accessJwt.sign({ sub: user.id, displayName: user.display_name });
-      const refresh = await refreshJwt.sign({ sub: user.id });
+        const accessToken = await accessJwt.sign({ sub: user.id, displayName: user.display_name });
+        const refresh = await refreshJwt.sign({ sub: user.id });
 
-      refreshToken.set({
-        value: refresh,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60,
-        path: '/',
-      });
+        refreshToken.set({
+          value: refresh,
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60,
+          path: '/',
+        });
 
-      return { accessToken, user };
+        return { accessToken, user };
+      } catch (err) {
+        if (err instanceof authService.AuthError) {
+          set.status = err.statusCode;
+          return { error: err.message };
+        }
+        throw err;
+      }
     },
     {
       body: t.Object({
