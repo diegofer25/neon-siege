@@ -1,21 +1,39 @@
 import { defineConfig } from 'vite';
 
+// When running inside Docker, VITE_API_TARGET is set to the server service name.
+// Locally it falls back to localhost:3000.
+const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:3000';
+const wsTarget  = apiTarget.replace(/^http/, 'ws');
+const isDocker  = !!process.env.VITE_API_TARGET;
+
 export default defineConfig({
   server: {
     host: true,
     port: 8080,
-    open: '/index.html',
+    // Don't try to open a browser when running inside a container
+    open: isDocker ? false : '/index.html',
+    watch: {
+      // Enable polling when CHOKIDAR_USEPOLLING=true (Docker / Linux inotify setups)
+      usePolling: process.env.CHOKIDAR_USEPOLLING === 'true',
+    },
     proxy: {
-      '/api': 'http://localhost:3000'
-    }
+      '/api': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: wsTarget,
+        ws: true,
+      },
+    },
   },
   preview: {
     host: true,
     port: 8080,
-    open: '/index.html'
+    open: '/index.html',
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: true
-  }
+    emptyOutDir: true,
+  },
 });

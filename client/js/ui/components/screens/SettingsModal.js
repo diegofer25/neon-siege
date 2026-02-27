@@ -3,7 +3,6 @@
  *
  * Public API:
  *   updateUI(settings)                          — sync all controls from a settings object
- *   setSaveButtonStates({ hasSave })            — enable/disable load/clear buttons
  *   setDevPanelVisible(bool)                    — show/hide the dev panel toggle row
  *   setKeybindHintsVisible(bool)                — show/hide the keybind hints text
  *   isVisible() → bool
@@ -11,8 +10,6 @@
  *
  * Events (composed, bubbling):
  *   'setting-change'    — { key, value } for any setting control
- *   'load-game'
- *   'clear-save'
  *   'reset-settings'
  *   'close-settings'
  *   'toggle-dev-panel'
@@ -172,6 +169,10 @@ const styles = createSheet(/* css */ `
     gap: var(--spacing-sm);
     margin-top: var(--spacing-md);
   }
+  .settings-actions--stacked {
+    flex-direction: column;
+    align-items: stretch;
+  }
 `);
 
 class SettingsModal extends BaseComponent {
@@ -225,16 +226,10 @@ class SettingsModal extends BaseComponent {
                         </label>
                     </div>
                     <p id="keybindHintsText" class="settings-help">Keyboard: WASD/Arrows move &bull; Q/E/R/T cast skills &bull; P pause/resume</p>
-                    <div class="settings-actions">
-                        <neon-button id="loadBtn">Load Save</neon-button>
-                        <neon-button id="clearBtn" variant="danger">Delete Save</neon-button>
-                    </div>
-                    <div class="settings-actions">
+                    <div class="settings-actions settings-actions--stacked">
                         <neon-button id="resetBtn">Reset Defaults</neon-button>
                         <neon-button id="closeBtn" variant="primary">Close</neon-button>
-                    </div>
-                    <div id="devRow" class="settings-actions" style="display:none">
-                        <neon-button id="devBtn" variant="danger">⚙ Admin Panel</neon-button>
+                        <neon-button id="devBtn" variant="danger" style="display:none">⚙ Admin Panel</neon-button>
                     </div>
                 </div>
             </div>
@@ -272,8 +267,6 @@ class SettingsModal extends BaseComponent {
         }
 
         // Action buttons
-        this._$('#loadBtn').addEventListener('click', () => this._emit('load-game'));
-        this._$('#clearBtn').addEventListener('click', () => this._emit('clear-save'));
         this._$('#resetBtn').addEventListener('click', () => this._emit('reset-settings'));
         this._$('#closeBtn').addEventListener('click', () => this._emit('close-settings'));
         this._$('#devBtn').addEventListener('click', () => this._emit('toggle-dev-panel'));
@@ -316,16 +309,10 @@ class SettingsModal extends BaseComponent {
         if (el) el.style.display = visible ? 'block' : 'none';
     }
 
-    /** @param {{ hasSave: boolean }} states */
-    setSaveButtonStates({ hasSave }) {
-        /** @type {HTMLButtonElement} */ (this._$('#loadBtn')).disabled = !hasSave;
-        /** @type {HTMLButtonElement} */ (this._$('#clearBtn')).disabled = !hasSave;
-    }
-
     /** @param {boolean} visible */
     setDevPanelVisible(visible) {
-        const row = this._$('#devRow');
-        if (row) row.style.display = visible ? '' : 'none';
+        const btn = this._$('#devBtn');
+        if (btn) btn.style.display = visible ? '' : 'none';
     }
 
     /** @returns {boolean} */

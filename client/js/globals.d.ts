@@ -71,7 +71,6 @@ declare global {
         show(): void;
         hide(): void;
         updateUI(settings: Record<string, unknown>): void;
-        setSaveButtonStates(states: { hasSave: boolean }): void;
         setDevPanelVisible(visible: boolean): void;
         setKeybindHintsVisible(visible: boolean): void;
         isVisible(): boolean;

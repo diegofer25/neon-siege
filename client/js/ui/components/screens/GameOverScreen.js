@@ -6,7 +6,6 @@
  *   setNewRecord(bool)
  *   setNearMiss(text | null)
  *   setCreditInfo({ freeRemaining, purchased, total }, hasSave)
- *   setLoadSaveVisible(bool)
  *   setContinueLoading(bool)
  *   show() / hide()
  *
@@ -14,7 +13,6 @@
  *   'restart'       — "Start Again" button clicked
  *   'continue'      — "Continue" button clicked (spend 1 credit)
  *   'buy-credits'   — "Buy Credits" button clicked
- *   'load-save'     — "Load Last Save" button clicked (legacy, hidden by default)
  *   'show-leaderboard' — "View Leaderboard" button clicked
  */
 
@@ -81,14 +79,12 @@ class GameOverScreen extends BaseComponent {
                     <neon-button id="buyBtn" style="display: none;">BUY 10 CREDITS — ${GameConfig.CONTINUE.PRICE_DISPLAY}</neon-button>
                 </div>
 
-                <neon-button id="loadBtn" style="display: none;">LOAD LAST SAVE</neon-button>
                 <neon-button id="leaderboardBtn">VIEW LEADERBOARD</neon-button>
                 <neon-button id="restartBtn">START AGAIN</neon-button>
             </div>
         `, overlayStyles, styles);
 
         this._$('#restartBtn').addEventListener('click', () => this._emit('restart'));
-        this._$('#loadBtn').addEventListener('click', () => this._emit('load-save'));
         this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
         this._$('#continueBtn').addEventListener('click', () => this._emit('continue'));
         this._$('#buyBtn').addEventListener('click', () => this._emit('buy-credits'));
@@ -155,12 +151,6 @@ class GameOverScreen extends BaseComponent {
             badge.textContent = '';
             buyBtn.style.display = 'none';
         }
-    }
-
-    /** @param {boolean} visible */
-    setLoadSaveVisible(visible) {
-        const el = this._$('#loadBtn');
-        if (el) el.style.display = visible ? 'inline-block' : 'none';
     }
 
     /**

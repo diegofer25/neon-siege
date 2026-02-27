@@ -1,23 +1,21 @@
 /**
- * @fileoverview Hybrid save-state manager.
+ * @fileoverview Server-authoritative save-state manager.
  *
- * When the player is authenticated saves are written to the server (with a
- * session-token anti-forgery check) and mirrored in localStorage as a fast
- * offline fallback.  Unauthenticated users get localStorage-only saves, which
- * is the legacy behaviour.
+ * All saves go to the server — there is no localStorage fallback.
+ * Every user (including anonymous guests) is authenticated before the game
+ * runs, so the server path is always available.
  *
- * Public API is intentionally synchronous so callers don't need to change:
+ * Public API is synchronous so callers don't need to change:
  *   hasSave()        — reads in-memory cache (populated by init())
  *   getRawSave()     — reads in-memory cache
- *   saveSnapshot()   — sync write to cache + localStorage; async to server
- *   clearSave()      — sync clear everywhere; async delete on server
+ *   saveSnapshot()   — sync write to cache; async fire-and-forget to server
+ *   clearSave()      — sync clear of cache; async DELETE on server
  *
  * Call `await saveStateManager.init()` once after auth is restored to pull
  * the canonical save from the server into the in-memory cache.
  */
 
 import { telemetry } from './TelemetryManager.js';
-import { isAuthenticated } from '../services/AuthService.js';
 import {
     loadSaveFromServer,
     persistSaveToServer,
@@ -27,7 +25,6 @@ import {
     clearSaveSession,
 } from '../services/SaveApiService.js';
 
-const SAVE_STORAGE_KEY = 'neon_td_save_v2';
 const SAVE_SCHEMA_VERSION = 2;
 
 export class SaveStateManager {
@@ -41,34 +38,18 @@ export class SaveStateManager {
     // ─── Initialisation ──────────────────────────────────────────────────────
 
     /**
-     * Load the canonical save into the in-memory cache.
-     * If authenticated:  fetch from server (authoritative); fall back to
-     *                    localStorage on network error.
-     * If not:            load from localStorage.
-     *
-     * Should be awaited once after the auth session is restored.
+     * Load the canonical save into the in-memory cache from the server.
+     * Should be awaited once after the auth session is restored and again
+     * after every successful login / account switch.
      */
     async init() {
         this._initialized = true;
-
-        if (isAuthenticated()) {
-            try {
-                const serverSave = await loadSaveFromServer();
-                if (serverSave) {
-                    this._cache = serverSave;
-                    // Mirror to localStorage so offline resumption still works
-                    this._writeToLocalStorage(serverSave);
-                } else {
-                    // No server save — check if there's a pending local save to
-                    // honour (e.g. guest→authenticated upgrade).
-                    this._cache = this._readFromLocalStorage();
-                }
-            } catch {
-                // Network is down — fall back to local copy
-                this._cache = this._readFromLocalStorage();
-            }
-        } else {
-            this._cache = this._readFromLocalStorage();
+        try {
+            const serverSave = await loadSaveFromServer();
+            this._cache = serverSave; // null when the user has no save yet
+        } catch (err) {
+            console.warn('[SaveStateManager] Could not load save from server:', err.message);
+            // Keep whatever was in _cache (null on first load, stale on retry)
         }
     }
 
@@ -86,14 +67,13 @@ export class SaveStateManager {
 
     /**
      * Persist a save snapshot.
-     * Sync path: updates the in-memory cache + localStorage immediately.
+     * Sync path: updates the in-memory cache immediately.
      * Async path: sends to the server in the background (fire-and-forget).
      *
      * On the first call per run, requests a fresh session token from the server
      * so that the save is tied to a real game session.
      *
      * @param {object} snapshot
-     * @returns {boolean} true if the local write succeeded
      */
     saveSnapshot(snapshot) {
         const payload = {
@@ -102,30 +82,23 @@ export class SaveStateManager {
             ...snapshot,
         };
 
-        // Update cache synchronously
+        // Update cache synchronously — callers can read hasSave() / getRawSave() immediately
         this._cache = payload;
 
-        // Persist locally
-        const localOk = this._writeToLocalStorage(payload);
-
-        // Fire-and-forget server sync for authenticated users
-        if (isAuthenticated()) {
-            this._syncToServer(payload);
-        }
+        // Fire-and-forget server sync
+        this._syncToServer(payload);
 
         telemetry.track('save_created', {
             wave: payload.wave ?? payload.legacyCompat?.wave,
             checkpointWave: payload.checkpointWave ?? payload.legacyCompat?.checkpointWave,
             gameState: payload.gameState ?? payload.legacyCompat?.gameState,
         });
-
-        return localOk;
     }
 
     /**
-     * Clear the save everywhere.
-     * Sync: clears cache + localStorage immediately.
-     * Async: deletes from server if authenticated.
+     * Clear the save.
+     * Sync: clears in-memory cache immediately.
+     * Async: deletes from server.
      *
      * @returns {boolean} always true (optimistic)
      */
@@ -133,41 +106,15 @@ export class SaveStateManager {
         this._cache = null;
         clearSaveSession();
 
-        try {
-            localStorage.removeItem(SAVE_STORAGE_KEY);
-        } catch { /* ignore */ }
-
-        if (isAuthenticated()) {
-            deleteSaveFromServer().catch(err =>
-                console.warn('[SaveStateManager] Server delete failed:', err.message)
-            );
-        }
+        deleteSaveFromServer().catch(err =>
+            console.warn('[SaveStateManager] Server delete failed:', err.message)
+        );
 
         telemetry.track('save_cleared');
         return true;
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
-
-    _readFromLocalStorage() {
-        try {
-            const raw = localStorage.getItem(SAVE_STORAGE_KEY);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            return parsed && typeof parsed === 'object' ? parsed : null;
-        } catch {
-            return null;
-        }
-    }
-
-    _writeToLocalStorage(payload) {
-        try {
-            localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
-            return true;
-        } catch {
-            return false;
-        }
-    }
 
     /**
      * Async background sync to the server.
@@ -176,7 +123,6 @@ export class SaveStateManager {
      */
     async _syncToServer(payload) {
         try {
-            // Lazy session initialisation — only start one if we don't have one
             if (!getSaveSessionToken()) {
                 await startSaveSession();
             }

@@ -263,7 +263,6 @@ async function init() {
         startGame();
     });
     gameOverScreen.addEventListener('restart', restartGame);
-    gameOverScreen.addEventListener('load-save', () => loadGameFromSave('game_over'));
     gameOverScreen.addEventListener('continue', handleContinue);
     gameOverScreen.addEventListener('buy-credits', handleBuyCredits);
     victoryScreen.addEventListener('continue-endless', continueToEndless);
@@ -271,8 +270,6 @@ async function init() {
 
     gameHudEl.addEventListener('settings-click', openSettingsModal);
     settingsModalEl.addEventListener('close-settings', closeSettingsModal);
-    settingsModalEl.addEventListener('load-game', () => loadGameFromSave('settings_menu'));
-    settingsModalEl.addEventListener('clear-save', clearSavedGame);
     settingsModalEl.addEventListener('reset-settings', resetSettingsToDefaults);
     settingsModalEl.addEventListener('setting-change', handleSettingChange);
     settingsModalEl.addEventListener('toggle-dev-panel', () => {
@@ -302,11 +299,13 @@ async function init() {
     });
 
     // Auth events
-    /** After successful auth, sync save state from server. */
-    const _onAuthSuccess = () => {
+    /** After successful auth, sync save + progression from server. */
+    const _onAuthSuccess = async () => {
         loginScreen.hide();
-        // Sync save from server after login so save buttons update correctly
-        saveStateManager.init().then(syncSaveButtons);
+        await saveStateManager.init();
+        await game.progressionManager.init();
+        syncSaveButtons();
+        populateLastRunStats();
     };
 
     loginScreen.addEventListener('auth-login-anonymous', async (e) => {
@@ -366,9 +365,10 @@ async function init() {
         startScreen.setAuthUser(user);
     });
 
-    // Try restoring session from refresh token, then sync save state from server
+    // Try restoring session from refresh token, then sync save + progression from server
     await authService.restoreSession();
     await saveStateManager.init();
+    await game.progressionManager.init();
 
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
@@ -1023,58 +1023,8 @@ async function handleBuyCredits() {
     }
 }
 
-function loadGameFromSave(source = 'unknown') {
-    const rawSave = saveStateManager.getRawSave();
-    if (!rawSave || !game) {
-        return false;
-    }
-
-    const wasMenuOrGameOver = game.gameState === 'menu' || game.gameState === 'gameover';
-    const restored = game.restoreFromSave(rawSave);
-    if (!restored) {
-        return false;
-    }
-
-    playSFX('ui_click');
-    document.querySelector('start-screen').hide();
-    document.querySelector('game-over-screen').hide();
-    document.querySelector('pause-screen').hide();
-    document.querySelector('settings-modal').hide();
-
-    if (wasMenuOrGameOver) {
-        telemetry.startSession({
-            entryPoint: 'save_load',
-            source
-        });
-    }
-
-    if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-    }
-    lastTime = performance.now();
-    animationFrameId = requestAnimationFrame(gameLoop);
-
-    syncMusicTrack();
-
-    syncStartDifficultyUI(game.getRunDifficulty());
-
-    settingsModalWasPlaying = false;
-    syncSaveButtons();
-    return true;
-}
-
-function clearSavedGame() {
-    if (saveStateManager.clearSave()) {
-        playSFX('ui_click');
-        syncSaveButtons();
-    }
-}
-
 function syncSaveButtons() {
-    const hasSave = saveStateManager.hasSave();
-
-    document.querySelector('settings-modal')?.setSaveButtonStates({ hasSave });
-    document.querySelector('game-over-screen')?.setLoadSaveVisible(hasSave);
+    // Reserved for future save-related UI sync
 }
 
 function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {

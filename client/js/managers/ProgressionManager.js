@@ -1,15 +1,55 @@
 import { GameConfig } from '../config/GameConfig.js';
+import {
+    loadProgressionFromServer,
+    persistProgressionToServer,
+} from '../services/ProgressionApiService.js';
+
+const PROGRESSION_SCHEMA_VERSION = 1;
+/** Debounce delay in ms — prevents a server write on every single wave */
+const SAVE_DEBOUNCE_MS = 2000;
 
 /**
  * Handles persistent meta-progression across runs.
- * Stores earned legacy tokens, unlock states, and milestone stats using localStorage when available.
+ * Data is stored on the server (replaces localStorage neon_td_meta).
+ * In-memory state is the authoritative runtime copy; server writes are
+ * debounced and fire-and-forget.
+ *
+ * Call `await progressionManager.init()` after auth is restored to load
+ * the server data into memory.
  */
 export class ProgressionManager {
-    constructor(storageKey = GameConfig.META.STORAGE_KEY) {
-        this.storageKey = storageKey;
-        this._supportsStorage = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-        this.state = this._loadState();
+    constructor() {
+        this.state = this._createDefaultState();
+        /** @type {ReturnType<typeof setTimeout>|null} */
+        this._saveTimer = null;
     }
+
+    // ─── Initialisation ──────────────────────────────────────────────────────
+
+    /**
+     * Load the authoritative progression from the server into memory.
+     * Should be called once after auth is restored and after every login.
+     */
+    async init() {
+        try {
+            const { data, schemaVersion } = await loadProgressionFromServer();
+            const defaults = this._createDefaultState();
+            // Merge server data with defaults so new fields are always present
+            this.state = {
+                ...defaults,
+                ...data,
+                currencies: { ...defaults.currencies, ...(data.currencies ?? {}) },
+                unlocks: { ...defaults.unlocks, ...(data.unlocks ?? {}) },
+            };
+            // Ignore schemaVersion mismatch for now — last-write-wins is fine
+            void schemaVersion;
+        } catch (err) {
+            console.warn('[ProgressionManager] Failed to load from server, using defaults:', err.message);
+            // Keep in-memory defaults — game is still playable
+        }
+    }
+
+    // ─── Public API ───────────────────────────────────────────────────────────
 
     /**
      * Record completion of a wave and grant legacy tokens.
@@ -33,9 +73,7 @@ export class ProgressionManager {
      * @returns {boolean} true if unlocked this call.
      */
     unlock(unlockKey) {
-        if (this.isUnlocked(unlockKey)) {
-            return false;
-        }
+        if (this.isUnlocked(unlockKey)) return false;
 
         const unlockConfig = GameConfig.META.UNLOCKS[unlockKey];
         if (!unlockConfig) {
@@ -44,53 +82,38 @@ export class ProgressionManager {
         }
 
         const cost = unlockConfig.cost ?? 0;
-        if (!this.spendCurrency('LEGACY_TOKENS', cost)) {
-            return false;
-        }
+        if (!this.spendCurrency('LEGACY_TOKENS', cost)) return false;
 
         this.state.unlocks[unlockKey] = true;
         this._saveState();
         return true;
     }
 
-    /**
-     * Check whether an unlock has been purchased.
-     * @param {string} unlockKey
-     */
+    /** @param {string} unlockKey */
     isUnlocked(unlockKey) {
         return !!this.state.unlocks?.[unlockKey];
     }
 
-    /**
-     * Get current balance for a currency.
-     * @param {string} currencyKey
-     */
+    /** @param {string} currencyKey */
     getCurrencyBalance(currencyKey) {
         return this.state.currencies?.[currencyKey] ?? 0;
     }
 
     /**
-     * Spend an amount of a currency if possible.
      * @param {string} currencyKey
      * @param {number} amount
      * @returns {boolean}
      */
     spendCurrency(currencyKey, amount) {
-        if (amount <= 0) {
-            return true;
-        }
+        if (amount <= 0) return true;
         const balance = this.getCurrencyBalance(currencyKey);
-        if (balance < amount) {
-            return false;
-        }
-
+        if (balance < amount) return false;
         this.state.currencies[currencyKey] = balance - amount;
         this._saveState();
         return true;
     }
 
     /**
-     * Record the end of a run for personal best tracking.
      * @param {number} wave
      * @param {number} score
      * @param {number} maxCombo
@@ -101,11 +124,11 @@ export class ProgressionManager {
         this.state.totalRuns = (this.state.totalRuns ?? 0) + 1;
         this.state.totalKills = (this.state.totalKills ?? 0) + totalKills;
 
-        const isNewBestWave = wave > (this.state.bestWave ?? 0);
-        const isNewBestScore = score > (this.state.bestScore ?? 0);
+        const isNewBestWave  = wave     > (this.state.bestWave  ?? 0);
+        const isNewBestScore = score    > (this.state.bestScore ?? 0);
         const isNewBestCombo = maxCombo > (this.state.bestCombo ?? 0);
 
-        if (isNewBestWave) this.state.bestWave = wave;
+        if (isNewBestWave)  this.state.bestWave  = wave;
         if (isNewBestScore) this.state.bestScore = score;
         if (isNewBestCombo) this.state.bestCombo = maxCombo;
 
@@ -117,68 +140,43 @@ export class ProgressionManager {
         return { isNewBestWave, isNewBestScore, isNewBestCombo };
     }
 
-    /**
-     * Reset all stored progression.
-     */
+    /** Reset all stored progression. */
     reset() {
         this.state = this._createDefaultState();
         this._saveState();
     }
 
-    /**
-     * Return a shallow copy of persistent stats for UI rendering.
-     */
+    /** Return a deep copy of persistent stats for UI rendering. */
     getSnapshot() {
         return JSON.parse(JSON.stringify(this.state));
     }
 
+    // ─── Private helpers ─────────────────────────────────────────────────────
+
     _calculateWaveReward(isBossWave) {
-        const currencyConfig = GameConfig.META.CURRENCIES.LEGACY_TOKENS;
-        if (!currencyConfig) {
-            return 0;
-        }
-        let total = currencyConfig.perWaveReward ?? 0;
-        if (isBossWave) {
-            total += currencyConfig.bossBonus ?? 0;
-        }
+        const cfg = GameConfig.META.CURRENCIES.LEGACY_TOKENS;
+        if (!cfg) return 0;
+        let total = cfg.perWaveReward ?? 0;
+        if (isBossWave) total += cfg.bossBonus ?? 0;
         return total;
     }
 
     _incrementCurrency(currencyKey, amount) {
-        if (!this.state.currencies[currencyKey]) {
-            this.state.currencies[currencyKey] = 0;
-        }
+        if (!this.state.currencies[currencyKey]) this.state.currencies[currencyKey] = 0;
         this.state.currencies[currencyKey] += amount;
     }
 
-    _loadState() {
-        const fallback = this._createDefaultState();
-        if (!this._supportsStorage) {
-            return fallback;
-        }
-
-        try {
-            const stored = window.localStorage.getItem(this.storageKey);
-            if (!stored) {
-                return fallback;
-            }
-            const parsed = JSON.parse(stored);
-            return { ...fallback, ...parsed, currencies: { ...fallback.currencies, ...parsed.currencies }, unlocks: { ...fallback.unlocks, ...parsed.unlocks } };
-        } catch (error) {
-            console.warn('[ProgressionManager] Failed to load stored data', error);
-            return fallback;
-        }
-    }
-
+    /**
+     * Debounced fire-and-forget server write.
+     * In-memory state is already updated synchronously before this is called.
+     */
     _saveState() {
-        if (!this._supportsStorage) {
-            return;
-        }
-        try {
-            window.localStorage.setItem(this.storageKey, JSON.stringify(this.state));
-        } catch (error) {
-            console.warn('[ProgressionManager] Failed to save progression data', error);
-        }
+        if (this._saveTimer !== null) clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => {
+            this._saveTimer = null;
+            persistProgressionToServer(this.state, PROGRESSION_SCHEMA_VERSION)
+                .catch(err => console.warn('[ProgressionManager] Server save failed:', err.message));
+        }, SAVE_DEBOUNCE_MS);
     }
 
     _createDefaultState() {
@@ -198,7 +196,7 @@ export class ProgressionManager {
             totalRuns: 0,
             totalKills: 0,
             runHistory: [],
-            achievements: {}
+            achievements: {},
         };
     }
 }
