@@ -4,6 +4,7 @@ import { corsPlugin } from './plugins/cors.plugin';
 import { healthRoutes } from './routes/health.routes';
 import { authRoutes } from './routes/auth.routes';
 import { leaderboardRoutes } from './routes/leaderboard.routes';
+import { saveRoutes } from './routes/save.routes';
 import { wsRoutes } from './ws';
 
 const app = new Elysia()
@@ -11,6 +12,7 @@ const app = new Elysia()
   .use(healthRoutes)
   .use(authRoutes)
   .use(leaderboardRoutes)
+  .use(saveRoutes)
   .use(wsRoutes)
   .onError(({ code, error, set }) => {
     if (code === 'VALIDATION') {

@@ -174,7 +174,7 @@ function setupGlobalHoverSfxHooks() {
  * Initialize the game application
  * Sets up canvas, game instance, input handlers, audio, and UI
  */
-function init() {
+async function init() {
     if (appRuntime.initialized) {
         return;
     }
@@ -301,9 +301,12 @@ function init() {
     });
 
     // Auth events
-    /** After successful auth, auto-start if the user clicked "Start" before logging in */
+    /** After successful auth, auto-start if the user clicked "Start" before logging in.
+     *  Also pull the server's save state so the save button reflects the server copy. */
     const _onAuthSuccess = () => {
         loginScreen.hide();
+        // Sync save from server after login so save buttons update correctly
+        saveStateManager.init().then(syncSaveButtons);
         if (pendingStartGame) {
             pendingStartGame = false;
             startGame();
@@ -367,8 +370,9 @@ function init() {
         startScreen.setAuthUser(user);
     });
 
-    // Try restoring session from refresh token
-    authService.restoreSession();
+    // Try restoring session from refresh token, then sync save state from server
+    await authService.restoreSession();
+    await saveStateManager.init();
 
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
