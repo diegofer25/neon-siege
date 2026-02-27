@@ -13,6 +13,7 @@
 import { BaseComponent } from '../BaseComponent.js';
 import { overlayStyles, createSheet } from '../shared-styles.js';
 import { apiFetch } from '../../../services/ApiClient.js';
+import { isAuthenticated, getUserLocation } from '../../../services/AuthService.js';
 import { skillIconHtml } from '../../../utils/IconUtils.js';
 
 const ASCENSION_NAMES = {
@@ -484,9 +485,52 @@ const styles = createSheet(/* css */ `
     background: rgba(0, 0, 0, 0.3);
   }
   .rdp-skill-item .skill-icon { width: 28px; height: 28px; border-radius: 4px; flex-shrink: 0; font-size: 20px; display: flex; align-items: center; justify-content: center; }
-  .rdp-skill-item .skill-info { display: flex; flex-direction: column; gap: 1px; }
-  .rdp-skill-item .skill-name { font-size: 12px; color: #ccc; }
-  .rdp-skill-item .skill-rank { font-family: var(--font-pixel); font-size: 10px; color: var(--color-primary-neon); }
+  /* ── Scope toggle (geographic filter) ──────────────────────────────── */
+  .lb-scope {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+  }
+  .lb-scope.hidden { display: none; }
+  .lb-scope-btn {
+    padding: 5px 14px !important;
+    font-size: 10px;
+    font-family: var(--font-pixel);
+    border: 1px solid rgba(143, 0, 255, 0.2) !important;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-transform: uppercase;
+    letter-spacing: 1px !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    position: relative !important;
+    white-space: nowrap;
+  }
+  .lb-scope-btn::before { display: none !important; }
+  .lb-scope-btn:hover {
+    border-color: var(--color-secondary-neon) !important;
+    color: #ccc;
+    background: rgba(143, 0, 255, 0.06) !important;
+    animation: none !important;
+    transform: none !important;
+  }
+  .lb-scope-btn.active {
+    border-color: var(--color-secondary-neon) !important;
+    background: rgba(143, 0, 255, 0.14) !important;
+    color: var(--color-secondary-neon);
+    box-shadow: 0 0 10px rgba(143, 0, 255, 0.2), inset 0 0 8px rgba(143, 0, 255, 0.06) !important;
+  }
+  .lb-scope-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 
   /* ── Loading / Empty / Error states ───────────────────────────────────── */
   .lb-loading {
@@ -536,6 +580,7 @@ const styles = createSheet(/* css */ `
     .lb-container { width: 96vw; height: calc(100vh - 24px); max-height: calc(100vh - 24px); padding: var(--spacing-md) var(--spacing-md); border-radius: var(--radius-lg); }
     .lb-heading { font-size: 16px; letter-spacing: 2px; }
     .lb-tab { padding: 6px 14px !important; font-size: 10px; }
+    .lb-scope-btn { padding: 4px 10px !important; font-size: 9px; }
     th { padding: 8px 8px; font-size: 9px; }
     td { padding: 8px 8px; font-size: 12px; }
     .name-cell { max-width: 100px; }
@@ -557,6 +602,7 @@ const styles = createSheet(/* css */ `
 class LeaderboardScreen extends BaseComponent {
     connectedCallback() {
         this._currentDifficulty = 'normal';
+        this._currentScope = 'global';
         this._data = null;
 
         this._render(/* html */ `
@@ -571,6 +617,9 @@ class LeaderboardScreen extends BaseComponent {
                         <button class="lb-tab" data-diff="easy">Easy</button>
                         <button class="lb-tab active" data-diff="normal">Normal</button>
                         <button class="lb-tab" data-diff="hard">Hard</button>
+                    </div>
+                    <div class="lb-scope hidden" id="scopeBar">
+                        <button class="lb-scope-btn active" data-scope="global">Global</button>
                     </div>
                     <div class="lb-body">
                         <div class="lb-table-wrap" id="tableWrap">
@@ -594,6 +643,18 @@ class LeaderboardScreen extends BaseComponent {
             this.loadLeaderboard(/** @type {HTMLElement} */ (tab).dataset.diff);
         });
 
+        // Scope switching
+        this._$('#scopeBar').addEventListener('click', (e) => {
+            const btn = /** @type {HTMLElement} */ (e.target).closest('.lb-scope-btn');
+            if (!btn || btn.disabled) return;
+            this._currentScope = /** @type {HTMLElement} */ (btn).dataset.scope;
+            this._$$('.lb-scope-btn').forEach(/** @param {Element} b */ b =>
+                b.classList.toggle('active', /** @type {HTMLElement} */ (b).dataset.scope === this._currentScope)
+            );
+            this._hideRunDetails();
+            this.loadLeaderboard(this._currentDifficulty);
+        });
+
         // Close leaderboard
         this._$('.close-btn').addEventListener('click', () => {
             this.hide();
@@ -605,6 +666,7 @@ class LeaderboardScreen extends BaseComponent {
     show() {
         super.show();
         this._hideRunDetails();
+        this._updateScopeBar();
         this.loadLeaderboard(this._currentDifficulty);
     }
 
@@ -634,7 +696,11 @@ class LeaderboardScreen extends BaseComponent {
         this._$('#userRank').style.display = 'none';
 
         try {
-            const data = await apiFetch(`/api/leaderboard?difficulty=${difficulty}&limit=50`);
+            let url = `/api/leaderboard?difficulty=${difficulty}&limit=50`;
+            if (this._currentScope && this._currentScope !== 'global') {
+                url += `&scope=${this._currentScope}`;
+            }
+            const data = await apiFetch(url);
             this._data = data;
             this._renderTable(data);
         } catch {
@@ -733,6 +799,50 @@ class LeaderboardScreen extends BaseComponent {
         if (this._data?.userRank != null) {
             const rankEl = this._$('#userRank');
             if (rankEl) rankEl.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Rebuild the scope bar buttons based on the user's stored location.
+     * Shows Global + location-specific buttons when location data is available.
+     */
+    _updateScopeBar() {
+        const bar = this._$('#scopeBar');
+        if (!bar) return;
+
+        const loc = isAuthenticated() ? getUserLocation() : null;
+
+        if (!loc) {
+            // No location data — hide scope bar, reset to global
+            bar.classList.add('hidden');
+            this._currentScope = 'global';
+            return;
+        }
+
+        // Build buttons dynamically
+        let buttons = `<button class="lb-scope-btn${this._currentScope === 'global' ? ' active' : ''}" data-scope="global">Global</button>`;
+
+        if (loc.country) {
+            buttons += `<button class="lb-scope-btn${this._currentScope === 'country' ? ' active' : ''}" data-scope="country">${this._esc(loc.country)}</button>`;
+        }
+        if (loc.region) {
+            buttons += `<button class="lb-scope-btn${this._currentScope === 'region' ? ' active' : ''}" data-scope="region">${this._esc(loc.region)}</button>`;
+        }
+        if (loc.city) {
+            buttons += `<button class="lb-scope-btn${this._currentScope === 'city' ? ' active' : ''}" data-scope="city">${this._esc(loc.city)}</button>`;
+        }
+
+        bar.innerHTML = buttons;
+        bar.classList.remove('hidden');
+
+        // If current scope no longer valid (e.g. region was set but now null), reset
+        const validScopes = ['global'];
+        if (loc.country) validScopes.push('country');
+        if (loc.region) validScopes.push('region');
+        if (loc.city) validScopes.push('city');
+        if (!validScopes.includes(this._currentScope)) {
+            this._currentScope = 'global';
+            bar.querySelector('[data-scope="global"]')?.classList.add('active');
         }
     }
 

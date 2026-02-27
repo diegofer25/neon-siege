@@ -66,6 +66,12 @@ export interface CreateEntryData {
   flagged?: boolean;
 }
 
+export interface LocationFilter {
+  countryCode?: string;
+  region?: string;
+  city?: string;
+}
+
 /**
  * Upsert a leaderboard entry — one record per user per difficulty.
  * Only replaces the existing record if the new score is higher.
@@ -122,8 +128,31 @@ export async function upsertEntry(data: CreateEntryData): Promise<{ entry: Leade
 export async function getLeaderboard(
   difficulty: string,
   limit: number = 50,
-  offset: number = 0
+  offset: number = 0,
+  locationFilter?: LocationFilter
 ): Promise<{ entries: LeaderboardRow[]; total: number }> {
+  // Build dynamic WHERE clauses for location filtering
+  const params: any[] = [difficulty];
+  let locationWhere = '';
+
+  if (locationFilter?.countryCode) {
+    params.push(locationFilter.countryCode);
+    locationWhere += ` AND u.country_code = $${params.length}`;
+  }
+  if (locationFilter?.region) {
+    params.push(locationFilter.region);
+    locationWhere += ` AND u.region = $${params.length}`;
+  }
+  if (locationFilter?.city) {
+    params.push(locationFilter.city);
+    locationWhere += ` AND u.city = $${params.length}`;
+  }
+
+  const filterParams = [...params]; // snapshot before limit/offset
+  const limitIdx = params.length + 1;
+  const offsetIdx = params.length + 2;
+  params.push(limit, offset);
+
   const [entries, countResult] = await Promise.all([
     query<LeaderboardRow>(
       `SELECT
@@ -132,14 +161,17 @@ export async function getLeaderboard(
         ROW_NUMBER() OVER (ORDER BY le.score DESC) AS rank
        FROM leaderboard_entries le
        JOIN users u ON u.id = le.user_id
-       WHERE le.difficulty = $1
+       WHERE le.difficulty = $1${locationWhere}
        ORDER BY le.score DESC
-       LIMIT $2 OFFSET $3`,
-      [difficulty, limit, offset]
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      params
     ),
     queryOne<{ count: string }>(
-      `SELECT COUNT(*) as count FROM leaderboard_entries WHERE difficulty = $1`,
-      [difficulty]
+      `SELECT COUNT(*) as count
+       FROM leaderboard_entries le
+       JOIN users u ON u.id = le.user_id
+       WHERE le.difficulty = $1${locationWhere}`,
+      filterParams
     ),
   ]);
 
@@ -167,17 +199,41 @@ export async function getUserEntry(
   );
 }
 
-export async function getUserRank(userId: string, difficulty: string): Promise<number | null> {
+export async function getUserRank(
+  userId: string,
+  difficulty: string,
+  locationFilter?: LocationFilter
+): Promise<number | null> {
+  const params: any[] = [difficulty];
+  let locationWhere = '';
+
+  if (locationFilter?.countryCode) {
+    params.push(locationFilter.countryCode);
+    locationWhere += ` AND u.country_code = $${params.length}`;
+  }
+  if (locationFilter?.region) {
+    params.push(locationFilter.region);
+    locationWhere += ` AND u.region = $${params.length}`;
+  }
+  if (locationFilter?.city) {
+    params.push(locationFilter.city);
+    locationWhere += ` AND u.city = $${params.length}`;
+  }
+
+  const userIdx = params.length + 1;
+  params.push(userId);
+
   const result = await queryOne<{ rank: string }>(
     `SELECT rank FROM (
       SELECT
-        user_id,
-        ROW_NUMBER() OVER (ORDER BY score DESC) AS rank
-      FROM leaderboard_entries
-      WHERE difficulty = $1
+        le.user_id,
+        ROW_NUMBER() OVER (ORDER BY le.score DESC) AS rank
+      FROM leaderboard_entries le
+      JOIN users u ON u.id = le.user_id
+      WHERE le.difficulty = $1${locationWhere}
     ) ranked
-    WHERE user_id = $2`,
-    [difficulty, userId]
+    WHERE user_id = $${userIdx}`,
+    params
   );
   return result ? parseInt(result.rank) : null;
 }

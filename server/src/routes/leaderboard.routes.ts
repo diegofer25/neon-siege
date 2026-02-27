@@ -1,6 +1,9 @@
 import { Elysia, t } from 'elysia';
 import { authPlugin } from '../plugins/auth.plugin';
 import * as leaderboardService from '../services/leaderboard.service';
+import * as UserModel from '../models/user.model';
+import { env } from '../config/env';
+import { extractClientIp, resolveLocation } from '../services/geolocation.service';
 
 const difficultySchema = t.Union([t.Literal('easy'), t.Literal('normal'), t.Literal('hard')]);
 
@@ -22,12 +25,29 @@ const publicRoutes = new Elysia({ prefix: '/api/leaderboard' })
       const difficulty = query.difficulty || 'normal';
       const limit = Math.min(parseInt(query.limit || '50'), 100);
       const offset = Math.max(parseInt(query.offset || '0'), 0);
+      const scope = query.scope || 'global';
+
+      // Build location filter from authenticated user's stored location
+      let locationFilter;
+      if (scope !== 'global' && userId) {
+        const user = await UserModel.findById(userId);
+        if (user?.country_code) {
+          locationFilter = { countryCode: user.country_code };
+          if ((scope === 'region' || scope === 'city') && user.region) {
+            locationFilter = { ...locationFilter, region: user.region };
+          }
+          if (scope === 'city' && user.city) {
+            locationFilter = { ...locationFilter, city: user.city };
+          }
+        }
+      }
 
       return leaderboardService.getLeaderboard(
         difficulty,
         limit,
         offset,
-        userId ?? undefined
+        userId ?? undefined,
+        locationFilter
       );
     },
     {
@@ -35,6 +55,14 @@ const publicRoutes = new Elysia({ prefix: '/api/leaderboard' })
         difficulty: t.Optional(difficultySchema),
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
+        scope: t.Optional(
+          t.Union([
+            t.Literal('global'),
+            t.Literal('country'),
+            t.Literal('region'),
+            t.Literal('city'),
+          ])
+        ),
       }),
     }
   );
@@ -73,7 +101,7 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
   )
   .post(
     '/submit',
-    async ({ body, userId, set }) => {
+    async ({ body, userId, set, headers, server, request }) => {
       try {
         const result = await leaderboardService.submitScore({
           userId,
@@ -90,6 +118,27 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
           clientVersion: body.clientVersion,
           checksum: body.checksum,
         });
+
+        // Resolve geolocation from IP and update user profile (best-effort, non-blocking on failure)
+        if (env.GEOIP_ENABLED) {
+          const ip = extractClientIp(headers, server ?? undefined, request);
+          if (ip) {
+            resolveLocation(ip).then(async (geo) => {
+              if (!geo) return;
+              // Only update if location differs from what's stored
+              const user = await UserModel.findById(userId);
+              if (
+                user &&
+                (user.country_code !== geo.countryCode ||
+                  user.region !== geo.region ||
+                  user.city !== geo.city)
+              ) {
+                await UserModel.updateLocation(userId, geo);
+              }
+            }).catch(() => { /* ignore geo errors */ });
+          }
+        }
+
         return result;
       } catch (err: any) {
         set.status = 400;

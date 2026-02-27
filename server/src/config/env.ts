@@ -6,4 +6,5 @@ export const env = {
   JWT_REFRESH_SECRET: Bun.env.JWT_REFRESH_SECRET || 'dev-jwt-refresh-secret',
   GOOGLE_CLIENT_ID: Bun.env.GOOGLE_CLIENT_ID || '',
   SCORE_HMAC_SECRET: Bun.env.SCORE_HMAC_SECRET || 'dev-hmac-secret',
+  GEOIP_ENABLED: Bun.env.GEOIP_ENABLED !== 'false', // default true; set to 'false' to disable
 } as const;

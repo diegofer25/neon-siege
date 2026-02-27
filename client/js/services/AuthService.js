@@ -25,6 +25,17 @@ export function getCurrentUser() {
 }
 
 /**
+ * Get the current user's geographic location (resolved from IP on score submit).
+ * @returns {{ country: string, countryCode: string, region: string, city: string }|null}
+ */
+export function getUserLocation() {
+  if (!_currentUser) return null;
+  const { country, country_code, region, city } = _currentUser;
+  if (!country_code) return null;
+  return { country, countryCode: country_code, region, city };
+}
+
+/**
  * Subscribe to auth state changes.
  * @param {function} listener
  * @returns {function} unsubscribe

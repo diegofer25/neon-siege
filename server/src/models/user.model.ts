@@ -7,17 +7,25 @@ export interface User {
   display_name: string;
   auth_provider: 'email' | 'google' | 'anonymous';
   google_id: string | null;
+  country: string | null;
+  country_code: string | null;
+  region: string | null;
+  city: string | null;
   created_at: Date;
   updated_at: Date;
 }
 
-export type PublicUser = Pick<User, 'id' | 'display_name' | 'auth_provider'>;
+export type PublicUser = Pick<User, 'id' | 'display_name' | 'auth_provider' | 'country' | 'country_code' | 'region' | 'city'>;
 
 export function toPublicUser(user: User): PublicUser {
   return {
     id: user.id,
     display_name: user.display_name,
     auth_provider: user.auth_provider,
+    country: user.country,
+    country_code: user.country_code,
+    region: user.region,
+    city: user.city,
   };
 }
 
@@ -93,5 +101,16 @@ export async function upgradeAnonymousToGoogle(
      WHERE id = $1 AND auth_provider = 'anonymous'
      RETURNING *`,
     [userId, googleId, email]
+  );
+}
+
+export async function updateLocation(
+  userId: string,
+  location: { country: string; countryCode: string; region: string; city: string }
+): Promise<void> {
+  await queryOne(
+    `UPDATE users SET country = $2, country_code = $3, region = $4, city = $5, updated_at = NOW()
+     WHERE id = $1`,
+    [userId, location.country, location.countryCode, location.region, location.city]
   );
 }

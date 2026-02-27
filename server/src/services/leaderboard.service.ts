@@ -1,4 +1,5 @@
 import * as LeaderboardModel from '../models/leaderboard.model';
+import type { LocationFilter } from '../models/leaderboard.model';
 import { validateScore } from './anticheat.service';
 
 interface SubmitScoreData {
@@ -48,12 +49,18 @@ export async function submitScore(data: SubmitScoreData) {
   return { entry, rank, isNewBest, flagged: validation.flagged };
 }
 
-export async function getLeaderboard(difficulty: string, limit: number, offset: number, userId?: string) {
-  const result = await LeaderboardModel.getLeaderboard(difficulty, limit, offset);
+export async function getLeaderboard(
+  difficulty: string,
+  limit: number,
+  offset: number,
+  userId?: string,
+  locationFilter?: LocationFilter
+) {
+  const result = await LeaderboardModel.getLeaderboard(difficulty, limit, offset, locationFilter);
 
   let userRank: number | null = null;
   if (userId) {
-    userRank = await LeaderboardModel.getUserRank(userId, difficulty);
+    userRank = await LeaderboardModel.getUserRank(userId, difficulty, locationFilter);
   }
 
   return { ...result, userRank };
