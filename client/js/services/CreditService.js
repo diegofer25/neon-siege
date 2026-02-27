@@ -90,57 +90,79 @@ export async function openCheckout() {
   const data = await apiFetch('/api/credits/checkout', {
     method: 'POST',
     body: JSON.stringify({
-      successUrl: `${origin}/?checkout=success`,
-      cancelUrl: `${origin}/?checkout=cancel`,
+      successUrl: `${origin}/checkout-complete.html?status=success`,
+      cancelUrl:  `${origin}/checkout-complete.html?status=cancel`,
     }),
   });
 
-  // Open Stripe Checkout in a popup (works in itch.io iframes)
+  console.log('[CreditService] Opening Stripe popup:', data.url);
+
+  // Open Stripe Checkout in a popup
   const popup = window.open(data.url, 'stripe-checkout', 'width=500,height=700,scrollbars=yes');
 
-  // Poll for balance changes
-  const startBalance = _cachedBalance.total;
-  const startTime = Date.now();
-  const POLL_INTERVAL = 3000;
   const TIMEOUT = 5 * 60 * 1000;
+  // After a successful payment the Stripe webhook arrives async — poll until
+  // the balance actually increases (up to 20 s) before giving up.
+  const WEBHOOK_POLL_INTERVAL = 2000;
+  const WEBHOOK_POLL_MAX = 10;
 
   return new Promise((resolve) => {
-    const poll = async () => {
-      // Check if popup was closed
-      if (popup?.closed) {
-        // Do one final check
+    let settled = false;
+
+    const finish = async (stripeSuccess) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener('message', onMessage);
+      clearTimeout(timer);
+      clearInterval(pollClosed);
+      popup?.close();
+
+      if (!stripeSuccess) {
         const balance = await getBalance();
-        resolve({
-          success: balance.total > startBalance,
-          balance,
-        });
+        resolve({ success: false, balance });
         return;
       }
 
-      // Timeout
-      if (Date.now() - startTime > TIMEOUT) {
-        popup?.close();
+      // Stripe webhook is async — retry getBalance until credits arrive
+      const balanceBefore = _cachedBalance.total;
+      let attempts = 0;
+      while (attempts < WEBHOOK_POLL_MAX) {
+        await new Promise(r => setTimeout(r, WEBHOOK_POLL_INTERVAL));
         const balance = await getBalance();
-        resolve({
-          success: balance.total > startBalance,
-          balance,
-        });
-        return;
-      }
-
-      // Poll
-      try {
-        const balance = await getBalance();
-        if (balance.total > startBalance) {
-          popup?.close();
+        if (balance.total > balanceBefore) {
           resolve({ success: true, balance });
           return;
         }
-      } catch { /* ignore polling errors */ }
+        attempts++;
+      }
 
-      setTimeout(poll, POLL_INTERVAL);
+      // Webhook never arrived within the window — resolve anyway
+      const balance = await getBalance();
+      resolve({ success: balance.total > balanceBefore, balance });
     };
 
-    setTimeout(poll, POLL_INTERVAL);
+    // Primary: postMessage from checkout-complete.html
+    const onMessage = (event) => {
+      // Only accept messages from our own origin
+      if (event.origin !== origin) return;
+      if (event.data?.type !== 'checkout-complete') return;
+      finish(event.data.success === true);
+    };
+    window.addEventListener('message', onMessage);
+
+    // Fallback: if popup is closed without postMessage (e.g. user manually closes it)
+    const pollClosed = setInterval(() => {
+      if (popup?.closed) {
+        console.log('[CreditService] Popup closed without postMessage — treating as cancel.');
+        clearInterval(pollClosed);
+        finish(false);
+      }
+    }, 500);
+
+    // Hard timeout — 5 minutes
+    const timer = setTimeout(() => {
+      console.warn('[CreditService] Checkout timed out after 5 minutes.');
+      finish(false);
+    }, TIMEOUT);
   });
 }

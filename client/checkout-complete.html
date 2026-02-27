@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Complete</title>
+  <style>
+    body {
+      margin: 0;
+      background: #020512;
+      color: #00ffff;
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <span id="msg">Processing...</span>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status'); // 'success' or 'cancel'
+
+    const msg = document.getElementById('msg');
+
+    if (status === 'success') {
+      msg.textContent = 'Payment successful! Returning to game...';
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: 'checkout-complete', success: true }, window.opener.location.origin);
+      }
+    } else {
+      msg.textContent = 'Payment cancelled. Returning to game...';
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: 'checkout-complete', success: false }, window.opener.location.origin);
+      }
+    }
+
+    // Close the popup after a brief delay so the user sees the message
+    setTimeout(() => window.close(), 1200);
+  </script>
+</body>
+</html>

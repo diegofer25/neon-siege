@@ -258,26 +258,12 @@ async function init() {
     const settingsModalEl = document.querySelector('settings-modal');
     const gameHudEl = document.querySelector('game-hud');
 
-    // Start game — requires at least a guest login
-    let _pendingGameStart = false;
+    // Start game — no auth required, anyone can play
     startScreen.addEventListener('start-game', () => {
-        if (!authService.isAuthenticated()) {
-            _pendingGameStart = true;
-            loginScreen.setUser(null);
-            loginScreen.show();
-        } else {
-            startGame();
-        }
-    });
-
-    startScreen.addEventListener('continue-game', () => {
-        continueLastGame();
-    });
-
-    startScreen.addEventListener('buy-credits', () => {
-        handleBuyCreditsFromMenu();
+        startGame();
     });
     gameOverScreen.addEventListener('restart', restartGame);
+    gameOverScreen.addEventListener('load-save', () => loadGameFromSave('game_over'));
     gameOverScreen.addEventListener('continue', handleContinue);
     gameOverScreen.addEventListener('buy-credits', handleBuyCredits);
     victoryScreen.addEventListener('continue-endless', continueToEndless);
@@ -285,6 +271,8 @@ async function init() {
 
     gameHudEl.addEventListener('settings-click', openSettingsModal);
     settingsModalEl.addEventListener('close-settings', closeSettingsModal);
+    settingsModalEl.addEventListener('load-game', () => loadGameFromSave('settings_menu'));
+    settingsModalEl.addEventListener('clear-save', clearSavedGame);
     settingsModalEl.addEventListener('reset-settings', resetSettingsToDefaults);
     settingsModalEl.addEventListener('setting-change', handleSettingChange);
     settingsModalEl.addEventListener('toggle-dev-panel', () => {
@@ -314,18 +302,11 @@ async function init() {
     });
 
     // Auth events
-    /** After successful auth, sync save + progression from server. */
-    const _onAuthSuccess = async () => {
+    /** After successful auth, sync save state from server. */
+    const _onAuthSuccess = () => {
         loginScreen.hide();
-        await saveStateManager.init();
-        await game.progressionManager.init();
-        await creditService.getBalance();
-        syncSaveButtons();
-        populateLastRunStats();
-        if (_pendingGameStart) {
-            _pendingGameStart = false;
-            startGame();
-        }
+        // Sync save from server after login so save buttons update correctly
+        saveStateManager.init().then(syncSaveButtons);
     };
 
     loginScreen.addEventListener('auth-login-anonymous', async (e) => {
@@ -371,7 +352,7 @@ async function init() {
     });
 
     loginScreen.addEventListener('login-close', () => {
-        _pendingGameStart = false;
+        // no-op — kept for future use
     });
 
     loginScreen.addEventListener('auth-logout', async () => {
@@ -380,57 +361,14 @@ async function init() {
         startScreen.setAuthUser(null);
     });
 
-    // Forgot password — request reset email
-    loginScreen.addEventListener('auth-forgot-password', async (e) => {
-        const { email } = /** @type {CustomEvent} */ (e).detail;
-        try {
-            loginScreen.setError(null);
-            loginScreen.setLoading(true);
-            await authService.requestPasswordReset(email);
-            loginScreen.setLoading(false);
-            loginScreen.showForgotPasswordSuccess();
-        } catch {
-            loginScreen.setLoading(false);
-            // Server always returns ok; this only fires on network errors
-            loginScreen.setError('Something went wrong. Please try again.');
-        }
-    });
-
-    // Reset password — consume token and set new password
-    loginScreen.addEventListener('auth-reset-password', async (e) => {
-        const { token, newPassword } = /** @type {CustomEvent} */ (e).detail;
-        try {
-            loginScreen.setError(null);
-            loginScreen.setLoading(true);
-            await authService.resetPassword(token, newPassword);
-            loginScreen.setLoading(false);
-            loginScreen.setUser(authService.getCurrentUser());
-            // Clean up the reset token from the URL
-            history.replaceState(null, '', location.pathname);
-            _onAuthSuccess();
-        } catch (err) {
-            loginScreen.setLoading(false);
-            loginScreen.setError(err.message);
-        }
-    });
-
-    // If the page was opened with ?reset_token= (from a password-reset email),
-    // skip the start screen and open the reset-password screen directly.
-    const _resetToken = new URLSearchParams(location.search).get('reset_token');
-    if (_resetToken) {
-        loginScreen.showResetScreen(_resetToken);
-    }
-
     // Update start screen button when auth changes
     authService.onAuthChange((user) => {
         startScreen.setAuthUser(user);
     });
 
-    // Try restoring session from refresh token, then sync save + progression from server
+    // Try restoring session from refresh token, then sync save state from server
     await authService.restoreSession();
     await saveStateManager.init();
-    await game.progressionManager.init();
-    await creditService.getBalance();
 
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
@@ -696,95 +634,6 @@ function restartGame() {
     }
     lastTime = performance.now();
     animationFrameId = requestAnimationFrame(gameLoop);
-}
-
-/**
- * Continue the last saved game from the main menu.
- * Deducts 1 credit, then restores game state from the server-authoritative save.
- * Falls back to a fresh start if no save is found.
- */
-async function continueLastGame() {
-    const startScreenEl = /** @type {any} */ (document.querySelector('start-screen'));
-    if (!saveStateManager.hasSave()) {
-        startGame();
-        return;
-    }
-
-    startScreenEl.setContinueLoading(true);
-
-    try {
-        // Deduct 1 credit and retrieve the canonical save + one-time token from server
-        const { continueToken, save } = await creditService.requestContinue();
-
-        const restored = game.restoreFromContinue(save, continueToken);
-        if (!restored) {
-            startScreenEl.showContinueError('Failed to restore save data.');
-            startScreenEl.setContinueLoading(false);
-            return;
-        }
-
-        playSFX('ui_start_game');
-        startScreenEl.hide();
-
-        telemetry.startSession({
-            entryPoint: 'continue_save',
-            statsOverlayEnabled: showPerformanceStats
-        });
-        telemetry.track('continue_used', {
-            fromWave: save.wave || 0,
-            continuesUsed: game.store.get('run', 'continuesUsed'),
-        });
-
-        syncMusicTrack({ restart: true });
-        syncStartDifficultyUI(game.getRunDifficulty());
-        syncSaveButtons();
-
-        if (animationFrameId !== null) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-        }
-        lastTime = performance.now();
-        animationFrameId = requestAnimationFrame(gameLoop);
-
-        // Fire-and-forget: redeem token to delete the old save server-side
-        const token = game.consumePendingContinueToken();
-        if (token) {
-            creditService.redeemContinue(token).catch(err => {
-                console.warn('[main] Failed to redeem continue token:', err.message);
-            });
-        }
-    } catch (err) {
-        console.error('[main] continueLastGame failed:', err);
-        const message = err?.status === 402
-            ? 'No continues remaining.'
-            : err?.status === 404
-                ? 'No save found to continue from.'
-                : 'Continue failed. Please try again.';
-        startScreenEl.showContinueError(message);
-        startScreenEl.setContinueLoading(false);
-        refreshCreditInfo();
-    }
-}
-
-/**
- * Handle "Buy Credits" button from the main menu start screen.
- */
-async function handleBuyCreditsFromMenu() {
-    const startScreenEl = /** @type {any} */ (document.querySelector('start-screen'));
-
-    try {
-        const result = await creditService.openCheckout();
-        if (result.success) {
-            playSFX('ui_click');
-            telemetry.track('credits_purchased', {
-                newBalance: result.balance.total,
-            });
-        }
-        refreshCreditInfo();
-    } catch (err) {
-        console.error('[main] Checkout failed:', err);
-        startScreenEl.showContinueError('Purchase failed. Please try again.');
-    }
 }
 
 /**
@@ -1066,21 +915,20 @@ function closeSettingsModal() {
  * Refresh credit balance from server and update the GameOverScreen UI.
  */
 async function refreshCreditInfo() {
-    let balance;
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    if (!goScreen) return;
+
     try {
-        balance = await creditService.getBalance();
+        const balance = await creditService.getBalance();
+        const hasSave = saveStateManager.hasSave();
+        goScreen.setCreditInfo(balance, hasSave);
     } catch (err) {
         console.warn('[main] Failed to refresh credit info:', err.message);
-        balance = creditService.getCachedBalance();
+        // Fall back to cached balance
+        const balance = creditService.getCachedBalance();
+        const hasSave = saveStateManager.hasSave();
+        goScreen.setCreditInfo(balance, hasSave);
     }
-
-    const hasSave = saveStateManager.hasSave();
-    const rawSave = saveStateManager.getRawSave();
-
-    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
-    if (goScreen) goScreen.setCreditInfo(balance, hasSave);
-
-    /** @type {any} */ (document.querySelector('start-screen'))?.setContinueInfo(balance, rawSave);
 }
 
 /**
@@ -1152,6 +1000,13 @@ async function handleContinue() {
 async function handleBuyCredits() {
     const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
 
+    // Block anonymous users from purchasing
+    const user = authService.getCurrentUser();
+    if (!user || user.provider === 'anonymous') {
+        goScreen.showContinueError('Create an account to purchase credits.');
+        return;
+    }
+
     try {
         const result = await creditService.openCheckout();
         if (result.success) {
@@ -1168,10 +1023,58 @@ async function handleBuyCredits() {
     }
 }
 
+function loadGameFromSave(source = 'unknown') {
+    const rawSave = saveStateManager.getRawSave();
+    if (!rawSave || !game) {
+        return false;
+    }
+
+    const wasMenuOrGameOver = game.gameState === 'menu' || game.gameState === 'gameover';
+    const restored = game.restoreFromSave(rawSave);
+    if (!restored) {
+        return false;
+    }
+
+    playSFX('ui_click');
+    document.querySelector('start-screen').hide();
+    document.querySelector('game-over-screen').hide();
+    document.querySelector('pause-screen').hide();
+    document.querySelector('settings-modal').hide();
+
+    if (wasMenuOrGameOver) {
+        telemetry.startSession({
+            entryPoint: 'save_load',
+            source
+        });
+    }
+
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+    }
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
+
+    syncMusicTrack();
+
+    syncStartDifficultyUI(game.getRunDifficulty());
+
+    settingsModalWasPlaying = false;
+    syncSaveButtons();
+    return true;
+}
+
+function clearSavedGame() {
+    if (saveStateManager.clearSave()) {
+        playSFX('ui_click');
+        syncSaveButtons();
+    }
+}
+
 function syncSaveButtons() {
-    const screen = document.querySelector('start-screen');
-    if (!screen) return;
-    /** @type {any} */ (screen).setContinueInfo(creditService.getCachedBalance(), saveStateManager.getRawSave());
+    const hasSave = saveStateManager.hasSave();
+
+    document.querySelector('settings-modal')?.setSaveButtonStates({ hasSave });
+    document.querySelector('game-over-screen')?.setLoadSaveVisible(hasSave);
 }
 
 function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {
