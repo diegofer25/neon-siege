@@ -3,17 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
-    "db:migrate": "bun src/config/migrate.ts",
+    "dev": "infisical run --env=dev --path=/neon-td -- bun --watch src/index.ts",
+    "start": "infisical run --env=dev --path=/neon-td -- bun src/index.ts",
+    "db:migrate": "infisical run --env=dev --path=/neon-td -- bun src/config/migrate.ts",
+    "stripe:listen": "infisical run --env=dev --path=/neon-td -- sh -c 'stripe listen --api-key \"$STRIPE_SECRET_KEY\" --forward-to localhost:3000/api/credits/webhook --events checkout.session.completed'",
+    "stripe:trigger": "infisical run --env=dev --path=/neon-td -- sh -c 'stripe trigger --api-key \"$STRIPE_SECRET_KEY\" checkout.session.completed'",
+    "stripe:test-webhook": "infisical run --env=dev --path=/neon-td -- bun run scripts/test-webhook.ts",
     "test": "bun test"
   },
   "dependencies": {
-    "elysia": "^1.4.26",
     "@elysiajs/cors": "^1.4.1",
     "@elysiajs/jwt": "^1.4.0",
+    "elysia": "^1.4.26",
+    "google-auth-library": "^9.15.1",
     "pg": "^8.13.1",
-    "google-auth-library": "^9.15.1"
+    "stripe": "^20.4.0"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",

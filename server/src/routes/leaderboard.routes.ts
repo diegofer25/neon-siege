@@ -117,6 +117,7 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
           startWave: body.startWave,
           clientVersion: body.clientVersion,
           checksum: body.checksum,
+          continuesUsed: body.continuesUsed,
         });
 
         // Resolve geolocation from IP and update user profile (best-effort, non-blocking on failure)
@@ -159,6 +160,7 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
         startWave: t.Optional(t.Number({ minimum: 1, maximum: 30 })),
         clientVersion: t.Optional(t.String()),
         checksum: t.Optional(t.String()),
+        continuesUsed: t.Optional(t.Number({ minimum: 0 })),
       }),
     }
   );

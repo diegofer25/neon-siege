@@ -64,6 +64,7 @@ export interface CreateEntryData {
   clientVersion?: string;
   checksum?: string;
   flagged?: boolean;
+  continuesUsed?: number;
 }
 
 export interface LocationFilter {
@@ -79,8 +80,8 @@ export interface LocationFilter {
 export async function upsertEntry(data: CreateEntryData): Promise<{ entry: LeaderboardEntry; isNewBest: boolean }> {
   const result = await queryOne<LeaderboardEntry>(
     `INSERT INTO leaderboard_entries
-      (user_id, difficulty, score, wave, kills, max_combo, level, is_victory, run_details, game_duration_ms, client_version, checksum, flagged)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      (user_id, difficulty, score, wave, kills, max_combo, level, is_victory, run_details, game_duration_ms, client_version, checksum, flagged, continues_used)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      ON CONFLICT (user_id, difficulty) DO UPDATE SET
        score = EXCLUDED.score,
        wave = EXCLUDED.wave,
@@ -93,6 +94,7 @@ export async function upsertEntry(data: CreateEntryData): Promise<{ entry: Leade
        client_version = EXCLUDED.client_version,
        checksum = EXCLUDED.checksum,
        flagged = EXCLUDED.flagged,
+       continues_used = EXCLUDED.continues_used,
        updated_at = NOW()
      WHERE EXCLUDED.score > leaderboard_entries.score
      RETURNING *`,
@@ -110,6 +112,7 @@ export async function upsertEntry(data: CreateEntryData): Promise<{ entry: Leade
       data.clientVersion ?? null,
       data.checksum ?? null,
       data.flagged ?? false,
+      data.continuesUsed ?? 0,
     ]
   );
 

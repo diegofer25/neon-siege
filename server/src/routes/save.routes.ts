@@ -2,6 +2,9 @@ import { Elysia, t } from 'elysia';
 import { authPlugin } from '../plugins/auth.plugin';
 import * as saveService from '../services/save.service';
 import { SaveError } from '../services/save.service';
+import { createRateLimiter } from '../middleware/rateLimit';
+
+const saveWriteLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
 
 export const saveRoutes = new Elysia({ prefix: '/api/save' })
   .use(authPlugin)
@@ -71,13 +74,25 @@ export const saveRoutes = new Elysia({ prefix: '/api/save' })
       }
     },
     {
+      beforeHandle: [saveWriteLimiter],
       body: t.Object({
         sessionToken: t.String({ minLength: 10 }),
-        saveData: t.Any(),
+        saveData: t.Object({}, { additionalProperties: true }),
         wave: t.Integer({ minimum: 1, maximum: 100 }),
         gameState: t.String({ minLength: 1 }),
         schemaVersion: t.Optional(t.Integer({ minimum: 1 })),
       }),
+      // Reject payloads larger than 256 KB to prevent DoS via oversized saves
+      parse: ({ request, contentType }) => {
+        if (contentType === 'application/json') {
+          return request.text().then(text => {
+            if (text.length > 256 * 1024) {
+              throw new SaveError('Save payload too large', 413);
+            }
+            return JSON.parse(text);
+          });
+        }
+      },
     }
   )
 

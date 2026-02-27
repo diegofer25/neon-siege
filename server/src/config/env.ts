@@ -9,4 +9,33 @@ export const env = {
   /** Secret used to HMAC-sign save-session tokens.  Set in production env. */
   SAVE_HMAC_SECRET: Bun.env.SAVE_HMAC_SECRET || 'dev-save-hmac-secret',
   GEOIP_ENABLED: Bun.env.GEOIP_ENABLED !== 'false', // default true; set to 'false' to disable
+
+  // ─── CORS ────────────────────────────────────────────
+  /** Comma-separated list of allowed origins in production (optional, falls back to anchored regex) */
+  ALLOWED_ORIGINS: Bun.env.ALLOWED_ORIGINS || '',
+
+  // ─── Stripe / Credits ────────────────────────────────
+  STRIPE_SECRET_KEY: Bun.env.STRIPE_SECRET_KEY || '',
+  STRIPE_WEBHOOK_SECRET: Bun.env.STRIPE_WEBHOOK_SECRET || '',
+  /** The Stripe Price ID for the $1 / 10-credits product */
+  STRIPE_PRICE_ID: Bun.env.STRIPE_PRICE_ID || '',
+  /** Secret used to HMAC-sign one-time continue tokens */
+  CONTINUE_TOKEN_SECRET: Bun.env.CONTINUE_TOKEN_SECRET || 'dev-continue-token-secret',
 } as const;
+
+// ─── Production startup validation ─────────────────────
+if (env.NODE_ENV === 'production') {
+  const required: (keyof typeof env)[] = [
+    'JWT_SECRET',
+    'JWT_REFRESH_SECRET',
+    'SCORE_HMAC_SECRET',
+    'SAVE_HMAC_SECRET',
+    'CONTINUE_TOKEN_SECRET',
+  ];
+  for (const key of required) {
+    const val = env[key];
+    if (typeof val === 'string' && (val === '' || val.startsWith('dev-'))) {
+      throw new Error(`[env] FATAL: ${key} must be set to a real secret in production.`);
+    }
+  }
+}

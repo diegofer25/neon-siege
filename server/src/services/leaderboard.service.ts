@@ -16,6 +16,7 @@ interface SubmitScoreData {
   startWave?: number;
   clientVersion?: string;
   checksum?: string;
+  continuesUsed?: number;
 }
 
 export async function submitScore(data: SubmitScoreData) {
