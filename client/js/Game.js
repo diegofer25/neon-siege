@@ -435,6 +435,7 @@ export class Game {
 		this._lastRunResult = null;
 		this._endlessMode = false;
 		this._runStartTimestamp = Date.now();
+		this._saveLoadWave = null;
 
 		this.player.reset();
 		this.skillManager.reset();
@@ -762,6 +763,7 @@ export class Game {
 			isVictory,
 			runDetails: buildRunDetails(this.store),
 			gameDurationMs: Date.now() - (this._runStartTimestamp || Date.now()),
+			startWave: this._saveLoadWave || 1,
 		});
 	}
 
@@ -1521,6 +1523,8 @@ export class Game {
 		this.score = legacy.score || 0;
 		this.gameState = Game.STATES.PLAYING;
 		this._gameOverTracked = false;
+		this._runStartTimestamp = Date.now();
+		this._saveLoadWave = checkpointWave;
 		this.setRunDifficulty(legacy.difficulty || DEFAULT_RUN_DIFFICULTY);
 
 		this.waveManager.reset();

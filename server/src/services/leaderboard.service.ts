@@ -12,6 +12,7 @@ interface SubmitScoreData {
   isVictory: boolean;
   runDetails: LeaderboardModel.RunDetails;
   gameDurationMs?: number;
+  startWave?: number;
   clientVersion?: string;
   checksum?: string;
 }
@@ -27,6 +28,7 @@ export async function submitScore(data: SubmitScoreData) {
     isVictory: data.isVictory,
     difficulty: data.difficulty,
     gameDurationMs: data.gameDurationMs,
+    startWave: data.startWave,
     checksum: data.checksum,
   });
 

@@ -9,6 +9,7 @@ interface ScorePayload {
   isVictory: boolean;
   difficulty: string;
   gameDurationMs?: number;
+  startWave?: number;
   checksum?: string;
 }
 
@@ -38,8 +39,10 @@ export async function validateScore(payload: ScorePayload): Promise<ValidationRe
     return { valid: false, flagged: true, reason: 'Negative score' };
   }
 
-  // Hard rejection: game too short (if duration provided)
-  if (payload.gameDurationMs !== undefined && payload.gameDurationMs < MIN_GAME_DURATION_MS && payload.wave > 5) {
+  // Hard rejection: game too short for the waves played this session
+  // startWave > 1 means the run was loaded from a save — only count waves played since load
+  const wavesPlayed = payload.wave - Math.max(1, payload.startWave ?? 1);
+  if (payload.gameDurationMs !== undefined && wavesPlayed > 5 && payload.gameDurationMs < MIN_GAME_DURATION_MS) {
     return { valid: false, flagged: true, reason: 'Game duration too short for waves reached' };
   }
 

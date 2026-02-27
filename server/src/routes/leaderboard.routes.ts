@@ -86,6 +86,7 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
           isVictory: body.isVictory,
           runDetails: body.runDetails || {},
           gameDurationMs: body.gameDurationMs,
+          startWave: body.startWave,
           clientVersion: body.clientVersion,
           checksum: body.checksum,
         });
@@ -106,6 +107,7 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
         isVictory: t.Boolean(),
         runDetails: t.Optional(t.Any()),
         gameDurationMs: t.Optional(t.Number()),
+        startWave: t.Optional(t.Number({ minimum: 1, maximum: 30 })),
         clientVersion: t.Optional(t.String()),
         checksum: t.Optional(t.String()),
       }),

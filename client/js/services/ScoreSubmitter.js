@@ -20,6 +20,7 @@ import { isAuthenticated } from './AuthService.js';
  * @param {boolean} params.isVictory
  * @param {object} params.runDetails
  * @param {number} [params.gameDurationMs]
+ * @param {number} [params.startWave] - Wave the run started from (>1 when loaded from save)
  * @returns {Promise<{entry: any, rank: number|null}|null>}
  */
 export async function submitScore(params) {
@@ -38,6 +39,7 @@ export async function submitScore(params) {
         isVictory: params.isVictory,
         runDetails: params.runDetails || {},
         gameDurationMs: params.gameDurationMs,
+        startWave: params.startWave ?? 1,
       }),
     });
     return result;

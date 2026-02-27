@@ -535,26 +535,47 @@ class LoginScreen extends BaseComponent {
             });
         });
 
-        // Forms
-        this._$('#anonForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const fd = new FormData(/** @type {HTMLFormElement} */ (e.target));
+        // Forms — neon-button renders its <button> in Shadow DOM so it isn't
+        // form-associated with the light-DOM <form>. Handle click on the custom
+        // element instead and call form.reportValidity() for browser validation UI.
+        this._$('#anonSubmit').addEventListener('click', () => {
+            const form = /** @type {HTMLFormElement} */ (this._$('#anonForm'));
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const fd = new FormData(form);
             this._emit('auth-login-anonymous', { displayName: fd.get('displayName') });
         });
 
-        this._$('#loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const fd = new FormData(/** @type {HTMLFormElement} */ (e.target));
+        this._$('#loginSubmit').addEventListener('click', () => {
+            const form = /** @type {HTMLFormElement} */ (this._$('#loginForm'));
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const fd = new FormData(form);
             this._emit('auth-login-email', { email: fd.get('email'), password: fd.get('password') });
         });
 
-        this._$('#registerForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const fd = new FormData(/** @type {HTMLFormElement} */ (e.target));
+        this._$('#registerSubmit').addEventListener('click', () => {
+            const form = /** @type {HTMLFormElement} */ (this._$('#registerForm'));
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const fd = new FormData(form);
             this._emit('auth-register-email', {
                 email: fd.get('email'),
                 password: fd.get('password'),
                 displayName: fd.get('displayName'),
+            });
+        });
+
+        // Enter key on inputs — native form submit is blocked by shadow DOM,
+        // so manually trigger the same logic on Enter.
+        this._$('#anonForm input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this._$('#anonSubmit').click();
+        });
+        this._$$('#loginForm input').forEach(inp => {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this._$('#loginSubmit').click();
+            });
+        });
+        this._$$('#registerForm input').forEach(inp => {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this._$('#registerSubmit').click();
             });
         });
 
