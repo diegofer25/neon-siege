@@ -15,6 +15,7 @@ import { overlayStyles, createSheet } from '../shared-styles.js';
 import { apiFetch } from '../../../services/ApiClient.js';
 import { isAuthenticated, getUserLocation } from '../../../services/AuthService.js';
 import { skillIconHtml } from '../../../utils/IconUtils.js';
+import { ARCHETYPES, ATTRIBUTES, ASCENSION_POOL } from '../../../config/SkillConfig.js';
 
 const ASCENSION_NAMES = {
     asc_ricochet: 'Ricochet Rounds',
@@ -483,8 +484,18 @@ const styles = createSheet(/* css */ `
     border: 1px solid rgba(0, 255, 255, 0.12);
     border-radius: var(--radius-sm);
     background: rgba(0, 0, 0, 0.3);
+    cursor: help;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .rdp-skill-item:hover {
+    border-color: rgba(0, 255, 255, 0.35);
+    background: rgba(0, 255, 255, 0.06);
   }
   .rdp-skill-item .skill-icon { width: 28px; height: 28px; border-radius: 4px; flex-shrink: 0; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+  .rdp-attr-item { cursor: help; transition: border-color 0.15s, background 0.15s; }
+  .rdp-attr-item:hover { border-color: rgba(0, 255, 255, 0.35); background: rgba(0, 255, 255, 0.06); }
+  .rdp-asc-item { cursor: help; transition: border-color 0.15s, background 0.15s; }
+  .rdp-asc-item:hover { border-color: rgba(255, 45, 236, 0.45); background: rgba(255, 45, 236, 0.1); }
   /* ── Scope toggle (geographic filter) ──────────────────────────────── */
   .lb-scope {
     display: flex;
@@ -604,6 +615,17 @@ class LeaderboardScreen extends BaseComponent {
         this._currentDifficulty = 'normal';
         this._currentScope = 'global';
         this._data = null;
+
+        // ── Tooltip lookup maps ──────────────────────────────────────────────
+        this._skillMap = new Map();
+        for (const arch of Object.values(ARCHETYPES)) {
+            for (const skill of arch.skills || []) {
+                this._skillMap.set(skill.id, skill);
+            }
+        }
+        this._ascMap = new Map(ASCENSION_POOL.map(m => [m.id, m]));
+        /** @type {HTMLElement|null} */ this._rdpTooltip = null;
+        /** @type {Function|null} */ this._rdpTooltipCleanup = null;
 
         this._render(/* html */ `
             <div class="overlay">
@@ -783,6 +805,7 @@ class LeaderboardScreen extends BaseComponent {
         `;
 
         panel.querySelector('#rdpBack').addEventListener('click', () => this._hideRunDetails());
+        this._setupRdpTooltips(panel);
 
         // Slide in panel, fade out table
         this._$('#tableWrap').classList.add('hidden');
@@ -795,6 +818,8 @@ class LeaderboardScreen extends BaseComponent {
         if (!panel) return;
         panel.classList.remove('visible');
         this._$('#tableWrap')?.classList.remove('hidden');
+        if (this._rdpTooltipCleanup) { this._rdpTooltipCleanup(); this._rdpTooltipCleanup = null; }
+        this._rdpTooltip?.hideTooltip();
         // Restore user rank if data loaded
         if (this._data?.userRank != null) {
             const rankEl = this._$('#userRank');
@@ -861,7 +886,7 @@ class LeaderboardScreen extends BaseComponent {
         const items = attrDefs.map(({ key, label, icon }) => {
             const val = attributes[key] ?? 0;
             const img = skillIconHtml({ iconImage: `assets/icons/skills/${icon}.jpg`, name: label }, 28);
-            return `<div class="rdp-attr-item">
+            return `<div class="rdp-attr-item" data-tooltip-type="attribute" data-skill-id="${key}">
                 ${img}
                 <span class="attr-label">${key}</span>
                 <span class="attr-value">${val}</span>
@@ -898,7 +923,7 @@ class LeaderboardScreen extends BaseComponent {
         const items = ascensions.map(id => {
             const name = ASCENSION_NAMES[id] || this._formatId(id);
             const img = skillIconHtml({ iconImage: `assets/icons/skills/${id}.jpg`, name }, 28);
-            return `<div class="rdp-asc-item">${img}<span class="asc-name">${name}</span></div>`;
+            return `<div class="rdp-asc-item" data-tooltip-type="ascension" data-skill-id="${id}">${img}<span class="asc-name">${name}</span></div>`;
         }).join('');
         return `<div class="rdp-section"><h4>Ascensions</h4><div class="rdp-asc-grid">${items}</div></div>`;
     }
@@ -916,7 +941,7 @@ class LeaderboardScreen extends BaseComponent {
         const skillItem = (id, rank) => {
             const name = this._formatId(id);
             const img = skillIconHtml({ iconImage: `assets/icons/skills/${id}.jpg`, name }, 28);
-            return `<div class="rdp-skill-item">
+            return `<div class="rdp-skill-item" data-tooltip-type="skill" data-skill-id="${id}">
                 <div class="skill-icon">${img}</div>
                 <div class="skill-info">
                     <span class="skill-name">${name}</span>
@@ -952,6 +977,98 @@ class LeaderboardScreen extends BaseComponent {
         }
 
         return `<div class="rdp-section"><h4>Skills</h4>${html}</div>`;
+    }
+
+    /* ── Run details tooltips ───────────────────────────────────────────── */
+
+    /** @param {HTMLElement} panel */
+    _setupRdpTooltips(panel) {
+        // Lazily create a single <hud-tooltip> appended to body
+        if (!this._rdpTooltip) {
+            this._rdpTooltip = document.createElement('hud-tooltip');
+            document.body.appendChild(this._rdpTooltip);
+        }
+        // Tear down any previous listeners
+        if (this._rdpTooltipCleanup) { this._rdpTooltipCleanup(); this._rdpTooltipCleanup = null; }
+
+        const tooltip = this._rdpTooltip;
+
+        const onMouseOver = (e) => {
+            const path = e.composedPath();
+            let target = null;
+            for (const el of path) {
+                if (el instanceof HTMLElement && el.dataset.tooltipType) { target = el; break; }
+            }
+            if (!target) { tooltip.hideTooltip(); return; }
+
+            const type = target.dataset.tooltipType;
+            const id = target.dataset.skillId;
+            let info = null;
+            let iconHtml = '';
+
+            if (type === 'skill') {
+                const skill = this._skillMap.get(id);
+                if (!skill) return;
+                const typeLabel = skill.type.charAt(0).toUpperCase() + skill.type.slice(1);
+                info = {
+                    icon: skill.icon || '⚡',
+                    iconImage: skill.iconImage,
+                    name: skill.name,
+                    meta: `${typeLabel} · Tier ${skill.tier}`,
+                    desc: skill.description,
+                    type: 'skill',
+                };
+                if (skill.cooldown) info.cd = `⏱ Cooldown: ${skill.cooldown / 1000}s base`;
+                iconHtml = skillIconHtml(skill, 20);
+
+            } else if (type === 'attribute') {
+                const attr = ATTRIBUTES[id];
+                if (!attr) return;
+                info = {
+                    icon: attr.icon || '★',
+                    iconImage: attr.iconImage,
+                    name: attr.label,
+                    meta: 'Attribute',
+                    desc: attr.description,
+                    type: 'skill',
+                };
+                iconHtml = skillIconHtml(attr, 20);
+
+            } else if (type === 'ascension') {
+                const asc = this._ascMap.get(id);
+                if (!asc) return;
+                info = {
+                    icon: asc.icon || '✦',
+                    iconImage: asc.iconImage,
+                    name: asc.name,
+                    meta: 'Ascension Modifier',
+                    desc: asc.description,
+                    type: 'ascension',
+                };
+                iconHtml = skillIconHtml(asc, 20);
+            }
+
+            if (info) {
+                tooltip.showTooltip(info, iconHtml);
+                tooltip.positionTooltip(e.clientX, e.clientY);
+            }
+        };
+
+        const onMouseMove = (e) => {
+            if (tooltip.isShown) tooltip.positionTooltip(e.clientX, e.clientY);
+        };
+
+        const onMouseLeave = () => tooltip.hideTooltip();
+
+        panel.addEventListener('mouseover', onMouseOver);
+        panel.addEventListener('mousemove', onMouseMove);
+        panel.addEventListener('mouseleave', onMouseLeave);
+
+        this._rdpTooltipCleanup = () => {
+            panel.removeEventListener('mouseover', onMouseOver);
+            panel.removeEventListener('mousemove', onMouseMove);
+            panel.removeEventListener('mouseleave', onMouseLeave);
+        };
     }
 
     /* ── Helpers ────────────────────────────────────────────────────────── */
