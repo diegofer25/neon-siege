@@ -3,19 +3,23 @@
  *
  * Public API:
  *   setLastRunStats({ lastWave, lastScore, bestWave, bestScore })
- *   setContinueAvailable(available, saveData)
+ *   setContinueInfo(credits, saveData)
+ *   setContinueLoading(bool)
+ *   showContinueError(message)
  *   getSelectedDifficulty() → string
  *   setDifficulty(difficulty)
  *   show() / hide()
  *
  * Events (composed, bubbling):
  *   'start-game'         — "Click to Start" button clicked
- *   'continue-game'      — "Continue" button clicked (only shown when save exists)
+ *   'continue-game'      — "Continue" button clicked (spends 1 credit)
+ *   'buy-credits'        — "Buy Credits" button clicked
  *   'difficulty-change'  — difficulty option clicked, detail: { difficulty }
  */
 
 import { BaseComponent } from '../BaseComponent.js';
 import { overlayStyles, createSheet } from '../shared-styles.js';
+import { GameConfig } from '../../../config/GameConfig.js';
 
 const RUN_DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
 
@@ -116,7 +120,11 @@ const styles = createSheet(/* css */ `
     color: #ffcc00;
     text-shadow: 0 0 4px #ffcc00;
   }
-  #continueBtn {
+  .continue-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     margin-top: var(--spacing-sm);
   }
   #continueBtn::part(button) {
@@ -128,6 +136,26 @@ const styles = createSheet(/* css */ `
   #continueBtn::part(button):hover {
     background: rgba(255, 45, 236, 0.22);
     box-shadow: 0 0 22px rgba(255, 45, 236, 0.55);
+  }
+  .credit-badge {
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: var(--color-accent-yellow);
+    text-shadow: 0 0 8px var(--color-accent-yellow);
+  }
+  .credit-badge.empty {
+    color: var(--color-accent-red);
+    text-shadow: 0 0 8px var(--color-accent-red);
+  }
+  .continue-error {
+    color: var(--color-accent-red);
+    font-size: 12px;
+    font-family: var(--font-pixel);
+    display: none;
+  }
+  #buyBtn {
+    --neon-bg: linear-gradient(45deg, #00c853, #00e676);
   }
 `);
 
@@ -149,7 +177,12 @@ class StartScreen extends BaseComponent {
                     </div>
                 </div>
                 <neon-button id="startBtn" variant="primary">CLICK TO START</neon-button>
-                <neon-button id="continueBtn" style="display: none;">CONTINUE</neon-button>
+                <div class="continue-section">
+                    <neon-button id="continueBtn" style="display: none;">CONTINUE</neon-button>
+                    <span id="creditBadge" class="credit-badge"></span>
+                    <span id="continueError" class="continue-error"></span>
+                    <neon-button id="buyBtn" style="display: none;">BUY CREDITS</neon-button>
+                </div>
                 <div style="display: flex; gap: 8px; margin-top: var(--spacing-sm); justify-content: center;">
                     <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
                     <neon-button id="loginBtn">SIGN IN</neon-button>
@@ -163,6 +196,7 @@ class StartScreen extends BaseComponent {
 
         this._$('#startBtn').addEventListener('click', () => this._emit('start-game'));
         this._$('#continueBtn').addEventListener('click', () => this._emit('continue-game'));
+        this._$('#buyBtn').addEventListener('click', () => this._emit('buy-credits'));
         this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
         this._$('#loginBtn').addEventListener('click', () => this._emit('show-login'));
         this._setupDifficultyControls();
@@ -254,20 +288,75 @@ class StartScreen extends BaseComponent {
     }
 
     /**
-     * Show or hide the "Continue" button.
-     * @param {boolean} available
-     * @param {{ wave?: number, checkpointWave?: number, score?: number }|null} [saveData]
+     * Update the continue/credits UI based on credit balance and save availability.
+     * Mirrors the GameOverScreen.setCreditInfo() API.
+     * @param {{ freeRemaining: number, purchased: number, total: number }} credits
+     * @param {{ wave?: number, checkpointWave?: number }|null} [saveData]
      */
-    setContinueAvailable(available, saveData = null) {
+    setContinueInfo(credits, saveData = null) {
+        const continueBtn = this._$('#continueBtn');
+        const buyBtn = this._$('#buyBtn');
+        const badge = this._$('#creditBadge');
+        const errorEl = this._$('#continueError');
+        if (!continueBtn) return;
+
+        if (errorEl) errorEl.style.display = 'none';
+
+        if (saveData && credits.total > 0) {
+            const wave = saveData.checkpointWave ?? saveData.wave ?? '?';
+            const creditLabel = credits.total === 1 ? '1 credit' : `${credits.total} credits`;
+            continueBtn.textContent = `CONTINUE — WAVE ${wave} (${creditLabel})`;
+            continueBtn.style.display = '';
+            continueBtn.removeAttribute('disabled');
+            if (badge) {
+                badge.textContent = credits.freeRemaining > 0
+                    ? `${credits.freeRemaining} free + ${credits.purchased} purchased`
+                    : `${credits.purchased} purchased credit${credits.purchased !== 1 ? 's' : ''}`;
+                badge.classList.remove('empty');
+            }
+            if (buyBtn) buyBtn.style.display = 'none';
+        } else if (saveData && credits.total === 0) {
+            continueBtn.style.display = 'none';
+            if (badge) {
+                badge.textContent = 'NO CREDITS — BUY TO CONTINUE';
+                badge.classList.add('empty');
+            }
+            if (buyBtn) {
+                buyBtn.textContent = `BUY 10 CREDITS — ${GameConfig.CONTINUE.PRICE_DISPLAY}`;
+                buyBtn.style.display = 'inline-block';
+            }
+        } else {
+            // No save — hide everything
+            continueBtn.style.display = 'none';
+            if (badge) badge.textContent = '';
+            if (buyBtn) buyBtn.style.display = 'none';
+        }
+    }
+
+    /**
+     * Show loading state on the continue button.
+     * @param {boolean} loading
+     */
+    setContinueLoading(loading) {
         const btn = this._$('#continueBtn');
         if (!btn) return;
-        if (available) {
-            const wave = saveData?.checkpointWave ?? saveData?.wave ?? '?';
-            btn.textContent = `CONTINUE — WAVE ${wave}`;
-            btn.style.display = '';
+        if (loading) {
+            btn.setAttribute('disabled', '');
+            btn.textContent = 'CONTINUING...';
         } else {
-            btn.style.display = 'none';
+            btn.removeAttribute('disabled');
         }
+    }
+
+    /**
+     * Show an error message under the continue section.
+     * @param {string} message
+     */
+    showContinueError(message) {
+        const el = this._$('#continueError');
+        if (!el) return;
+        el.textContent = message;
+        el.style.display = 'block';
     }
 
     /** @param {{ display_name: string }|null} user */

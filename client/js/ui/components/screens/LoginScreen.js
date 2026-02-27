@@ -1033,7 +1033,7 @@ class LoginScreen extends BaseComponent {
         // Handle avatar selection
         picker.addEventListener('click', (e) => {
             const target = /** @type {HTMLElement} */ (e.target);
-            const btn = target.closest('.avatar-option');
+            const btn = /** @type {HTMLElement} */ (target.closest('.avatar-option'));
             if (!btn) return;
             const emoji = btn.dataset.avatar;
             this._setAvatarChoice(emoji);
@@ -1047,7 +1047,7 @@ class LoginScreen extends BaseComponent {
         const picker = this._$('#avatarPicker');
         if (!picker) return;
         picker.querySelectorAll('.avatar-option').forEach(btn => {
-            btn.classList.toggle('selected', btn.dataset.avatar === saved);
+            btn.classList.toggle('selected', /** @type {HTMLElement} */ (btn).dataset.avatar === saved);
         });
     }
 

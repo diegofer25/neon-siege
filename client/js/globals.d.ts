@@ -65,6 +65,9 @@ declare global {
         getSelectedDifficulty(): string;
         setDifficulty(difficulty: string): void;
         setAuthUser(user: { display_name: string } | null): void;
+        setContinueLoading(loading: boolean): void;
+        setContinueInfo(balance: unknown, save: unknown): void;
+        showContinueError(message: string): void;
     }
 
     interface SettingsModalElement extends HTMLElement {
@@ -111,6 +114,8 @@ declare global {
         setUser(user: { id: string; display_name: string; auth_provider: string } | null): void;
         setError(message: string | null): void;
         setLoading(loading: boolean): void;
+        showForgotPasswordSuccess(): void;
+        showResetScreen(token: string): void;
     }
 
     interface LeaderboardScreenElement extends HTMLElement {

@@ -273,6 +273,10 @@ async function init() {
     startScreen.addEventListener('continue-game', () => {
         continueLastGame();
     });
+
+    startScreen.addEventListener('buy-credits', () => {
+        handleBuyCreditsFromMenu();
+    });
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('continue', handleContinue);
     gameOverScreen.addEventListener('buy-credits', handleBuyCredits);
@@ -315,6 +319,7 @@ async function init() {
         loginScreen.hide();
         await saveStateManager.init();
         await game.progressionManager.init();
+        await creditService.getBalance();
         syncSaveButtons();
         populateLastRunStats();
         if (_pendingGameStart) {
@@ -425,6 +430,7 @@ async function init() {
     await authService.restoreSession();
     await saveStateManager.init();
     await game.progressionManager.init();
+    await creditService.getBalance();
 
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
@@ -694,38 +700,97 @@ function restartGame() {
 
 /**
  * Continue the last saved game from the main menu.
- * Restores full game state (skills, wave, score) from the server save.
+ * Deducts 1 credit, then restores game state from the server-authoritative save.
+ * Falls back to a fresh start if no save is found.
  */
-function continueLastGame() {
-    const save = saveStateManager.getRawSave();
-    if (!save) return;
-
-    document.querySelector('start-screen').hide();
-    document.querySelector('game-over-screen').hide();
-    playSFX('ui_start_game');
-
-    telemetry.startSession({
-        entryPoint: 'continue_save',
-        statsOverlayEnabled: showPerformanceStats
-    });
-
-    const restored = game.restoreFromSave(save);
-    if (!restored) {
-        console.error('[main] continueLastGame: restoreFromSave failed — falling back to fresh start');
+async function continueLastGame() {
+    const startScreenEl = /** @type {any} */ (document.querySelector('start-screen'));
+    if (!saveStateManager.hasSave()) {
         startGame();
         return;
     }
 
-    syncMusicTrack({ restart: true });
-    syncStartDifficultyUI(game.getRunDifficulty());
-    syncSaveButtons();
+    startScreenEl.setContinueLoading(true);
 
-    if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
+    try {
+        // Deduct 1 credit and retrieve the canonical save + one-time token from server
+        const { continueToken, save } = await creditService.requestContinue();
+
+        const restored = game.restoreFromContinue(save, continueToken);
+        if (!restored) {
+            startScreenEl.showContinueError('Failed to restore save data.');
+            startScreenEl.setContinueLoading(false);
+            return;
+        }
+
+        playSFX('ui_start_game');
+        startScreenEl.hide();
+
+        telemetry.startSession({
+            entryPoint: 'continue_save',
+            statsOverlayEnabled: showPerformanceStats
+        });
+        telemetry.track('continue_used', {
+            fromWave: save.wave || 0,
+            continuesUsed: game.store.get('run', 'continuesUsed'),
+        });
+
+        syncMusicTrack({ restart: true });
+        syncStartDifficultyUI(game.getRunDifficulty());
+        syncSaveButtons();
+
+        if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+
+        // Fire-and-forget: redeem token to delete the old save server-side
+        const token = game.consumePendingContinueToken();
+        if (token) {
+            creditService.redeemContinue(token).catch(err => {
+                console.warn('[main] Failed to redeem continue token:', err.message);
+            });
+        }
+    } catch (err) {
+        console.error('[main] continueLastGame failed:', err);
+        const message = err?.status === 402
+            ? 'No credits remaining.'
+            : err?.status === 404
+                ? 'No save found to continue from.'
+                : 'Continue failed. Please try again.';
+        startScreenEl.showContinueError(message);
+        startScreenEl.setContinueLoading(false);
+        refreshCreditInfo();
     }
-    lastTime = performance.now();
-    animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+/**
+ * Handle "Buy Credits" button from the main menu start screen.
+ */
+async function handleBuyCreditsFromMenu() {
+    const startScreenEl = /** @type {any} */ (document.querySelector('start-screen'));
+
+    const user = authService.getCurrentUser();
+    if (!user || user.auth_provider === 'anonymous') {
+        startScreenEl.showContinueError('Create an account to purchase credits.');
+        return;
+    }
+
+    try {
+        const result = await creditService.openCheckout();
+        if (result.success) {
+            playSFX('ui_click');
+            telemetry.track('credits_purchased', {
+                newBalance: result.balance.total,
+            });
+        }
+        refreshCreditInfo();
+    } catch (err) {
+        console.error('[main] Checkout failed:', err);
+        startScreenEl.showContinueError('Purchase failed. Please try again.');
+    }
 }
 
 /**
@@ -1007,20 +1072,21 @@ function closeSettingsModal() {
  * Refresh credit balance from server and update the GameOverScreen UI.
  */
 async function refreshCreditInfo() {
-    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
-    if (!goScreen) return;
-
+    let balance;
     try {
-        const balance = await creditService.getBalance();
-        const hasSave = saveStateManager.hasSave();
-        goScreen.setCreditInfo(balance, hasSave);
+        balance = await creditService.getBalance();
     } catch (err) {
         console.warn('[main] Failed to refresh credit info:', err.message);
-        // Fall back to cached balance
-        const balance = creditService.getCachedBalance();
-        const hasSave = saveStateManager.hasSave();
-        goScreen.setCreditInfo(balance, hasSave);
+        balance = creditService.getCachedBalance();
     }
+
+    const hasSave = saveStateManager.hasSave();
+    const rawSave = saveStateManager.getRawSave();
+
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    if (goScreen) goScreen.setCreditInfo(balance, hasSave);
+
+    /** @type {any} */ (document.querySelector('start-screen'))?.setContinueInfo(balance, rawSave);
 }
 
 /**
@@ -1094,7 +1160,7 @@ async function handleBuyCredits() {
 
     // Block anonymous users from purchasing
     const user = authService.getCurrentUser();
-    if (!user || user.provider === 'anonymous') {
+    if (!user || user.auth_provider === 'anonymous') {
         goScreen.showContinueError('Create an account to purchase credits.');
         return;
     }
@@ -1118,7 +1184,7 @@ async function handleBuyCredits() {
 function syncSaveButtons() {
     const screen = document.querySelector('start-screen');
     if (!screen) return;
-    screen.setContinueAvailable(saveStateManager.hasSave(), saveStateManager.getRawSave());
+    /** @type {any} */ (screen).setContinueInfo(creditService.getCachedBalance(), saveStateManager.getRawSave());
 }
 
 function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {
