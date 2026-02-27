@@ -185,3 +185,30 @@ export async function logout() {
   _saveToStorage(null);
   _notifyListeners();
 }
+
+/**
+ * Request a password-reset email for the given address.
+ * Always resolves (server never reveals whether the address exists).
+ * @param {string} email
+ */
+export async function requestPasswordReset(email) {
+  return apiFetch('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Consume a raw reset token and set a new password.
+ * On success the server issues a fresh session, so the user is auto-logged-in.
+ * @param {string} token   Raw token from the URL parameter
+ * @param {string} newPassword
+ */
+export async function resetPassword(token, newPassword) {
+  const data = await apiFetch('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
+  _setAuthData(data);
+  return _currentUser;
+}

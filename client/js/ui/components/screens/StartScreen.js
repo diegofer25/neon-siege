@@ -3,12 +3,14 @@
  *
  * Public API:
  *   setLastRunStats({ lastWave, lastScore, bestWave, bestScore })
+ *   setContinueAvailable(available, saveData)
  *   getSelectedDifficulty() → string
  *   setDifficulty(difficulty)
  *   show() / hide()
  *
  * Events (composed, bubbling):
  *   'start-game'         — "Click to Start" button clicked
+ *   'continue-game'      — "Continue" button clicked (only shown when save exists)
  *   'difficulty-change'  — difficulty option clicked, detail: { difficulty }
  */
 
@@ -114,6 +116,19 @@ const styles = createSheet(/* css */ `
     color: #ffcc00;
     text-shadow: 0 0 4px #ffcc00;
   }
+  #continueBtn {
+    margin-top: var(--spacing-sm);
+  }
+  #continueBtn::part(button) {
+    background: rgba(255, 45, 236, 0.12);
+    border-color: var(--color-secondary-neon);
+    color: var(--color-secondary-neon);
+    box-shadow: 0 0 14px rgba(255, 45, 236, 0.35);
+  }
+  #continueBtn::part(button):hover {
+    background: rgba(255, 45, 236, 0.22);
+    box-shadow: 0 0 22px rgba(255, 45, 236, 0.55);
+  }
 `);
 
 class StartScreen extends BaseComponent {
@@ -134,6 +149,7 @@ class StartScreen extends BaseComponent {
                     </div>
                 </div>
                 <neon-button id="startBtn" variant="primary">CLICK TO START</neon-button>
+                <neon-button id="continueBtn" style="display: none;">CONTINUE</neon-button>
                 <div style="display: flex; gap: 8px; margin-top: var(--spacing-sm); justify-content: center;">
                     <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
                     <neon-button id="loginBtn">SIGN IN</neon-button>
@@ -146,6 +162,7 @@ class StartScreen extends BaseComponent {
         `, overlayStyles, styles);
 
         this._$('#startBtn').addEventListener('click', () => this._emit('start-game'));
+        this._$('#continueBtn').addEventListener('click', () => this._emit('continue-game'));
         this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
         this._$('#loginBtn').addEventListener('click', () => this._emit('show-login'));
         this._setupDifficultyControls();
@@ -234,6 +251,23 @@ class StartScreen extends BaseComponent {
         if (bestScoreEl) bestScoreEl.textContent = (bestScore || 0).toLocaleString();
 
         container.style.display = 'block';
+    }
+
+    /**
+     * Show or hide the "Continue" button.
+     * @param {boolean} available
+     * @param {{ wave?: number, checkpointWave?: number, score?: number }|null} [saveData]
+     */
+    setContinueAvailable(available, saveData = null) {
+        const btn = this._$('#continueBtn');
+        if (!btn) return;
+        if (available) {
+            const wave = saveData?.checkpointWave ?? saveData?.wave ?? '?';
+            btn.textContent = `CONTINUE — WAVE ${wave}`;
+            btn.style.display = '';
+        } else {
+            btn.style.display = 'none';
+        }
     }
 
     /** @param {{ display_name: string }|null} user */

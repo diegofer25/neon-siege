@@ -269,6 +269,10 @@ async function init() {
             startGame();
         }
     });
+
+    startScreen.addEventListener('continue-game', () => {
+        continueLastGame();
+    });
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('continue', handleContinue);
     gameOverScreen.addEventListener('buy-credits', handleBuyCredits);
@@ -370,6 +374,47 @@ async function init() {
         loginScreen.setUser(null);
         startScreen.setAuthUser(null);
     });
+
+    // Forgot password — request reset email
+    loginScreen.addEventListener('auth-forgot-password', async (e) => {
+        const { email } = /** @type {CustomEvent} */ (e).detail;
+        try {
+            loginScreen.setError(null);
+            loginScreen.setLoading(true);
+            await authService.requestPasswordReset(email);
+            loginScreen.setLoading(false);
+            loginScreen.showForgotPasswordSuccess();
+        } catch {
+            loginScreen.setLoading(false);
+            // Server always returns ok; this only fires on network errors
+            loginScreen.setError('Something went wrong. Please try again.');
+        }
+    });
+
+    // Reset password — consume token and set new password
+    loginScreen.addEventListener('auth-reset-password', async (e) => {
+        const { token, newPassword } = /** @type {CustomEvent} */ (e).detail;
+        try {
+            loginScreen.setError(null);
+            loginScreen.setLoading(true);
+            await authService.resetPassword(token, newPassword);
+            loginScreen.setLoading(false);
+            loginScreen.setUser(authService.getCurrentUser());
+            // Clean up the reset token from the URL
+            history.replaceState(null, '', location.pathname);
+            _onAuthSuccess();
+        } catch (err) {
+            loginScreen.setLoading(false);
+            loginScreen.setError(err.message);
+        }
+    });
+
+    // If the page was opened with ?reset_token= (from a password-reset email),
+    // skip the start screen and open the reset-password screen directly.
+    const _resetToken = new URLSearchParams(location.search).get('reset_token');
+    if (_resetToken) {
+        loginScreen.showResetScreen(_resetToken);
+    }
 
     // Update start screen button when auth changes
     authService.onAuthChange((user) => {
@@ -639,6 +684,42 @@ function restartGame() {
     syncMusicTrack({ restart: true });
     syncStartDifficultyUI(game.getRunDifficulty());
     syncSaveButtons();
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+/**
+ * Continue the last saved game from the main menu.
+ * Restores full game state (skills, wave, score) from the server save.
+ */
+function continueLastGame() {
+    const save = saveStateManager.getRawSave();
+    if (!save) return;
+
+    document.querySelector('start-screen').hide();
+    document.querySelector('game-over-screen').hide();
+    playSFX('ui_start_game');
+
+    telemetry.startSession({
+        entryPoint: 'continue_save',
+        statsOverlayEnabled: showPerformanceStats
+    });
+
+    const restored = game.restoreFromSave(save);
+    if (!restored) {
+        console.error('[main] continueLastGame: restoreFromSave failed — falling back to fresh start');
+        startGame();
+        return;
+    }
+
+    syncMusicTrack({ restart: true });
+    syncStartDifficultyUI(game.getRunDifficulty());
+    syncSaveButtons();
+
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -1035,7 +1116,9 @@ async function handleBuyCredits() {
 }
 
 function syncSaveButtons() {
-    // Reserved for future save-related UI sync
+    const screen = document.querySelector('start-screen');
+    if (!screen) return;
+    screen.setContinueAvailable(saveStateManager.hasSave(), saveStateManager.getRawSave());
 }
 
 function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {

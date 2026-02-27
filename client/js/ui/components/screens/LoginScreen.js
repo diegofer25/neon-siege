@@ -640,6 +640,9 @@ class LoginScreen extends BaseComponent {
                                     </div>
                                     <neon-button type="submit" variant="primary" id="loginSubmit">LOGIN</neon-button>
                                 </form>
+                                <div class="auth-link-row" style="text-align:right;margin-top:6px;">
+                                    <button class="auth-link" data-goto="forgot-password">Forgot password?</button>
+                                </div>
                                 <hr class="auth-divider">
                                 <div class="auth-link-row">
                                     Don't have an account?
@@ -676,6 +679,48 @@ class LoginScreen extends BaseComponent {
                                     Already have an account?
                                     <button class="auth-link" data-goto="login">Sign In</button>
                                 </div>
+                            </div>
+
+                            <!-- Screen 4: Forgot Password -->
+                            <div class="auth-screen" id="screen-forgot-password">
+                                <button class="back-btn" data-goto="login">${ARROW_LEFT} Back</button>
+                                <h2 class="auth-heading">FORGOT PASSWORD</h2>
+                                <p class="auth-subtitle">Enter your email and we'll send you a reset link valid for 1 hour.</p>
+                                <div id="forgotSuccess" class="forgot-success" style="display:none;">
+                                    <div class="forgot-success-icon">✉️</div>
+                                    <p>Check your inbox! If an account exists for that email, a reset link is on its way.</p>
+                                </div>
+                                <form class="auth-form" id="forgotForm">
+                                    <div class="input-wrapper">
+                                        <input type="email" name="email" placeholder="Your email" required autocomplete="email">
+                                    </div>
+                                    <neon-button type="submit" variant="primary" id="forgotSubmit">SEND RESET LINK</neon-button>
+                                </form>
+                            </div>
+
+                            <!-- Screen 5: Reset Password (opened via ?reset_token= URL param) -->
+                            <div class="auth-screen" id="screen-reset-password">
+                                <h2 class="auth-heading">NEW PASSWORD</h2>
+                                <p class="auth-subtitle">Choose a strong password for your account.</p>
+                                <form class="auth-form" id="resetForm">
+                                    <input type="hidden" id="resetTokenInput">
+                                    <div class="input-wrapper has-toggle">
+                                        <input type="password" name="newPassword" placeholder="New password (min 6 chars)" required minlength="6" autocomplete="new-password" id="resetPassword">
+                                        <button type="button" class="pw-toggle" aria-label="Toggle password visibility">${EYE_CLOSED}</button>
+                                    </div>
+                                    <div class="strength-meter" id="resetStrengthMeter">
+                                        <div class="strength-bar"></div>
+                                        <div class="strength-bar"></div>
+                                        <div class="strength-bar"></div>
+                                        <div class="strength-bar"></div>
+                                    </div>
+                                    <div class="strength-label" id="resetStrengthLabel"></div>
+                                    <div class="input-wrapper has-toggle">
+                                        <input type="password" name="confirmPassword" placeholder="Confirm new password" required minlength="6" autocomplete="new-password" id="resetConfirmPassword">
+                                        <button type="button" class="pw-toggle" aria-label="Toggle password visibility">${EYE_CLOSED}</button>
+                                    </div>
+                                    <neon-button type="submit" variant="primary" id="resetSubmit">SET NEW PASSWORD</neon-button>
+                                </form>
                             </div>
 
                         </div>
@@ -725,6 +770,26 @@ class LoginScreen extends BaseComponent {
             });
         });
 
+        this._$('#forgotSubmit').addEventListener('click', () => {
+            const form = /** @type {HTMLFormElement} */ (this._$('#forgotForm'));
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const fd = new FormData(form);
+            this._emit('auth-forgot-password', { email: fd.get('email') });
+        });
+
+        this._$('#resetSubmit').addEventListener('click', () => {
+            const form = /** @type {HTMLFormElement} */ (this._$('#resetForm'));
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const newPassword = /** @type {HTMLInputElement} */ (this._$('#resetPassword')).value;
+            const confirmPassword = /** @type {HTMLInputElement} */ (this._$('#resetConfirmPassword')).value;
+            if (newPassword !== confirmPassword) {
+                this.setError('Passwords do not match');
+                return;
+            }
+            const token = /** @type {HTMLInputElement} */ (this._$('#resetTokenInput')).value;
+            this._emit('auth-reset-password', { token, newPassword });
+        });
+
         // Enter key on inputs — native form submit is blocked by shadow DOM,
         // so manually trigger the same logic on Enter.
         this._$('#anonForm input').addEventListener('keydown', (e) => {
@@ -740,15 +805,26 @@ class LoginScreen extends BaseComponent {
                 if (e.key === 'Enter') this._$('#registerSubmit').click();
             });
         });
+        this._$('#forgotForm input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this._$('#forgotSubmit').click();
+        });
+        this._$$('#resetForm input[type="password"]').forEach(inp => {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this._$('#resetSubmit').click();
+            });
+        });
 
         // Password visibility toggles
         this._$$('.pw-toggle').forEach(/** @param {HTMLButtonElement} toggle */ toggle => {
             toggle.addEventListener('click', () => this._togglePasswordVisibility(toggle));
         });
 
-        // Password strength meter
+        // Password strength meters
         this._$('#regPassword')?.addEventListener('input', (e) => {
-            this._updateStrength(/** @type {HTMLInputElement} */ (e.target).value);
+            this._updateStrengthFor(/** @type {HTMLInputElement} */ (e.target).value, '#strengthMeter', '#strengthLabel');
+        });
+        this._$('#resetPassword')?.addEventListener('input', (e) => {
+            this._updateStrengthFor(/** @type {HTMLInputElement} */ (e.target).value, '#resetStrengthMeter', '#resetStrengthLabel');
         });
 
         // Close & logout
@@ -771,7 +847,7 @@ class LoginScreen extends BaseComponent {
         this._switching = true;
 
         // Determine slide direction
-        const screens = ['quick-play', 'login', 'register'];
+        const screens = ['quick-play', 'login', 'forgot-password', 'register', 'reset-password'];
         const currentIdx = screens.indexOf(this._currentScreen);
         const nextIdx = screens.indexOf(screenId);
         const slideIn = nextIdx > currentIdx ? 'slide-right' : 'slide-left';
@@ -828,6 +904,32 @@ class LoginScreen extends BaseComponent {
         this._$('#screen-quick-play')?.classList.add('active');
         this._currentScreen = 'quick-play';
         this.setError(null);
+        // Reset forgot-password form state
+        const forgotSuccess = this._$('#forgotSuccess');
+        const forgotForm = this._$('#forgotForm');
+        if (forgotSuccess) forgotSuccess.style.display = 'none';
+        if (forgotForm) forgotForm.style.display = 'block';
+    }
+
+    /** Open the overlay directly on the reset-password screen (skips quick-play). */
+    showResetScreen(token) {
+        this._$$('.auth-screen').forEach(s => s.classList.remove('active', 'slide-left', 'slide-right'));
+        const screen = this._$('#screen-reset-password');
+        if (screen) screen.classList.add('active');
+        this._currentScreen = 'reset-password';
+        this.setError(null);
+        const tokenInput = /** @type {HTMLInputElement} */ (this._$('#resetTokenInput'));
+        if (tokenInput) tokenInput.value = token;
+        const root = this._$('.overlay');
+        if (root) root.classList.add('show');
+    }
+
+    /** Hide the forgot-password form and display the success confirmation. */
+    showForgotPasswordSuccess() {
+        const success = this._$('#forgotSuccess');
+        const form = this._$('#forgotForm');
+        if (success) success.style.display = 'block';
+        if (form) form.style.display = 'none';
     }
 
     /* ── Password visibility ────────────────────────────────────────────── */
@@ -843,6 +945,11 @@ class LoginScreen extends BaseComponent {
     /* ── Password strength ──────────────────────────────────────────────── */
     /** @param {string} pw */
     _updateStrength(pw) {
+        this._updateStrengthFor(pw, '#strengthMeter', '#strengthLabel');
+    }
+
+    /** @param {string} pw @param {string} meterId @param {string} labelId */
+    _updateStrengthFor(pw, meterId, labelId) {
         let score = 0;
         if (pw.length >= 6) score++;
         if (pw.length >= 8) score++;
@@ -856,7 +963,7 @@ class LoginScreen extends BaseComponent {
         const color = pw.length === 0 ? '#888' : colors[score - 1] || '#f00';
         const label = pw.length === 0 ? '' : labels[score - 1] || 'Weak';
 
-        const bars = this._$$('#strengthMeter .strength-bar');
+        const bars = this._$$(`${meterId} .strength-bar`);
         bars.forEach((bar, i) => {
             bar.classList.toggle('active', i < score);
             bar.style.setProperty('--str-color', color);
@@ -864,7 +971,7 @@ class LoginScreen extends BaseComponent {
             else bar.style.background = '';
         });
 
-        const labelEl = this._$('#strengthLabel');
+        const labelEl = this._$(labelId);
         if (labelEl) {
             labelEl.textContent = label;
             labelEl.style.setProperty('--str-color', color);
@@ -879,6 +986,8 @@ class LoginScreen extends BaseComponent {
             'quick-play': '#anonSubmit',
             'login': '#loginSubmit',
             'register': '#registerSubmit',
+            'forgot-password': '#forgotSubmit',
+            'reset-password': '#resetSubmit',
         };
         const btnSel = screenBtnMap[this._currentScreen];
         const btn = btnSel ? this._$(btnSel) : null;
