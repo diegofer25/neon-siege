@@ -142,12 +142,12 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     '/refresh',
     async ({ accessJwt, refreshJwt, cookie: { refreshToken }, set }) => {
       const token = refreshToken.value;
-      if (!token) {
+      if (!token || typeof token !== 'string') {
         set.status = 401;
         return { error: 'No refresh token' };
       }
 
-      const payload = await refreshJwt.verify(token);
+      const payload = await refreshJwt.verify(token as string);
       if (!payload) {
         set.status = 401;
         return { error: 'Invalid refresh token' };

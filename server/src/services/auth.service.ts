@@ -18,6 +18,11 @@ export async function registerWithEmail(email: string, password: string, display
     throw new AuthError('Email already registered', 409);
   }
 
+  const nameTaken = await UserModel.findByDisplayName(displayName);
+  if (nameTaken) {
+    throw new AuthError('Player name already taken', 409);
+  }
+
   const passwordHash = await hashPassword(password);
   const user = await UserModel.createEmailUser(email, passwordHash, displayName);
   return UserModel.toPublicUser(user);
@@ -70,6 +75,11 @@ export async function loginWithGoogle(idToken: string) {
 }
 
 export async function createAnonymous(displayName: string) {
+  const nameTaken = await UserModel.findByDisplayName(displayName);
+  if (nameTaken) {
+    throw new AuthError('Player name already taken', 409);
+  }
+
   const user = await UserModel.createAnonymousUser(displayName);
   return UserModel.toPublicUser(user);
 }

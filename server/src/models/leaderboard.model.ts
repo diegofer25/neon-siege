@@ -66,11 +66,29 @@ export interface CreateEntryData {
   flagged?: boolean;
 }
 
-export async function createEntry(data: CreateEntryData): Promise<LeaderboardEntry> {
+/**
+ * Upsert a leaderboard entry — one record per user per difficulty.
+ * Only replaces the existing record if the new score is higher.
+ */
+export async function upsertEntry(data: CreateEntryData): Promise<{ entry: LeaderboardEntry; isNewBest: boolean }> {
   const result = await queryOne<LeaderboardEntry>(
     `INSERT INTO leaderboard_entries
       (user_id, difficulty, score, wave, kills, max_combo, level, is_victory, run_details, game_duration_ms, client_version, checksum, flagged)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+     ON CONFLICT (user_id, difficulty) DO UPDATE SET
+       score = EXCLUDED.score,
+       wave = EXCLUDED.wave,
+       kills = EXCLUDED.kills,
+       max_combo = EXCLUDED.max_combo,
+       level = EXCLUDED.level,
+       is_victory = EXCLUDED.is_victory,
+       run_details = EXCLUDED.run_details,
+       game_duration_ms = EXCLUDED.game_duration_ms,
+       client_version = EXCLUDED.client_version,
+       checksum = EXCLUDED.checksum,
+       flagged = EXCLUDED.flagged,
+       updated_at = NOW()
+     WHERE EXCLUDED.score > leaderboard_entries.score
      RETURNING *`,
     [
       data.userId,
@@ -88,7 +106,17 @@ export async function createEntry(data: CreateEntryData): Promise<LeaderboardEnt
       data.flagged ?? false,
     ]
   );
-  return result!;
+
+  if (result) {
+    return { entry: result, isNewBest: true };
+  }
+
+  // Score wasn't higher — return the existing entry
+  const existing = await queryOne<LeaderboardEntry>(
+    `SELECT * FROM leaderboard_entries WHERE user_id = $1 AND difficulty = $2`,
+    [data.userId, data.difficulty]
+  );
+  return { entry: existing!, isNewBest: false };
 }
 
 export async function getLeaderboard(
@@ -121,12 +149,11 @@ export async function getLeaderboard(
   };
 }
 
-export async function getUserEntries(
+export async function getUserEntry(
   userId: string,
   difficulty: string,
-  limit: number = 10
-): Promise<LeaderboardRow[]> {
-  return query<LeaderboardRow>(
+): Promise<LeaderboardRow | null> {
+  return queryOne<LeaderboardRow>(
     `SELECT
       le.*,
       u.display_name,
@@ -135,10 +162,8 @@ export async function getUserEntries(
       ) AS rank
      FROM leaderboard_entries le
      JOIN users u ON u.id = le.user_id
-     WHERE le.user_id = $1 AND le.difficulty = $2 AND le.flagged = FALSE
-     ORDER BY le.score DESC
-     LIMIT $3`,
-    [userId, difficulty, limit]
+     WHERE le.user_id = $1 AND le.difficulty = $2 AND le.flagged = FALSE`,
+    [userId, difficulty]
   );
 }
 
@@ -147,10 +172,9 @@ export async function getUserRank(userId: string, difficulty: string): Promise<n
     `SELECT rank FROM (
       SELECT
         user_id,
-        ROW_NUMBER() OVER (ORDER BY MAX(score) DESC) AS rank
+        ROW_NUMBER() OVER (ORDER BY score DESC) AS rank
       FROM leaderboard_entries
       WHERE difficulty = $1 AND flagged = FALSE
-      GROUP BY user_id
     ) ranked
     WHERE user_id = $2`,
     [difficulty, userId]

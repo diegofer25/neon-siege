@@ -53,6 +53,13 @@ export async function createGoogleUser(googleId: string, email: string, displayN
   return result!;
 }
 
+export async function findByDisplayName(displayName: string): Promise<User | null> {
+  return queryOne<User>(
+    'SELECT * FROM users WHERE LOWER(display_name) = LOWER($1)',
+    [displayName]
+  );
+}
+
 export async function createAnonymousUser(displayName: string): Promise<User> {
   const result = await queryOne<User>(
     `INSERT INTO users (display_name, auth_provider)

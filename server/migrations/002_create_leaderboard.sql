@@ -13,8 +13,12 @@ CREATE TABLE leaderboard_entries (
   client_version   VARCHAR(20),
   checksum         VARCHAR(64),
   flagged          BOOLEAN DEFAULT FALSE,
-  created_at       TIMESTAMPTZ DEFAULT NOW()
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW(),
+
+  -- One record per user per difficulty (best score wins)
+  UNIQUE (user_id, difficulty)
 );
 
 CREATE INDEX idx_leaderboard_difficulty_score ON leaderboard_entries(difficulty, score DESC);
-CREATE INDEX idx_leaderboard_user ON leaderboard_entries(user_id, created_at DESC);
+CREATE INDEX idx_leaderboard_user ON leaderboard_entries(user_id);

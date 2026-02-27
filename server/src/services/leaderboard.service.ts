@@ -34,8 +34,8 @@ export async function submitScore(data: SubmitScoreData) {
     throw new Error(validation.reason || 'Score rejected by anti-cheat');
   }
 
-  // Create the entry
-  const entry = await LeaderboardModel.createEntry({
+  // Upsert — only replaces if new score is higher
+  const { entry, isNewBest } = await LeaderboardModel.upsertEntry({
     ...data,
     flagged: validation.flagged,
   });
@@ -43,7 +43,7 @@ export async function submitScore(data: SubmitScoreData) {
   // Get the user's rank
   const rank = await LeaderboardModel.getUserRank(data.userId, data.difficulty);
 
-  return { entry, rank, flagged: validation.flagged };
+  return { entry, rank, isNewBest, flagged: validation.flagged };
 }
 
 export async function getLeaderboard(difficulty: string, limit: number, offset: number, userId?: string) {
@@ -57,6 +57,6 @@ export async function getLeaderboard(difficulty: string, limit: number, offset: 
   return { ...result, userRank };
 }
 
-export async function getUserEntries(userId: string, difficulty: string, limit: number) {
-  return LeaderboardModel.getUserEntries(userId, difficulty, limit);
+export async function getUserEntry(userId: string, difficulty: string) {
+  return LeaderboardModel.getUserEntry(userId, difficulty);
 }

@@ -3,7 +3,7 @@ import { authPlugin } from '../plugins/auth.plugin';
 
 export const requireAuth = new Elysia({ name: 'requireAuth' })
   .use(authPlugin)
-  .derive(async ({ accessJwt, headers, set }) => {
+  .resolve(async ({ accessJwt, headers, set }) => {
     const authHeader = headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       set.status = 401;
@@ -26,17 +26,17 @@ export const requireAuth = new Elysia({ name: 'requireAuth' })
 
 export const optionalAuth = new Elysia({ name: 'optionalAuth' })
   .use(authPlugin)
-  .derive(async ({ accessJwt, headers }) => {
+  .resolve(async ({ accessJwt, headers }) => {
     const authHeader = headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return { userId: null, displayName: null };
+      return { userId: null as string | null, displayName: null as string | null };
     }
 
     const token = authHeader.slice(7);
     const payload = await accessJwt.verify(token);
 
     if (!payload) {
-      return { userId: null, displayName: null };
+      return { userId: null as string | null, displayName: null as string | null };
     }
 
     return {
