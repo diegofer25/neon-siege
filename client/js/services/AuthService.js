@@ -1,9 +1,12 @@
 /**
  * @fileoverview Authentication service for Neon Siege.
  * Manages user login state (email, Google, anonymous).
+ * Anonymous users are persisted in localStorage so the device stays linked.
  */
 
 import { apiFetch, setAccessToken, tryRestoreSession } from './ApiClient.js';
+
+const STORAGE_KEY = 'neon_siege_auth';
 
 /** @type {{ id: string, display_name: string, auth_provider: string }|null} */
 let _currentUser = null;
@@ -37,17 +40,62 @@ function _notifyListeners() {
   }
 }
 
+/** Persist user info to localStorage so we can restore on next visit. */
+function _saveToStorage(user) {
+  if (user) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+/** Read persisted user info from localStorage. */
+function _loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Try restoring session from refresh cookie (call on app init).
+ * Set user after a successful auth call and persist.
+ * @param {any} data - Response with { accessToken, user }
+ */
+function _setAuthData(data) {
+  setAccessToken(data.accessToken);
+  _currentUser = data.user;
+  _saveToStorage(_currentUser);
+  _notifyListeners();
+}
+
+/**
+ * Try restoring session:
+ * 1. First try the refresh token cookie (works for email/google accounts)
+ * 2. Fall back to localStorage (works for anonymous users across sessions)
  * @returns {Promise<boolean>}
  */
 export async function restoreSession() {
+  // Try refresh token first (httpOnly cookie)
   const data = await tryRestoreSession();
   if (data) {
     _currentUser = data.user;
+    _saveToStorage(_currentUser);
     _notifyListeners();
     return true;
   }
+
+  // Fall back to stored user info (the user is still "known" on this device,
+  // but their access token expired — show them as logged in so the start
+  // screen shows their name, and the next API call will re-auth via refresh)
+  const stored = _loadFromStorage();
+  if (stored) {
+    _currentUser = stored;
+    _notifyListeners();
+    return true;
+  }
+
   return false;
 }
 
@@ -62,9 +110,7 @@ export async function registerEmail(email, password, displayName) {
     method: 'POST',
     body: JSON.stringify({ email, password, displayName }),
   });
-  setAccessToken(data.accessToken);
-  _currentUser = data.user;
-  _notifyListeners();
+  _setAuthData(data);
   return _currentUser;
 }
 
@@ -78,9 +124,7 @@ export async function loginEmail(email, password) {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  setAccessToken(data.accessToken);
-  _currentUser = data.user;
-  _notifyListeners();
+  _setAuthData(data);
   return _currentUser;
 }
 
@@ -93,14 +137,13 @@ export async function loginGoogle(idToken) {
     method: 'POST',
     body: JSON.stringify({ idToken }),
   });
-  setAccessToken(data.accessToken);
-  _currentUser = data.user;
-  _notifyListeners();
+  _setAuthData(data);
   return _currentUser;
 }
 
 /**
  * Create an anonymous account with a display name.
+ * The user is persisted in localStorage so this device stays linked.
  * @param {string} displayName
  */
 export async function loginAnonymous(displayName) {
@@ -108,14 +151,12 @@ export async function loginAnonymous(displayName) {
     method: 'POST',
     body: JSON.stringify({ displayName }),
   });
-  setAccessToken(data.accessToken);
-  _currentUser = data.user;
-  _notifyListeners();
+  _setAuthData(data);
   return _currentUser;
 }
 
 /**
- * Logout and clear session.
+ * Logout and clear session + stored data.
  */
 export async function logout() {
   try {
@@ -123,5 +164,6 @@ export async function logout() {
   } catch { /* ignore */ }
   setAccessToken(null);
   _currentUser = null;
+  _saveToStorage(null);
   _notifyListeners();
 }

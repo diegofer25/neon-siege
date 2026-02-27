@@ -1,5 +1,6 @@
 /**
- * @fileoverview <leaderboard-screen> — leaderboard overlay with difficulty tabs and stat tooltips.
+ * @fileoverview <leaderboard-screen> — redesigned leaderboard overlay with
+ * difficulty tabs, stat tooltips, animated entrance/exit, and responsive layout.
  *
  * Public API:
  *   show() / hide()
@@ -30,20 +31,112 @@ const ASCENSION_NAMES = {
     asc_echo: 'Echo Strike',
 };
 
+/* ── SVG icons ────────────────────────────────────────────────────────────── */
+const TROPHY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`;
+const SPINNER_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.2"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></path></svg>`;
+
+/* ── Styles ───────────────────────────────────────────────────────────────── */
 const styles = createSheet(/* css */ `
   :host { display: contents; }
+
+  /* ── Container card ───────────────────────────────────────────────────── */
   .lb-container {
-    width: min(700px, 92vw);
+    position: relative;
+    width: min(720px, 92vw);
     max-height: 80vh;
     display: flex;
     flex-direction: column;
+    padding: var(--spacing-xl) var(--spacing-xxl);
+    background: rgba(5, 1, 10, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 255, 255, 0.15);
+    border-radius: var(--radius-xxl);
+    box-shadow:
+      0 0 30px rgba(0, 255, 255, 0.08),
+      0 0 60px rgba(143, 0, 255, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
+
+  /* Subtle scan-line on the card */
+  .lb-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 255, 255, 0.012) 3px,
+      rgba(0, 255, 255, 0.012) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* ── Close button (overlay top-right) ──────────────────────────────────── */
+  .close-btn {
+    position: absolute !important;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5) !important;
+    color: #888;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 2;
+    line-height: 1;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    letter-spacing: 0 !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+    text-transform: none !important;
+  }
+  .close-btn::before { display: none !important; }
+  .close-btn:hover {
+    color: #fff;
+    border-color: var(--color-primary-neon) !important;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3) !important;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /* ── Header ───────────────────────────────────────────────────────────── */
   .lb-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--spacing-md);
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: var(--spacing-lg);
   }
+  .lb-header-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--color-secondary-neon);
+    filter: drop-shadow(0 0 6px var(--color-secondary-neon));
+  }
+  .lb-heading {
+    font-family: var(--font-pixel);
+    color: var(--color-secondary-neon);
+    text-shadow:
+      0 0 6px var(--color-secondary-neon),
+      0 0 14px var(--color-secondary-neon),
+      0 0 28px var(--color-secondary-neon);
+    font-size: 22px;
+    letter-spacing: 3px;
+    animation: neonFlicker 3s infinite alternate;
+    margin: 0;
+  }
+
+  /* ── Tabs ──────────────────────────────────────────────────────────────── */
   .lb-tabs {
     display: flex;
     gap: 4px;
@@ -51,34 +144,54 @@ const styles = createSheet(/* css */ `
     margin-bottom: var(--spacing-md);
   }
   .lb-tab {
-    padding: 8px 20px;
-    font-size: 13px;
+    padding: 8px 22px !important;
+    font-size: 12px;
     font-family: var(--font-pixel);
-    border: 1px solid rgba(0, 255, 255, 0.3);
+    border: 1px solid rgba(0, 255, 255, 0.2) !important;
     border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.4);
-    color: #aaa;
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #777;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.25s;
     text-transform: uppercase;
+    letter-spacing: 1px !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    position: relative !important;
   }
+  .lb-tab::before { display: none !important; }
   .lb-tab:hover {
-    border-color: var(--color-secondary-neon);
-    color: #fff;
+    border-color: var(--color-secondary-neon) !important;
+    color: #ccc;
+    background: rgba(0, 255, 255, 0.05) !important;
+    animation: none !important;
+    transform: none !important;
   }
   .lb-tab.active {
-    border-color: var(--color-primary-neon);
-    background: rgba(0, 255, 255, 0.12);
+    border-color: var(--color-primary-neon) !important;
+    background: rgba(0, 255, 255, 0.12) !important;
     color: var(--color-primary-neon);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2), inset 0 0 8px rgba(0, 255, 255, 0.06) !important;
   }
+
+  /* ── Table wrapper ────────────────────────────────────────────────────── */
   .lb-table-wrap {
     overflow-y: auto;
     flex: 1;
     border: 1px solid rgba(0, 255, 255, 0.15);
     border-radius: var(--radius-md);
     background: rgba(0, 0, 0, 0.3);
+    min-height: 200px;
   }
+  .lb-table-wrap::-webkit-scrollbar { width: 6px; }
+  .lb-table-wrap::-webkit-scrollbar-track { background: transparent; }
+  .lb-table-wrap::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+
+  /* ── Table ────────────────────────────────────────────────────────────── */
   table {
     width: 100%;
     border-collapse: collapse;
@@ -87,38 +200,96 @@ const styles = createSheet(/* css */ `
   th {
     position: sticky;
     top: 0;
-    background: rgba(5, 1, 10, 0.95);
-    padding: 10px 12px;
+    background: rgba(5, 1, 10, 0.97);
+    padding: 10px 14px;
     text-align: left;
     font-family: var(--font-pixel);
-    font-size: 11px;
+    font-size: 10px;
     color: var(--color-primary-neon);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     border-bottom: 1px solid rgba(0, 255, 255, 0.3);
   }
   td {
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: #ccc;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: #bbb;
+    transition: background 0.15s;
   }
+  tr { transition: background 0.15s; }
   tr:hover td {
     background: rgba(0, 255, 255, 0.04);
   }
+
+  /* Row entrance animation */
+  tbody tr {
+    animation: rowFadeIn 0.3s ease backwards;
+  }
+  tbody tr:nth-child(1)  { animation-delay: 0.05s; }
+  tbody tr:nth-child(2)  { animation-delay: 0.08s; }
+  tbody tr:nth-child(3)  { animation-delay: 0.11s; }
+  tbody tr:nth-child(4)  { animation-delay: 0.14s; }
+  tbody tr:nth-child(5)  { animation-delay: 0.17s; }
+  tbody tr:nth-child(6)  { animation-delay: 0.20s; }
+  tbody tr:nth-child(7)  { animation-delay: 0.23s; }
+  tbody tr:nth-child(8)  { animation-delay: 0.26s; }
+  tbody tr:nth-child(9)  { animation-delay: 0.29s; }
+  tbody tr:nth-child(10) { animation-delay: 0.32s; }
+  @keyframes rowFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Rank cells ───────────────────────────────────────────────────────── */
   .rank-cell {
     font-family: var(--font-pixel);
     font-size: 12px;
     color: var(--color-primary-neon);
-    width: 50px;
+    width: 54px;
     text-align: center;
   }
-  .rank-1 { color: #ffd700; text-shadow: 0 0 8px #ffd700; }
-  .rank-2 { color: #c0c0c0; text-shadow: 0 0 6px #c0c0c0; }
-  .rank-3 { color: #cd7f32; text-shadow: 0 0 6px #cd7f32; }
+  .rank-1 {
+    color: #ffd700;
+    text-shadow: 0 0 8px #ffd700, 0 0 16px rgba(255, 215, 0, 0.4);
+    font-size: 13px;
+  }
+  .rank-2 {
+    color: #c0c0c0;
+    text-shadow: 0 0 6px #c0c0c0;
+  }
+  .rank-3 {
+    color: #cd7f32;
+    text-shadow: 0 0 6px #cd7f32;
+  }
+
+  /* Rank badge for top 3 */
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .rank-1 .rank-badge {
+    background: rgba(255, 215, 0, 0.15);
+    border: 1px solid rgba(255, 215, 0, 0.5);
+  }
+  .rank-2 .rank-badge {
+    background: rgba(192, 192, 192, 0.12);
+    border: 1px solid rgba(192, 192, 192, 0.4);
+  }
+  .rank-3 .rank-badge {
+    background: rgba(205, 127, 50, 0.12);
+    border: 1px solid rgba(205, 127, 50, 0.4);
+  }
+
   .name-cell {
     font-weight: 600;
-    color: #fff;
-    max-width: 150px;
+    color: #eee;
+    max-width: 160px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -135,59 +306,77 @@ const styles = createSheet(/* css */ `
   }
   .victory-badge {
     color: #ffd700;
-    font-size: 10px;
+    font-size: 11px;
     margin-left: 4px;
+    filter: drop-shadow(0 0 4px #ffd700);
   }
+
+  /* ── Stats icon ───────────────────────────────────────────────────────── */
   .stats-cell {
     position: relative;
     cursor: pointer;
     text-align: center;
   }
   .stats-icon {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    line-height: 20px;
-    text-align: center;
-    border: 1px solid rgba(0, 255, 255, 0.3);
-    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-radius: 6px;
     font-size: 10px;
+    font-weight: bold;
     color: var(--color-primary-neon);
     transition: all 0.2s;
+    background: rgba(0, 255, 255, 0.04);
   }
   .stats-icon:hover {
     border-color: var(--color-primary-neon);
     background: rgba(0, 255, 255, 0.15);
-    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    transform: scale(1.1);
   }
 
-  /* Tooltip */
+  /* ── Tooltip ──────────────────────────────────────────────────────────── */
   .lb-tooltip {
     display: none;
     position: fixed;
     z-index: 1000;
     width: 280px;
-    padding: 12px;
-    background: rgba(5, 1, 10, 0.96);
+    padding: 14px;
+    background: rgba(5, 1, 10, 0.97);
     border: 1px solid rgba(0, 255, 255, 0.5);
     border-radius: var(--radius-md);
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), 0 4px 16px rgba(0, 0, 0, 0.8);
+    box-shadow:
+      0 0 20px rgba(0, 255, 255, 0.2),
+      0 4px 20px rgba(0, 0, 0, 0.8),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
     font-size: 12px;
     color: #ccc;
     pointer-events: none;
+    backdrop-filter: blur(8px);
   }
-  .lb-tooltip.visible { display: block; }
+  .lb-tooltip.visible {
+    display: block;
+    animation: tooltipIn 0.15s ease-out;
+  }
+  @keyframes tooltipIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
   .lb-tooltip h4 {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-family: var(--font-pixel);
     font-size: 11px;
     color: var(--color-primary-neon);
     text-transform: uppercase;
+    letter-spacing: 1px;
   }
   .lb-tooltip .section {
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
   .lb-tooltip .section:last-child {
     margin-bottom: 0;
@@ -199,74 +388,115 @@ const styles = createSheet(/* css */ `
     justify-content: space-between;
     padding: 2px 0;
   }
-  .lb-tooltip .stat-label { color: #888; }
-  .lb-tooltip .stat-value { color: var(--color-primary-neon); }
+  .lb-tooltip .stat-label { color: #777; font-size: 11px; }
+  .lb-tooltip .stat-value { color: var(--color-primary-neon); font-family: var(--font-pixel); font-size: 11px; }
   .lb-tooltip .asc-tag {
     display: inline-block;
-    padding: 2px 6px;
+    padding: 3px 8px;
     margin: 2px;
     font-size: 10px;
     border: 1px solid rgba(255, 45, 236, 0.3);
-    border-radius: 3px;
+    border-radius: 4px;
     background: rgba(255, 45, 236, 0.1);
     color: var(--color-secondary-neon);
   }
   .lb-tooltip .skill-tag {
     display: inline-block;
-    padding: 2px 6px;
+    padding: 3px 8px;
     margin: 2px;
     font-size: 10px;
     border: 1px solid rgba(0, 255, 255, 0.2);
-    border-radius: 3px;
+    border-radius: 4px;
     background: rgba(0, 255, 255, 0.06);
     color: #aaa;
   }
 
+  /* ── Loading / Empty / Error states ───────────────────────────────────── */
   .lb-loading {
-    text-align: center;
-    padding: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: var(--spacing-xxl);
     color: #888;
+    font-size: 13px;
+  }
+  .lb-loading-spinner {
+    width: 32px;
+    height: 32px;
+    color: var(--color-primary-neon);
+    opacity: 0.7;
   }
   .lb-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: var(--spacing-xxl);
+    color: #555;
+    font-size: 14px;
+  }
+  .lb-empty-icon {
+    font-size: 28px;
+    opacity: 0.4;
+  }
+  .lb-error {
     text-align: center;
     padding: var(--spacing-xl);
-    color: #666;
-    font-style: italic;
+    color: var(--color-accent-red);
+    font-size: 13px;
   }
+
+  /* ── User rank banner ─────────────────────────────────────────────────── */
   .lb-user-rank {
     margin-top: var(--spacing-md);
     padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid rgba(0, 255, 255, 0.2);
     border-radius: var(--radius-sm);
-    background: rgba(0, 255, 255, 0.06);
+    background: rgba(0, 255, 255, 0.05);
     font-size: 13px;
     text-align: center;
-    color: #aaa;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
   .lb-user-rank strong {
     color: var(--color-primary-neon);
     font-family: var(--font-pixel);
+    text-shadow: 0 0 4px var(--color-primary-neon);
   }
-  .close-btn {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 32px;
-    height: 32px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.5);
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+
+  /* ── Responsive ───────────────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .lb-container {
+      width: 96vw;
+      padding: var(--spacing-md) var(--spacing-md);
+      border-radius: var(--radius-lg);
+    }
+    .lb-heading { font-size: 16px; letter-spacing: 2px; }
+    .lb-tab { padding: 6px 14px !important; font-size: 10px; }
+    th { padding: 8px 8px; font-size: 9px; }
+    td { padding: 8px 8px; font-size: 12px; }
+    .name-cell { max-width: 100px; }
+    .lb-tooltip { width: 240px; }
   }
-  .close-btn:hover {
-    border-color: var(--color-primary-neon);
+
+  /* ── neonFlicker keyframe ─────────────────────────────────────────────── */
+  @keyframes neonFlicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+      text-shadow:
+        0 0 6px var(--color-secondary-neon),
+        0 0 14px var(--color-secondary-neon),
+        0 0 28px var(--color-secondary-neon);
+    }
+    20%, 24%, 55% { text-shadow: none; }
   }
 `);
+
 
 class LeaderboardScreen extends BaseComponent {
     connectedCallback() {
@@ -275,16 +505,22 @@ class LeaderboardScreen extends BaseComponent {
 
         this._render(/* html */ `
             <div class="overlay">
-                <button class="close-btn" id="closeBtn">&times;</button>
+                <button class="close-btn" aria-label="Close">&times;</button>
                 <div class="lb-container">
-                    <h2>LEADERBOARD</h2>
+                    <div class="lb-header">
+                        <span class="lb-header-icon">${TROPHY_ICON}</span>
+                        <h2 class="lb-heading">LEADERBOARD</h2>
+                    </div>
                     <div class="lb-tabs" id="tabs">
                         <button class="lb-tab" data-diff="easy">Easy</button>
                         <button class="lb-tab active" data-diff="normal">Normal</button>
                         <button class="lb-tab" data-diff="hard">Hard</button>
                     </div>
                     <div class="lb-table-wrap" id="tableWrap">
-                        <div class="lb-loading" id="loading">Loading...</div>
+                        <div class="lb-loading">
+                            <span class="lb-loading-spinner">${SPINNER_SVG}</span>
+                            Loading…
+                        </div>
                     </div>
                     <div class="lb-user-rank" id="userRank" style="display: none;"></div>
                 </div>
@@ -294,20 +530,32 @@ class LeaderboardScreen extends BaseComponent {
 
         // Tab switching
         this._$('#tabs').addEventListener('click', (e) => {
-            const tab = e.target.closest('.lb-tab');
+            const tab = /** @type {HTMLElement} */ (e.target).closest('.lb-tab');
             if (!tab) return;
-            this.loadLeaderboard(tab.dataset.diff);
+            this.loadLeaderboard(/** @type {HTMLElement} */ (tab).dataset.diff);
         });
 
-        this._$('#closeBtn').addEventListener('click', () => {
+        // Close
+        this._$('.close-btn').addEventListener('click', () => {
             this.hide();
             this._emit('leaderboard-close');
         });
     }
 
+    /* ── Animated show / hide ───────────────────────────────────────────── */
     show() {
         super.show();
         this.loadLeaderboard(this._currentDifficulty);
+    }
+
+    hide() {
+        const root = this._$('.overlay');
+        if (!root || !root.classList.contains('show')) return;
+
+        root.classList.add('hide');
+        root.addEventListener('animationend', () => {
+            root.classList.remove('show', 'hide');
+        }, { once: true });
     }
 
     /** @param {string} [difficulty] */
@@ -315,20 +563,24 @@ class LeaderboardScreen extends BaseComponent {
         this._currentDifficulty = difficulty;
 
         // Update tabs
-        this._$$('.lb-tab').forEach(t =>
-            t.classList.toggle('active', t.dataset.diff === difficulty)
+        this._$$('.lb-tab').forEach(/** @param {Element} t */ t =>
+            t.classList.toggle('active', /** @type {HTMLElement} */ (t).dataset.diff === difficulty)
         );
 
         const wrap = this._$('#tableWrap');
-        wrap.innerHTML = '<div class="lb-loading">Loading...</div>';
+        wrap.innerHTML = `
+            <div class="lb-loading">
+                <span class="lb-loading-spinner">${SPINNER_SVG}</span>
+                Loading…
+            </div>`;
         this._$('#userRank').style.display = 'none';
 
         try {
             const data = await apiFetch(`/api/leaderboard?difficulty=${difficulty}&limit=50`);
             this._data = data;
             this._renderTable(data);
-        } catch (err) {
-            wrap.innerHTML = `<div class="lb-empty">Could not load leaderboard</div>`;
+        } catch {
+            wrap.innerHTML = `<div class="lb-error">Could not load leaderboard</div>`;
         }
     }
 
@@ -337,17 +589,26 @@ class LeaderboardScreen extends BaseComponent {
         const wrap = this._$('#tableWrap');
 
         if (!data.entries || data.entries.length === 0) {
-            wrap.innerHTML = '<div class="lb-empty">No entries yet. Be the first!</div>';
+            wrap.innerHTML = `
+                <div class="lb-empty">
+                    <span class="lb-empty-icon">🏆</span>
+                    No entries yet — be the first!
+                </div>`;
             return;
         }
 
         const rows = data.entries.map((entry, i) => {
             const rank = entry.rank || i + 1;
             const rankClass = rank <= 3 ? ` rank-${rank}` : '';
-            const victoryBadge = entry.is_victory ? '<span class="victory-badge">&#9733;</span>' : '';
+            const victoryBadge = entry.is_victory ? '<span class="victory-badge">★</span>' : '';
+
+            // Top 3 get a badge, rest get plain number
+            const rankContent = rank <= 3
+                ? `<span class="rank-badge">${rank}</span>`
+                : `#${rank}`;
 
             return `<tr>
-                <td class="rank-cell${rankClass}">#${rank}</td>
+                <td class="rank-cell${rankClass}">${rankContent}</td>
                 <td class="name-cell">${this._esc(entry.display_name)}</td>
                 <td class="score-cell">${entry.score.toLocaleString()}</td>
                 <td class="wave-cell">W${entry.wave}${victoryBadge}</td>
@@ -369,17 +630,17 @@ class LeaderboardScreen extends BaseComponent {
         // Hover tooltips
         const tooltip = this._$('#tooltip');
         wrap.addEventListener('mouseenter', (e) => {
-            const cell = e.target.closest('.stats-cell');
+            const cell = /** @type {HTMLElement} */ (e.target).closest('.stats-cell');
             if (!cell) return;
-            const idx = parseInt(cell.dataset.idx);
+            const idx = parseInt(/** @type {HTMLElement} */ (cell).dataset.idx);
             const entry = data.entries[idx];
             if (!entry) return;
             this._showTooltip(tooltip, entry, cell);
         }, true);
 
         wrap.addEventListener('mouseleave', (e) => {
-            const cell = e.target.closest('.stats-cell');
-            if (cell || e.target.closest('.stats-icon')) {
+            const cell = /** @type {HTMLElement} */ (e.target).closest('.stats-cell');
+            if (cell || /** @type {HTMLElement} */ (e.target).closest('.stats-icon')) {
                 tooltip.classList.remove('visible');
             }
         }, true);
@@ -388,7 +649,7 @@ class LeaderboardScreen extends BaseComponent {
         const rankEl = this._$('#userRank');
         if (data.userRank != null) {
             rankEl.innerHTML = `Your best rank: <strong>#${data.userRank}</strong> on ${this._currentDifficulty}`;
-            rankEl.style.display = 'block';
+            rankEl.style.display = 'flex';
         }
     }
 

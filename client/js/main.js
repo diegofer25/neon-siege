@@ -484,7 +484,14 @@ function setupInputHandlers() {
         }
 
         if (e.code === 'Escape') {
-            // Close login screen first if visible
+            // Close leaderboard if visible
+            const lbEl = /** @type {any} */ (document.querySelector('leaderboard-screen'));
+            if (lbEl?.isVisible()) {
+                lbEl.hide();
+                lbEl.dispatchEvent(new CustomEvent('leaderboard-close', { bubbles: true, composed: true }));
+                return;
+            }
+            // Close login screen if visible
             const loginEl = /** @type {any} */ (document.querySelector('login-screen'));
             if (loginEl?.isVisible()) {
                 loginEl.hide();
