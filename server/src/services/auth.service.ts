@@ -74,10 +74,24 @@ export async function loginWithGoogle(idToken: string) {
   return UserModel.toPublicUser(user);
 }
 
+export async function resumeAnonymous(userId: string) {
+  const user = await UserModel.findById(userId);
+  if (!user || user.auth_provider !== 'anonymous') {
+    throw new AuthError('Guest session not found', 404);
+  }
+  return UserModel.toPublicUser(user);
+}
+
 export async function createAnonymous(displayName: string) {
-  const nameTaken = await UserModel.findByDisplayName(displayName);
-  if (nameTaken) {
-    throw new AuthError('Player name already taken', 409);
+  const existing = await UserModel.findByDisplayName(displayName);
+
+  if (existing) {
+    // Allow re-login for anonymous accounts: the same guest name can be reclaimed
+    // from any browser. Only block if the name belongs to a registered account.
+    if (existing.auth_provider !== 'anonymous') {
+      throw new AuthError('Player name already taken', 409);
+    }
+    return UserModel.toPublicUser(existing);
   }
 
   const user = await UserModel.createAnonymousUser(displayName);

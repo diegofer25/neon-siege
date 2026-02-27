@@ -83,12 +83,12 @@ function _setAuthData(data) {
 
 /**
  * Try restoring session:
- * 1. First try the refresh token cookie (works for email/google accounts)
- * 2. Fall back to localStorage (works for anonymous users across sessions)
+ * 1. First try the refresh token cookie (works for all account types)
+ * 2. For anonymous users: fall back to resume by stored userId (device token)
  * @returns {Promise<boolean>}
  */
 export async function restoreSession() {
-  // Try refresh token first (httpOnly cookie)
+  // Try refresh token first (httpOnly cookie, works while cookie is alive)
   const data = await tryRestoreSession();
   if (data) {
     _currentUser = data.user;
@@ -97,14 +97,21 @@ export async function restoreSession() {
     return true;
   }
 
-  // Fall back to stored user info (the user is still "known" on this device,
-  // but their access token expired — show them as logged in so the start
-  // screen shows their name, and the next API call will re-auth via refresh)
+  // For anonymous users: if the refresh cookie expired/cleared, resume the
+  // guest session using the stored userId as a device-bound token.
   const stored = _loadFromStorage();
-  if (stored) {
-    _currentUser = stored;
-    _notifyListeners();
-    return true;
+  if (stored?.auth_provider === 'anonymous' && stored?.id) {
+    try {
+      const resumed = await apiFetch('/api/auth/anonymous/resume', {
+        method: 'POST',
+        body: JSON.stringify({ userId: stored.id }),
+      });
+      _setAuthData(resumed);
+      return true;
+    } catch {
+      // Guest session no longer exists on server — clear stale storage
+      _saveToStorage(null);
+    }
   }
 
   return false;
