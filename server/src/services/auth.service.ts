@@ -1,6 +1,8 @@
+import { createHash, randomBytes } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { env } from '../config/env';
 import * as UserModel from '../models/user.model';
+import { sendPasswordResetEmail } from './email.service';
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
@@ -95,6 +97,60 @@ export async function createAnonymous(displayName: string) {
   }
 
   const user = await UserModel.createAnonymousUser(displayName);
+  return UserModel.toPublicUser(user);
+}
+
+// ─── Password reset ─────────────────────────────────────────────────────────────────
+
+function _hashToken(raw: string): string {
+  return createHash('sha256').update(raw).digest('hex');
+}
+
+/**
+ * Send a password-reset email.
+ * Always resolves (never reveals whether the email exists) to prevent enumeration.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const user = await UserModel.findByEmail(email);
+  // Silently no-op for unknown / non-email accounts
+  if (!user || user.auth_provider !== 'email') return;
+
+  // Invalidate any pending tokens for this user (one active token at a time)
+  await UserModel.deleteUnusedPasswordResetTokens(user.id);
+
+  const rawToken = randomBytes(32).toString('hex');
+  const tokenHash = _hashToken(rawToken);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await UserModel.createPasswordResetToken(user.id, tokenHash, expiresAt);
+
+  const resetUrl = `${env.APP_BASE_URL}/?reset_token=${rawToken}`;
+  await sendPasswordResetEmail(email, resetUrl);
+}
+
+/**
+ * Validate a raw reset token and set a new password.
+ * Returns the user so the caller can issue a new session (auto-login).
+ */
+export async function resetPassword(
+  rawToken: string,
+  newPassword: string
+): Promise<UserModel.PublicUser> {
+  const tokenHash = _hashToken(rawToken);
+  const record = await UserModel.findPasswordResetToken(tokenHash);
+
+  if (!record)           throw new AuthError('Invalid or expired reset token', 400);
+  if (record.used_at)    throw new AuthError('Reset token already used', 400);
+  if (new Date(record.expires_at) < new Date()) throw new AuthError('Reset token has expired', 400);
+
+  // Mark used first to prevent replay on concurrent requests
+  await UserModel.consumePasswordResetToken(record.id);
+
+  const newHash = await hashPassword(newPassword);
+  await UserModel.updatePasswordHash(record.user_id, newHash);
+
+  const user = await UserModel.findById(record.user_id);
+  if (!user) throw new AuthError('User not found', 404);
   return UserModel.toPublicUser(user);
 }
 

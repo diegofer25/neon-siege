@@ -1,8 +1,32 @@
 import { Elysia, t } from 'elysia';
 import { authPlugin } from '../plugins/auth.plugin';
 import { requireAuth } from '../middleware/authenticate';
+import { createRateLimiter, getClientIp } from '../middleware/rateLimit';
 import * as authService from '../services/auth.service';
 import * as UserModel from '../models/user.model';
+
+// ─── Abuse-prevention rate limiters for unauthenticated password-reset routes ─
+
+/** Max 5 forgot-password requests per IP per 15 minutes */
+const forgotIpLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 5,
+  keyFn: getClientIp,
+});
+
+/** Max 3 emails to the same address per hour (prevents inbox bombing) */
+const forgotEmailLimiter = createRateLimiter({
+  windowMs: 60 * 60_000,
+  max: 3,
+  keyFn: (ctx: any) => (ctx.body?.email as string | undefined)?.toLowerCase() ?? null,
+});
+
+/** Max 10 reset-password attempts per IP per hour (brute-force guard) */
+const resetPasswordLimiter = createRateLimiter({
+  windowMs: 60 * 60_000,
+  max: 10,
+  keyFn: getClientIp,
+});
 
 export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .use(authPlugin)
@@ -221,4 +245,61 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .post('/logout', ({ cookie: { refreshToken } }) => {
     refreshToken.remove();
     return { success: true };
-  });
+  })
+
+  // ─── Password reset ───────────────────────────────────────────────────────
+
+  .post(
+    '/forgot-password',
+    async ({ body }) => {
+      // Always return { ok: true } regardless of whether the email exists
+      // to prevent user-enumeration attacks.
+      try {
+        await authService.requestPasswordReset(body.email);
+      } catch {
+        // Swallow errors — do not leak info
+      }
+      return { ok: true };
+    },
+    {
+      body: t.Object({ email: t.String({ format: 'email' }) }),
+      beforeHandle: [forgotIpLimiter, forgotEmailLimiter],
+    }
+  )
+
+  .post(
+    '/reset-password',
+    async ({ body, accessJwt, refreshJwt, cookie: { refreshToken }, set }) => {
+      try {
+        const user = await authService.resetPassword(body.token, body.newPassword);
+
+        // Auto-login: issue a fresh session after password reset
+        const accessToken = await accessJwt.sign({ sub: user.id, displayName: user.display_name });
+        const refresh = await refreshJwt.sign({ sub: user.id });
+
+        refreshToken.set({
+          value: refresh,
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60,
+          path: '/',
+        });
+
+        return { accessToken, user };
+      } catch (err) {
+        if (err instanceof authService.AuthError) {
+          set.status = err.statusCode;
+          return { error: err.message };
+        }
+        throw err;
+      }
+    },
+    {
+      body: t.Object({
+        token: t.String(),
+        newPassword: t.String({ minLength: 6 }),
+      }),
+      beforeHandle: [resetPasswordLimiter],
+    }
+  );

@@ -68,3 +68,14 @@ export function createRateLimiter(opts: RateLimitOptions) {
     entry.timestamps.push(now);
   };
 }
+
+/**
+ * Extract the real client IP from a request context.
+ * Reads x-forwarded-for first (set by reverse proxies / CDNs), falls back to
+ * the raw socket address provided by Bun/Elysia.
+ */
+export function getClientIp(ctx: any): string | null {
+  const xff = (ctx.request as Request | undefined)?.headers?.get?.('x-forwarded-for');
+  if (xff) return xff.split(',')[0].trim();
+  return (ctx.server?.requestIP?.(ctx.request as Request))?.address ?? null;
+}

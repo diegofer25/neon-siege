@@ -21,6 +21,14 @@ export const env = {
   STRIPE_PRICE_ID: Bun.env.STRIPE_PRICE_ID || '',
   /** Secret used to HMAC-sign one-time continue tokens */
   CONTINUE_TOKEN_SECRET: Bun.env.CONTINUE_TOKEN_SECRET || 'dev-continue-token-secret',
+
+  // ─── Email / Resend ───────────────────────────────────
+  /** Resend API key for transactional email (password resets). Leave empty in dev to use console fallback. */
+  RESEND_API_KEY: Bun.env.RESEND_API_KEY || '',
+  /** Public base URL of the client app, used to build reset links in emails. */
+  APP_BASE_URL: Bun.env.APP_BASE_URL || 'http://localhost:8080',
+  /** From address for outgoing emails (Resend verified domain required in production). */
+  EMAIL_FROM: Bun.env.EMAIL_FROM || 'Neon Siege <noreply@neon-siege.com>',
 } as const;
 
 // ─── Production startup validation ─────────────────────
@@ -31,6 +39,7 @@ if (env.NODE_ENV === 'production') {
     'SCORE_HMAC_SECRET',
     'SAVE_HMAC_SECRET',
     'CONTINUE_TOKEN_SECRET',
+    'RESEND_API_KEY',
   ];
   for (const key of required) {
     const val = env[key];

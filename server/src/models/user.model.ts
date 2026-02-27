@@ -104,6 +104,58 @@ export async function upgradeAnonymousToGoogle(
   );
 }
 
+export async function updatePasswordHash(userId: string, newHash: string): Promise<void> {
+  await query(
+    'UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1',
+    [userId, newHash]
+  );
+}
+
+// ─── Password reset tokens ────────────────────────────────────────────────────────
+
+export interface PasswordResetToken {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: Date;
+  used_at: Date | null;
+  created_at: Date;
+}
+
+export async function createPasswordResetToken(
+  userId: string,
+  tokenHash: string,
+  expiresAt: Date
+): Promise<PasswordResetToken> {
+  const result = await queryOne<PasswordResetToken>(
+    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [userId, tokenHash, expiresAt]
+  );
+  return result!;
+}
+
+export async function findPasswordResetToken(tokenHash: string): Promise<PasswordResetToken | null> {
+  return queryOne<PasswordResetToken>(
+    'SELECT * FROM password_reset_tokens WHERE token_hash = $1',
+    [tokenHash]
+  );
+}
+
+export async function consumePasswordResetToken(id: string): Promise<void> {
+  await query(
+    'UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1',
+    [id]
+  );
+}
+
+export async function deleteUnusedPasswordResetTokens(userId: string): Promise<void> {
+  await query(
+    'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL',
+    [userId]
+  );
+}
+
 export async function updateLocation(
   userId: string,
   location: { country: string; countryCode: string; region: string; city: string }
