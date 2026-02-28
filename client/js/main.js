@@ -302,6 +302,7 @@ async function init() {
     // Auth & leaderboard screens
     const loginScreen = document.querySelector('login-screen');
     const leaderboardScreen = document.querySelector('leaderboard-screen');
+    const achievementsScreen = /** @type {any} */ (document.querySelector('achievements-screen'));
 
     // Open reset-password flow directly when arriving from email link
     const resetTokenFromUrl = urlParams.get('reset_token') || urlParams.get('resetToken');
@@ -318,7 +319,9 @@ async function init() {
 
     // Show leaderboard from any screen
     const showLeaderboard = () => leaderboardScreen.show();
+    const showAchievements = () => achievementsScreen.show();
     startScreen.addEventListener('show-leaderboard', showLeaderboard);
+    startScreen.addEventListener('show-achievements', showAchievements);
     gameOverScreen.addEventListener('show-leaderboard', showLeaderboard);
     victoryScreen.addEventListener('show-leaderboard', showLeaderboard);
 
@@ -581,6 +584,13 @@ function setupInputHandlers() {
         }
 
         if (e.code === 'Escape') {
+            // Close achievements if visible
+            const achievementsEl = /** @type {any} */ (document.querySelector('achievements-screen'));
+            if (achievementsEl?.isVisible()) {
+                achievementsEl.hide();
+                achievementsEl.dispatchEvent(new CustomEvent('achievements-close', { bubbles: true, composed: true }));
+                return;
+            }
             // Close leaderboard if visible
             const lbEl = /** @type {any} */ (document.querySelector('leaderboard-screen'));
             if (lbEl?.isVisible()) {

@@ -7,6 +7,7 @@ import { leaderboardRoutes } from './routes/leaderboard.routes';
 import { saveRoutes } from './routes/save.routes';
 import { creditRoutes } from './routes/credit.routes';
 import { progressionRoutes } from './routes/progression.routes';
+import { achievementsRoutes } from './routes/achievements.routes';
 import { wsRoutes } from './ws';
 
 const app = new Elysia()
@@ -17,6 +18,7 @@ const app = new Elysia()
   .use(saveRoutes)
   .use(creditRoutes)
   .use(progressionRoutes)
+  .use(achievementsRoutes)
   .use(wsRoutes)
   .onError(({ code, error, set }) => {
     if (code === 'VALIDATION') {

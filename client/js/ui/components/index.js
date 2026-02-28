@@ -24,6 +24,7 @@ import './screens/StartScreen.js';
 import './screens/SettingsModal.js';
 import './screens/LoginScreen.js';
 import './screens/LeaderboardScreen.js';
+import './screens/AchievementsScreen.js';
 
 // Panel overlays
 import './panels/LevelUpPanel.js';

@@ -265,6 +265,11 @@ const styles = createSheet(/* css */ `
     padding-top: var(--spacing-xs);
     border-top: 1px solid rgba(0, 255, 255, 0.18);
   }
+  .menu-footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
   .menu-footer neon-button {
     margin: 0;
     width: auto;
@@ -307,6 +312,12 @@ const styles = createSheet(/* css */ `
     .menu-footer {
       flex-direction: column;
       align-items: stretch;
+    }
+    .menu-footer-left {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: var(--spacing-sm);
     }
     .menu-footer neon-button {
       width: 100%;
@@ -420,7 +431,10 @@ class StartScreen extends BaseComponent {
               </div>
             </div>
             <div class="menu-footer">
-              <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
+              <div class="menu-footer-left">
+                <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
+                <neon-button id="achievementsBtn">ACHIEVEMENTS</neon-button>
+              </div>
               <span id="versionBadge" class="version-badge">v${APP_VERSION}</span>
             </div>
                 </div>
@@ -431,6 +445,7 @@ class StartScreen extends BaseComponent {
         this._$('#continueBtn').addEventListener('click', () => this._emit('continue-game'));
         this._$('#buyBtn').addEventListener('click', () => this._emit('buy-credits'));
         this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
+        this._$('#achievementsBtn').addEventListener('click', () => this._emit('show-achievements'));
         this._$('#loginBtn').addEventListener('click', () => this._emit('show-login'));
         this._setupDifficultyControls();
         this._syncVersionBadge();

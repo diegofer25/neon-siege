@@ -3,8 +3,10 @@ import { vfxHelper } from '../managers/VFXHelper.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 import { MathUtils } from '../utils/MathUtils.js';
 import { ActionTypes } from '../state/index.js';
+import { isAuthenticated } from '../services/AuthService.js';
+import { unlockAchievementOnServer } from '../services/AchievementApiService.js';
 
-const ACHIEVEMENTS = [
+export const ACHIEVEMENTS = [
     // Kill-based
     { id: 'first_blood',     name: 'First Blood',       desc: 'Kill your first enemy',             icon: '🗡️', check: 'killsThisRun', target: 1 },
     { id: 'centurion',       name: 'Centurion',         desc: 'Kill 100 enemies in one run',       icon: '💯', check: 'killsThisRun', target: 100 },
@@ -18,6 +20,7 @@ const ACHIEVEMENTS = [
     { id: 'wave_10',         name: 'Survivor',          desc: 'Reach wave 10',                     icon: '🌊', check: 'wave', target: 10 },
     { id: 'wave_25',         name: 'Veteran',           desc: 'Reach wave 25',                     icon: '⭐', check: 'wave', target: 25 },
     { id: 'wave_50',         name: 'Legend',             desc: 'Reach wave 50',                     icon: '🏆', check: 'wave', target: 50 },
+    { id: 'wave_75',         name: 'Mythic',            desc: 'Reach wave 75',                     icon: '💎', check: 'wave', target: 75 },
     { id: 'wave_100',        name: 'Immortal',          desc: 'Reach wave 100',                    icon: '👑', check: 'wave', target: 100 },
 
     // Progression-based
@@ -159,6 +162,12 @@ export class AchievementSystem {
             type: ActionTypes.ACHIEVEMENT_UNLOCK,
             payload: { achievementId: achievement.id, name: achievement.name },
         });
+
+        if (isAuthenticated()) {
+            unlockAchievementOnServer(achievement.id).catch((err) => {
+                console.warn('[AchievementSystem] Failed to persist achievement unlock:', err?.message || err);
+            });
+        }
 
         if (this._toastActive) {
             this._toastQueue.push(achievement);
