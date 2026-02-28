@@ -356,10 +356,15 @@ class StartScreen extends BaseComponent {
         const btn = this._$('#continueBtn');
         if (!btn) return;
         if (loading) {
+        btn.dataset.prevLabel = btn.textContent || 'CONTINUE';
             btn.setAttribute('disabled', '');
             btn.textContent = 'CONTINUING...';
         } else {
             btn.removeAttribute('disabled');
+        if (btn.textContent === 'CONTINUING...') {
+          btn.textContent = btn.dataset.prevLabel || 'CONTINUE';
+        }
+        delete btn.dataset.prevLabel;
         }
     }
 

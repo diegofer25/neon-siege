@@ -133,6 +133,8 @@ class GameOverScreen extends BaseComponent {
         if (hasSave && credits.total > 0) {
             // Show continue button with credit count
             continueBtn.style.display = 'inline-block';
+            continueBtn.removeAttribute('disabled');
+            delete continueBtn.dataset.prevLabel;
             continueBtn.textContent = `CONTINUE (${credits.total} left)`;
             badge.textContent = credits.freeRemaining > 0
                 ? `${credits.freeRemaining} free + ${credits.purchased} purchased`
@@ -161,10 +163,15 @@ class GameOverScreen extends BaseComponent {
         const btn = this._$('#continueBtn');
         if (!btn) return;
         if (loading) {
+            btn.dataset.prevLabel = btn.textContent || 'CONTINUE';
             btn.setAttribute('disabled', '');
             btn.textContent = 'CONTINUING...';
         } else {
             btn.removeAttribute('disabled');
+            if (btn.textContent === 'CONTINUING...') {
+                btn.textContent = btn.dataset.prevLabel || 'CONTINUE';
+            }
+            delete btn.dataset.prevLabel;
         }
     }
 
