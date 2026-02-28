@@ -263,9 +263,9 @@ async function init() {
     const settingsModalEl = document.querySelector('settings-modal');
     const gameHudEl = document.querySelector('game-hud');
 
-    // Start game — requires a registered signed-in account
+    // Start game — requires authentication (guest or registered)
     startScreen.addEventListener('start-game', () => {
-        if (!authService.isRegisteredUser()) {
+        if (!authService.isAuthenticated()) {
             loginScreen.setUser(authService.getCurrentUser());
             loginScreen.show();
             return;
