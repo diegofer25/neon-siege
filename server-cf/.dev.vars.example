@@ -1,0 +1,18 @@
+# Local development secrets — mirrors production secrets via `wrangler secret put`
+# Copy this file to .dev.vars and fill in values.
+
+NODE_ENV=development
+JWT_SECRET=dev-jwt-secret
+JWT_REFRESH_SECRET=dev-jwt-refresh-secret
+SCORE_HMAC_SECRET=dev-hmac-secret
+SAVE_HMAC_SECRET=dev-save-hmac-secret
+CONTINUE_TOKEN_SECRET=dev-continue-token-secret
+GOOGLE_CLIENT_ID=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_ID=
+RESEND_API_KEY=
+APP_BASE_URL=http://localhost:8080
+EMAIL_FROM=Neon Siege <noreply@diegolamarao.com>
+GEOIP_ENABLED=true
+ALLOWED_ORIGINS=

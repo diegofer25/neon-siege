@@ -1,0 +1,41 @@
+name = "neon-siege-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── D1 Database ────────────────────────────────────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "neon-siege-db"
+database_id = "TO_BE_CREATED"            # run: wrangler d1 create neon-siege-db
+migrations_dir = "migrations"
+
+# ─── Environment: Preview ───────────────────────────────────────────────────
+[env.preview]
+name = "neon-siege-api-preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "neon-siege-db-preview"
+database_id = "TO_BE_CREATED"            # run: wrangler d1 create neon-siege-db-preview
+migrations_dir = "migrations"
+
+# ─── Secrets (set via `wrangler secret put <KEY>`) ──────────────────────────
+# JWT_SECRET
+# JWT_REFRESH_SECRET
+# SCORE_HMAC_SECRET
+# SAVE_HMAC_SECRET
+# CONTINUE_TOKEN_SECRET
+# GOOGLE_CLIENT_ID
+# STRIPE_SECRET_KEY
+# STRIPE_WEBHOOK_SECRET
+# STRIPE_PRICE_ID
+# RESEND_API_KEY
+
+# ─── Vars (non-secret config) ──────────────────────────────────────────────
+[vars]
+NODE_ENV = "production"
+APP_BASE_URL = "https://neon-siege.com"
+EMAIL_FROM = "Neon Siege <noreply@diegolamarao.com>"
+GEOIP_ENABLED = "true"
+ALLOWED_ORIGINS = ""
