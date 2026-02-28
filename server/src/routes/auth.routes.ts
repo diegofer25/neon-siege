@@ -18,7 +18,10 @@ const forgotIpLimiter = createRateLimiter({
 const forgotEmailLimiter = createRateLimiter({
   windowMs: 60 * 60_000,
   max: 3,
-  keyFn: (ctx: any) => (ctx.body?.email as string | undefined)?.toLowerCase() ?? null,
+  keyFn: (ctx: any) => {
+    const email = ctx.body?.email as string | undefined;
+    return email ? email.trim().toLowerCase() : null;
+  },
 });
 
 /** Max 10 reset-password attempts per IP per hour (brute-force guard) */
@@ -28,14 +31,62 @@ const resetPasswordLimiter = createRateLimiter({
   keyFn: getClientIp,
 });
 
+/** Max 5 registration-code sends per IP per 15 minutes */
+const registerStartIpLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 5,
+  keyFn: getClientIp,
+});
+
+/** Max 5 registration-code sends to the same email per hour */
+const registerStartEmailLimiter = createRateLimiter({
+  windowMs: 60 * 60_000,
+  max: 5,
+  keyFn: (ctx: any) => {
+    const email = ctx.body?.email as string | undefined;
+    return email ? email.trim().toLowerCase() : null;
+  },
+});
+
+/** Max 20 code-verification attempts per IP per 15 minutes */
+const registerVerifyLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 20,
+  keyFn: getClientIp,
+});
+
 export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .use(authPlugin)
 
   .post(
     '/register',
+    async ({ body, set }) => {
+      try {
+        await authService.startEmailRegistration(body.email, body.password, body.displayName);
+        return { ok: true };
+      } catch (err) {
+        if (err instanceof authService.AuthError) {
+          set.status = err.statusCode;
+          return { error: err.message };
+        }
+        throw err;
+      }
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: 'email' }),
+        password: t.String({ minLength: 6 }),
+        displayName: t.String({ minLength: 1, maxLength: 50 }),
+      }),
+      beforeHandle: [registerStartIpLimiter, registerStartEmailLimiter],
+    }
+  )
+
+  .post(
+    '/register/verify',
     async ({ body, accessJwt, refreshJwt, cookie: { refreshToken }, set }) => {
       try {
-        const user = await authService.registerWithEmail(body.email, body.password, body.displayName);
+        const user = await authService.verifyEmailRegistration(body.email, body.code);
 
         const accessToken = await accessJwt.sign({ sub: user.id, displayName: user.display_name });
         const refresh = await refreshJwt.sign({ sub: user.id });
@@ -61,9 +112,9 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     {
       body: t.Object({
         email: t.String({ format: 'email' }),
-        password: t.String({ minLength: 6 }),
-        displayName: t.String({ minLength: 1, maxLength: 50 }),
+        code: t.String({ minLength: 6, maxLength: 6 }),
       }),
+      beforeHandle: [registerVerifyLimiter],
     }
   )
 

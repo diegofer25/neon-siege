@@ -123,6 +123,7 @@ declare global {
     interface LoginScreenElement extends HTMLElement {
         show(): void;
         showRegistration(displayName?: string): void;
+        showEmailVerification(email: string): void;
         hide(): void;
         isVisible(): boolean;
         setUser(user: { id: string; display_name: string; auth_provider: string } | null): void;

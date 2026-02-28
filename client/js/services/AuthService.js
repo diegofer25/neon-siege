@@ -152,15 +152,29 @@ export async function restoreSession() {
 }
 
 /**
- * Register with email + password.
+ * Start registration with email + password.
+ * Sends a verification code to the user's email.
  * @param {string} email
  * @param {string} password
  * @param {string} displayName
  */
 export async function registerEmail(email, password, displayName) {
-  const data = await apiFetch('/api/auth/register', {
+  return apiFetch('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify({ email, password, displayName }),
+  });
+}
+
+/**
+ * Verify pending email registration using a 6-digit code.
+ * On success the server issues a session and the user is auto-logged-in.
+ * @param {string} email
+ * @param {string} code
+ */
+export async function verifyEmailRegistration(email, code) {
+  const data = await apiFetch('/api/auth/register/verify', {
+    method: 'POST',
+    body: JSON.stringify({ email, code }),
   });
   _setAuthData(data);
   return _currentUser;

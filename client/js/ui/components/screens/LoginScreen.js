@@ -15,6 +15,7 @@
  * Events (composed, bubbling):
  *   'auth-login-email'       detail: { email, password }
  *   'auth-register-email'    detail: { email, password, displayName }
+ *   'auth-verify-registration' detail: { email, code }
  *   'auth-login-anonymous'   detail: { displayName }
  *   'auth-logout'
  *   'login-close'
@@ -577,6 +578,9 @@ class LoginScreen extends BaseComponent {
     /** @type {string} Current visible screen id */
     _currentScreen = 'quick-play';
 
+  /** @type {string|null} Pending registration email awaiting code verification */
+  _pendingRegistrationEmail = null;
+
     connectedCallback() {
         this._render(/* html */ `
             <div class="overlay">
@@ -681,7 +685,20 @@ class LoginScreen extends BaseComponent {
                                 </div>
                             </div>
 
-                            <!-- Screen 4: Forgot Password -->
+                              <!-- Screen 4: Verify Registration Code -->
+                              <div class="auth-screen" id="screen-verify-email">
+                                <button class="back-btn" data-goto="register">${ARROW_LEFT} Back</button>
+                                <h2 class="auth-heading">VERIFY EMAIL</h2>
+                                <p class="auth-subtitle">Enter the 6-digit code we sent to <span id="verifyEmailTarget"></span></p>
+                                <form class="auth-form" id="verifyForm">
+                                  <div class="input-wrapper">
+                                    <input type="text" name="code" placeholder="6-digit code" required minlength="6" maxlength="6" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}">
+                                  </div>
+                                  <neon-button type="submit" variant="primary" id="verifySubmit">VERIFY & CREATE ACCOUNT</neon-button>
+                                </form>
+                              </div>
+
+                              <!-- Screen 5: Forgot Password -->
                             <div class="auth-screen" id="screen-forgot-password">
                                 <button class="back-btn" data-goto="login">${ARROW_LEFT} Back</button>
                                 <h2 class="auth-heading">FORGOT PASSWORD</h2>
@@ -698,7 +715,7 @@ class LoginScreen extends BaseComponent {
                                 </form>
                             </div>
 
-                            <!-- Screen 5: Reset Password (opened via ?reset_token= URL param) -->
+                            <!-- Screen 6: Reset Password (opened via ?reset_token= URL param) -->
                             <div class="auth-screen" id="screen-reset-password">
                                 <h2 class="auth-heading">NEW PASSWORD</h2>
                                 <p class="auth-subtitle">Choose a strong password for your account.</p>
@@ -770,6 +787,20 @@ class LoginScreen extends BaseComponent {
             });
         });
 
+            this._$('#verifySubmit').addEventListener('click', () => {
+              const form = /** @type {HTMLFormElement} */ (this._$('#verifyForm'));
+              if (!form.checkValidity()) { form.reportValidity(); return; }
+              if (!this._pendingRegistrationEmail) {
+                this.setError('No pending registration found. Please create your account again.');
+                return;
+              }
+              const fd = new FormData(form);
+              this._emit('auth-verify-registration', {
+                email: this._pendingRegistrationEmail,
+                code: String(fd.get('code') || '').trim(),
+              });
+            });
+
         this._$('#forgotSubmit').addEventListener('click', () => {
             const form = /** @type {HTMLFormElement} */ (this._$('#forgotForm'));
             if (!form.checkValidity()) { form.reportValidity(); return; }
@@ -804,6 +835,9 @@ class LoginScreen extends BaseComponent {
             inp.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') this._$('#registerSubmit').click();
             });
+        });
+        this._$('#verifyForm input').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') this._$('#verifySubmit').click();
         });
         this._$('#forgotForm input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this._$('#forgotSubmit').click();
@@ -847,7 +881,7 @@ class LoginScreen extends BaseComponent {
         this._switching = true;
 
         // Determine slide direction
-        const screens = ['quick-play', 'login', 'forgot-password', 'register', 'reset-password'];
+        const screens = ['quick-play', 'login', 'forgot-password', 'register', 'verify-email', 'reset-password'];
         const currentIdx = screens.indexOf(this._currentScreen);
         const nextIdx = screens.indexOf(screenId);
         const slideIn = nextIdx > currentIdx ? 'slide-right' : 'slide-left';
@@ -905,6 +939,23 @@ class LoginScreen extends BaseComponent {
       });
     }
 
+    /**
+     * Open the verification step for an in-progress email registration.
+     * @param {string} email
+     */
+    showEmailVerification(email) {
+        const normalizedEmail = String(email || '').trim();
+        this._pendingRegistrationEmail = normalizedEmail || null;
+
+        const target = this._$('#verifyEmailTarget');
+        if (target) target.textContent = normalizedEmail;
+
+        const codeInput = /** @type {HTMLInputElement|null} */ (this._$('#verifyForm input[name="code"]'));
+        if (codeInput) codeInput.value = '';
+
+        this._switchScreen('verify-email');
+    }
+
     hide() {
         const root = this._$('.overlay');
         if (!root || !root.classList.contains('show')) return;
@@ -921,7 +972,14 @@ class LoginScreen extends BaseComponent {
         });
         this._$('#screen-quick-play')?.classList.add('active');
         this._currentScreen = 'quick-play';
+      this._pendingRegistrationEmail = null;
         this.setError(null);
+
+      const verifyTarget = this._$('#verifyEmailTarget');
+      if (verifyTarget) verifyTarget.textContent = '';
+      const verifyInput = /** @type {HTMLInputElement|null} */ (this._$('#verifyForm input[name="code"]'));
+      if (verifyInput) verifyInput.value = '';
+
         // Reset forgot-password form state
         const forgotSuccess = this._$('#forgotSuccess');
         const forgotForm = this._$('#forgotForm');
@@ -1004,6 +1062,7 @@ class LoginScreen extends BaseComponent {
             'quick-play': '#anonSubmit',
             'login': '#loginSubmit',
             'register': '#registerSubmit',
+            'verify-email': '#verifySubmit',
             'forgot-password': '#forgotSubmit',
             'reset-password': '#resetSubmit',
         };

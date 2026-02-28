@@ -393,6 +393,19 @@ async function init() {
             loginScreen.setLoading(true);
             await authService.registerEmail(email, password, displayName);
             loginScreen.setLoading(false);
+            /** @type {any} */ (loginScreen).showEmailVerification(email);
+        } catch (err) {
+            loginScreen.setError(err.message);
+        }
+    });
+
+    loginScreen.addEventListener('auth-verify-registration', async (e) => {
+        const { email, code } = /** @type {CustomEvent} */ (e).detail;
+        try {
+            loginScreen.setError(null);
+            loginScreen.setLoading(true);
+            await authService.verifyEmailRegistration(email, code);
+            loginScreen.setLoading(false);
             loginScreen.setUser(authService.getCurrentUser());
             _onAuthSuccess();
         } catch (err) {

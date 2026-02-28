@@ -170,6 +170,19 @@ export async function findPasswordResetToken(tokenHash: string): Promise<Passwor
   );
 }
 
+export async function findLatestPasswordResetTokenForUser(
+  userId: string
+): Promise<PasswordResetToken | null> {
+  return queryOne<PasswordResetToken>(
+    `SELECT *
+     FROM password_reset_tokens
+     WHERE user_id = $1
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+}
+
 export async function consumePasswordResetToken(id: string): Promise<void> {
   await query(
     'UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1',
@@ -181,6 +194,89 @@ export async function deleteUnusedPasswordResetTokens(userId: string): Promise<v
   await query(
     'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL',
     [userId]
+  );
+}
+
+// ─── Pending email registrations ───────────────────────────────────────────────
+
+export interface PendingEmailRegistration {
+  id: string;
+  email: string;
+  display_name: string;
+  password_hash: string;
+  code_hash: string;
+  expires_at: Date;
+  attempts_used: number;
+  consumed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export async function upsertPendingEmailRegistration(
+  email: string,
+  displayName: string,
+  passwordHash: string,
+  codeHash: string,
+  expiresAt: Date
+): Promise<PendingEmailRegistration> {
+  const result = await queryOne<PendingEmailRegistration>(
+    `INSERT INTO pending_email_registrations (
+      email,
+      display_name,
+      password_hash,
+      code_hash,
+      expires_at,
+      attempts_used,
+      consumed_at,
+      updated_at
+    ) VALUES ($1, $2, $3, $4, $5, 0, NULL, NOW())
+    ON CONFLICT (email)
+    DO UPDATE SET
+      display_name = EXCLUDED.display_name,
+      password_hash = EXCLUDED.password_hash,
+      code_hash = EXCLUDED.code_hash,
+      expires_at = EXCLUDED.expires_at,
+      attempts_used = 0,
+      consumed_at = NULL,
+      updated_at = NOW()
+    RETURNING *`,
+    [email, displayName, passwordHash, codeHash, expiresAt]
+  );
+  return result!;
+}
+
+export async function findPendingEmailRegistrationByEmail(
+  email: string
+): Promise<PendingEmailRegistration | null> {
+  return queryOne<PendingEmailRegistration>(
+    `SELECT *
+     FROM pending_email_registrations
+     WHERE email = $1 AND consumed_at IS NULL`,
+    [email]
+  );
+}
+
+export async function incrementPendingRegistrationAttempts(id: string): Promise<void> {
+  await query(
+    `UPDATE pending_email_registrations
+     SET attempts_used = attempts_used + 1,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [id]
+  );
+}
+
+export async function deletePendingEmailRegistrationByEmail(email: string): Promise<void> {
+  await query(
+    'DELETE FROM pending_email_registrations WHERE email = $1',
+    [email]
+  );
+}
+
+export async function deleteExpiredPendingEmailRegistrations(): Promise<void> {
+  await query(
+    'DELETE FROM pending_email_registrations WHERE expires_at < NOW()',
+    []
   );
 }
 
