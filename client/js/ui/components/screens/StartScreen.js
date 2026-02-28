@@ -32,6 +32,13 @@ function normalizeDifficulty(value) {
 const styles = createSheet(/* css */ `
   :host { display: contents; }
   /* Override overlay ::before for start-screen background image */
+  .overlay {
+    padding: clamp(18px, 4vh, 40px);
+  }
+  .overlay.show {
+    animation: none;
+    opacity: 1;
+  }
   .overlay::before {
     background:
       linear-gradient(180deg, rgba(2, 5, 18, 0.42) 0%, rgba(2, 5, 18, 0.78) 100%),
@@ -40,23 +47,77 @@ const styles = createSheet(/* css */ `
       url('/assets/images/start_screen_bg.jpg') center/cover no-repeat;
     animation: none;
   }
+  .menu-shell {
+    width: min(92vw, 760px);
+    max-height: 92vh;
+    overflow: auto;
+    border: 1px solid rgba(0, 255, 255, 0.34);
+    border-radius: var(--radius-xxl);
+    padding: clamp(18px, 3vw, 28px);
+    background:
+      linear-gradient(180deg, rgba(4, 10, 28, 0.88) 0%, rgba(6, 8, 20, 0.9) 100%);
+    box-shadow:
+      0 0 26px rgba(0, 255, 255, 0.22),
+      0 0 34px rgba(255, 45, 236, 0.16),
+      inset 0 0 20px rgba(0, 255, 255, 0.08);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--spacing-lg);
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  .overlay.show .menu-shell {
+    animation: menuReveal 0.45s ease-out 0.8s forwards;
+  }
+  .overlay.hide .menu-shell {
+    animation: menuHide 0.2s ease-in forwards;
+  }
+  .menu-utility {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .menu-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
   .start-logo {
     width: clamp(96px, 18vw, 180px);
     height: auto;
-    margin-bottom: 14px;
+    margin-bottom: var(--spacing-sm);
     border-radius: 16px;
     border: 1px solid rgba(0, 255, 255, 0.35);
     box-shadow:
       0 0 18px rgba(0, 255, 255, 0.28),
       0 0 28px rgba(255, 45, 236, 0.2);
   }
+  .menu-main h1 {
+    margin-bottom: 2px;
+    font-size: clamp(36px, 7vw, 54px);
+    letter-spacing: 1.2px;
+  }
+  .menu-subtitle,
+  .menu-objective {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.92);
+  }
+  .menu-subtitle {
+    font-size: clamp(15px, 2.3vw, 18px);
+  }
+  .menu-objective {
+    font-size: clamp(13px, 2vw, 16px);
+    color: rgba(255, 255, 255, 0.78);
+  }
   .start-difficulty-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    margin: 5px 0 var(--spacing-md);
+    margin: var(--spacing-md) 0 var(--spacing-sm);
     color: #fff;
     font-size: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .start-difficulty-options {
     display: inline-flex;
@@ -91,13 +152,43 @@ const styles = createSheet(/* css */ `
     box-shadow: 0 0 12px rgba(0, 255, 255, 0.45) !important;
     color: var(--color-primary-neon);
   }
+  .menu-main neon-button {
+    margin: 0;
+    width: 100%;
+    max-width: 480px;
+  }
+  .menu-main neon-button::part(button) {
+    min-height: 54px;
+    font-size: 16px;
+    letter-spacing: 0.7px;
+    padding: 13px 18px;
+  }
+  .menu-main neon-button::part(button):hover {
+    animation: none;
+    transform: translateY(-1px);
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
+    box-shadow:
+      0 0 14px rgba(0, 255, 255, 0.35),
+      0 0 20px rgba(255, 45, 236, 0.26);
+  }
+  .menu-main neon-button::part(button):active {
+    transform: translateY(0) scale(0.99);
+  }
+  .primary-actions {
+    width: min(100%, 520px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xs);
+  }
   .last-run-stats {
-    margin-top: var(--spacing-lg);
+    margin-top: var(--spacing-md);
     padding: var(--spacing-md) var(--spacing-lg);
     border: 1px solid rgba(0, 255, 255, 0.2);
     border-radius: var(--radius-md);
     background: rgba(0, 0, 0, 0.4);
     min-width: 280px;
+    width: min(100%, 520px);
   }
   .last-run-row {
     display: flex;
@@ -124,19 +215,26 @@ const styles = createSheet(/* css */ `
   .continue-section {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    margin-top: var(--spacing-sm);
+    align-items: stretch;
+    gap: var(--spacing-xs);
   }
   #continueBtn::part(button) {
-    background: rgba(255, 45, 236, 0.12);
+    background: rgba(255, 45, 236, 0.14);
     border-color: var(--color-secondary-neon);
-    color: var(--color-secondary-neon);
+    color: #fff;
+    text-shadow: none;
     box-shadow: 0 0 14px rgba(255, 45, 236, 0.35);
+    white-space: normal;
+    line-height: 1.3;
   }
   #continueBtn::part(button):hover {
-    background: rgba(255, 45, 236, 0.22);
-    box-shadow: 0 0 22px rgba(255, 45, 236, 0.55);
+    animation: none;
+    transform: translateY(-1px);
+    background: rgba(255, 45, 236, 0.24);
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 0 16px rgba(255, 45, 236, 0.52),
+      0 0 20px rgba(0, 255, 255, 0.2);
   }
   .credit-badge {
     display: inline-block;
@@ -144,6 +242,7 @@ const styles = createSheet(/* css */ `
     font-size: 10px;
     color: var(--color-accent-yellow);
     text-shadow: 0 0 8px var(--color-accent-yellow);
+    text-align: center;
   }
   .credit-badge.empty {
     color: var(--color-accent-red);
@@ -158,10 +257,40 @@ const styles = createSheet(/* css */ `
   #buyBtn {
     --neon-bg: linear-gradient(45deg, #00c853, #00e676);
   }
+  .menu-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding-top: var(--spacing-xs);
+    border-top: 1px solid rgba(0, 255, 255, 0.18);
+  }
+  .menu-footer neon-button {
+    margin: 0;
+    width: auto;
+    min-width: 190px;
+  }
+  #leaderboardBtn {
+    margin-top: var(--spacing-xs);
+  }
+  .menu-footer neon-button::part(button) {
+    width: auto;
+    min-height: 46px;
+    font-size: 14px;
+    padding: 10px 18px;
+  }
+  .utility-btn {
+    width: auto;
+    min-width: 160px;
+  }
+  .utility-btn::part(button) {
+    width: auto;
+    min-height: 44px;
+    font-size: 13px;
+    padding: 10px 14px;
+  }
   .version-badge {
-    position: absolute;
-    right: 14px;
-    bottom: 10px;
+    position: static;
     font-family: var(--font-pixel);
     font-size: 10px;
     color: var(--color-primary-neon);
@@ -171,41 +300,130 @@ const styles = createSheet(/* css */ `
     pointer-events: none;
     user-select: none;
   }
+  @media (max-width: 900px) {
+    .menu-shell {
+      width: min(94vw, 640px);
+    }
+    .menu-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .menu-footer neon-button {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+  @media (max-width: 640px) {
+    .menu-shell {
+      padding: 16px;
+      gap: var(--spacing-md);
+    }
+    .menu-main h1 {
+      font-size: clamp(30px, 11vw, 42px);
+      margin-bottom: 4px;
+    }
+    .menu-subtitle {
+      font-size: 15px;
+    }
+    .menu-objective {
+      font-size: 13px;
+    }
+    .start-difficulty-row {
+      justify-content: flex-start;
+      width: 100%;
+      font-size: 14px;
+    }
+    .start-difficulty-options {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .start-difficulty-option {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 6px !important;
+      font-size: 12px !important;
+    }
+    .last-run-stats {
+      min-width: 0;
+      width: 100%;
+      padding: var(--spacing-sm) var(--spacing-md);
+    }
+    .last-run-row {
+      font-size: 13px;
+    }
+    .last-run-row span:first-child {
+      margin-right: var(--spacing-md);
+    }
+    .last-run-row span:last-child {
+      font-size: 10px;
+    }
+    .utility-btn {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+  @keyframes menuReveal {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes menuHide {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
 `);
 
 class StartScreen extends BaseComponent {
     connectedCallback() {
         this._render(/* html */ `
             <div class="overlay">
-                <img class="start-logo" src="assets/images/start_screen_logo.png" alt="Neon Siege emblem">
-                <h1>NEON SIEGE</h1>
-                <p>Conquer 30 waves and defeat 6 unique bosses</p>
-                <p>Auto-targeting turret defense game</p>
-                <p>Level up and unlock skills between waves!</p>
-                <div class="start-difficulty-row" aria-label="Difficulty">
-                    <span>Difficulty</span>
-                    <div class="start-difficulty-options" id="difficultyGroup" role="radiogroup" aria-label="Select difficulty">
-                        <button type="button" role="radio" class="start-difficulty-option" data-difficulty="easy" aria-checked="false" tabindex="-1">Easy</button>
-                        <button type="button" role="radio" class="start-difficulty-option active" data-difficulty="normal" aria-checked="true" tabindex="0">Normal</button>
-                        <button type="button" role="radio" class="start-difficulty-option" data-difficulty="hard" aria-checked="false" tabindex="-1">Hard</button>
+          <div class="menu-shell">
+            <div class="menu-utility">
+              <neon-button id="loginBtn" class="utility-btn">PROFILE</neon-button>
                     </div>
+            <div class="menu-main">
+              <img class="start-logo" src="assets/images/start_screen_logo.png" alt="Neon Siege emblem">
+              <h1>NEON SIEGE</h1>
+              <p class="menu-subtitle">Auto-target turret defense with arcade neon chaos</p>
+              <p class="menu-objective">Survive 30 waves, defeat 6 bosses, and build your skill path</p>
+              <div class="start-difficulty-row" aria-label="Difficulty">
+                <span>Difficulty</span>
+                <div class="start-difficulty-options" id="difficultyGroup" role="radiogroup" aria-label="Select difficulty">
+                  <button type="button" role="radio" class="start-difficulty-option" data-difficulty="easy" aria-checked="false" tabindex="-1">Easy</button>
+                  <button type="button" role="radio" class="start-difficulty-option active" data-difficulty="normal" aria-checked="true" tabindex="0">Normal</button>
+                  <button type="button" role="radio" class="start-difficulty-option" data-difficulty="hard" aria-checked="false" tabindex="-1">Hard</button>
                 </div>
-                <neon-button id="startBtn" variant="primary">CLICK TO START</neon-button>
+              </div>
+              <div class="primary-actions">
+                <neon-button id="startBtn" variant="primary">START RUN</neon-button>
                 <div class="continue-section">
-                    <neon-button id="continueBtn" style="display: none;">CONTINUE</neon-button>
-                    <span id="creditBadge" class="credit-badge"></span>
-                    <span id="continueError" class="continue-error"></span>
-                    <neon-button id="buyBtn" style="display: none;">BUY CONTINUES</neon-button>
+                  <neon-button id="continueBtn" style="display: none;">CONTINUE</neon-button>
+                  <span id="creditBadge" class="credit-badge"></span>
+                  <span id="continueError" class="continue-error"></span>
+                  <neon-button id="buyBtn" style="display: none;">BUY CONTINUES</neon-button>
                 </div>
-                <div style="display: flex; gap: 8px; margin-top: var(--spacing-sm); justify-content: center;">
-                    <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
-                    <neon-button id="loginBtn">SIGN IN</neon-button>
+              </div>
+              <div id="lastRunStats" class="last-run-stats" style="display: none;">
+                <div class="last-run-row"><span>Last Run: </span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
+                <div class="last-run-row best"><span>Best: </span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>
+              </div>
+            </div>
+            <div class="menu-footer">
+              <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
+              <span class="version-badge">v${APP_VERSION}</span>
+            </div>
                 </div>
-                <div id="lastRunStats" class="last-run-stats" style="display: none;">
-                    <div class="last-run-row"><span>Last Run: </span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
-                    <div class="last-run-row best"><span>Best: </span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>
-                </div>
-                <span class="version-badge">v${APP_VERSION}</span>
             </div>
         `, overlayStyles, styles);
 
@@ -383,11 +601,11 @@ class StartScreen extends BaseComponent {
     setAuthUser(user) {
         const btn = this._$('#loginBtn');
         if (!btn) return;
-        if (user) {
-            btn.textContent = user.display_name.toUpperCase();
-        } else {
-            btn.textContent = 'SIGN IN';
-        }
+      if (user) {
+        btn.textContent = 'PROFILE';
+      } else {
+        btn.textContent = 'PROFILE';
+      }
     }
 
 }

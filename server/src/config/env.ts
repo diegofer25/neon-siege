@@ -28,7 +28,7 @@ export const env = {
   /** Public base URL of the client app, used to build reset links in emails. */
   APP_BASE_URL: Bun.env.APP_BASE_URL || 'http://localhost:8080',
   /** From address for outgoing emails (Resend verified domain required in production). */
-  EMAIL_FROM: Bun.env.EMAIL_FROM || 'Neon Siege <noreply@neon-siege.com>',
+  EMAIL_FROM: Bun.env.EMAIL_FROM || 'Neon Siege <noreply@diegolamarao.com>',
 } as const;
 
 // ─── Production startup validation ─────────────────────

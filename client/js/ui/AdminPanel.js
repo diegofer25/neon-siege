@@ -7,7 +7,7 @@
  * Self-contained: injects its own styles into <head>.
  */
 
-import { ARCHETYPES, PLAYABLE_ARCHETYPES, ATTRIBUTES } from '../config/SkillConfig.js';
+import { ARCHETYPES, PLAYABLE_ARCHETYPES, ATTRIBUTES, ASCENSION_POOL } from '../config/SkillConfig.js';
 
 // ── Password ─────────────────────────────────────────────────────────────────
 // Password: N30n$!ege#Adm1n_2026
@@ -239,6 +239,20 @@ export class AdminPanel {
 						<button id="ap-jump-wave50">Jump to Wave 50</button>
 					</div>
 
+					<!-- Ascension -->
+					<div class="ap-section">
+						<div class="ap-section-title">🜂 Ascension</div>
+						<button id="ap-asc-offer">Offer Ascension Now</button>
+						<button id="ap-asc-random">Grant Random Ascension</button>
+						<button id="ap-asc-all" class="ap-success">Grant ALL Ascensions</button>
+					</div>
+
+					<!-- Moderator Boost -->
+					<div class="ap-section">
+						<div class="ap-section-title">🧩 Moderator Tools</div>
+						<button id="ap-mod-plus1000" class="ap-success">+1000 Everything</button>
+					</div>
+
 					<!-- Full Power -->
 					<div class="ap-section">
 						<div class="ap-section-title">⚡ Nuclear Options</div>
@@ -425,6 +439,41 @@ export class AdminPanel {
 		document.getElementById('ap-jump-wave25').addEventListener('click', () => jumpToWave(25));
 		document.getElementById('ap-jump-wave50').addEventListener('click', () => jumpToWave(50));
 
+		// ── Ascension ───────────────────────────────────────────────────
+		document.getElementById('ap-asc-offer').addEventListener('click', () => {
+			if (!g.ascensionSystem) {
+				this._status('Ascension system unavailable.', 'error');
+				return;
+			}
+			g.gameState = 'ascension';
+			g.ascensionSystem.generateOptions();
+			this._status('Ascension options generated. Pick from Ascension panel.', 'success');
+		});
+
+		document.getElementById('ap-asc-random').addEventListener('click', () => {
+			const mod = this._grantRandomAscension();
+			if (!mod) {
+				this._status('No ascension modifiers available.', 'error');
+				return;
+			}
+			this._status(`Ascension granted: ${mod.name}`, 'success');
+		});
+
+		document.getElementById('ap-asc-all').addEventListener('click', () => {
+			const granted = this._grantAllAscensions();
+			if (granted <= 0) {
+				this._status('All ascensions already granted.', 'error');
+				return;
+			}
+			this._status(`Granted ${granted} ascension modifier(s).`, 'success');
+		});
+
+		// ── Moderator Tools ──────────────────────────────────────────────
+		document.getElementById('ap-mod-plus1000').addEventListener('click', () => {
+			this._grantModeratorBoost();
+			this._status('Moderator boost applied (+1000 everything + all ascensions).', 'success');
+		});
+
 		// ── Full Power ───────────────────────────────────────────────────
 		document.getElementById('ap-full-power').addEventListener('click', () => {
 			// Max all skills
@@ -449,6 +498,8 @@ export class AdminPanel {
 			// Score
 			g.score += 100000;
 			g.dispatcher?.dispatch({ type: 'SCORE_ADD', payload: { amount: 100000 } });
+			// Ascensions
+			this._grantAllAscensions();
 			g._syncPlayerFromSkills();
 			this._status('🚀 FULL POWER activated! God Mode ON.', 'success');
 		});
@@ -526,6 +577,95 @@ export class AdminPanel {
 		sm.unspentAttributePoints -= needed;
 
 		this.game._syncPlayerFromSkills();
+	}
+
+	/**
+	 * Apply a specific ascension modifier by id, including plugin equip + consume effects.
+	 * @param {string} modId
+	 * @returns {boolean}
+	 */
+	_grantAscension(modId) {
+		const g = this.game;
+		if (!g?.ascensionSystem) return false;
+
+		const mod = ASCENSION_POOL.find((m) => m.id === modId);
+		if (!mod) return false;
+
+		const alreadyOwned = g.ascensionSystem.activeModifiers.some((m) => m.id === modId);
+		if (alreadyOwned) return false;
+
+		g.ascensionSystem.activeModifiers.push(mod);
+		g.ascensionSystem.offeredIds.add(mod.id);
+
+		if (mod.consumeOnPick && mod.effect) {
+			g.ascensionSystem._applyConsumeEffect(mod.effect);
+		}
+
+		if (g.skillEffectEngine?.hasPlugin(mod.id)) {
+			g.skillEffectEngine.equipSkill(mod.id, 1, mod);
+		}
+
+		g._syncPlayerFromSkills();
+		return true;
+	}
+
+	/**
+	 * Grant one random ascension not yet active.
+	 * @returns {Object|null}
+	 */
+	_grantRandomAscension() {
+		const g = this.game;
+		if (!g?.ascensionSystem) return null;
+
+		const available = ASCENSION_POOL.filter(mod => !g.ascensionSystem.activeModifiers.some(active => active.id === mod.id));
+		if (!available.length) return null;
+
+		const mod = available[Math.floor(Math.random() * available.length)];
+		return this._grantAscension(mod.id) ? mod : null;
+	}
+
+	/**
+	 * Grant all ascension modifiers.
+	 * @returns {number} Number of newly granted modifiers.
+	 */
+	_grantAllAscensions() {
+		let granted = 0;
+		for (const mod of ASCENSION_POOL) {
+			if (this._grantAscension(mod.id)) granted++;
+		}
+		return granted;
+	}
+
+	/**
+	 * Moderator shortcut: grants massive resources and max progression.
+	 */
+	_grantModeratorBoost() {
+		const g = this.game;
+		const sm = g.skillManager;
+
+		for (const key of PLAYABLE_ARCHETYPES) {
+			this._maxArchetypeSkills(key);
+		}
+
+		for (const attrKey of Object.keys(ATTRIBUTES)) {
+			this._maxAttribute(attrKey);
+		}
+
+		sm.unspentSkillPoints += 1000;
+		sm.unspentAttributePoints += 1000;
+
+		g.addXP(1000000);
+		g.score += 1000000;
+		g.dispatcher?.dispatch({ type: 'SCORE_ADD', payload: { amount: 1000000 } });
+
+		if (g.player) {
+			g.player.heal(g.player.maxHp);
+			if (g.player.hasShield) g.player.shieldHp = g.player.maxShieldHp;
+			g.player._godModeActive = true;
+		}
+
+		this._grantAllAscensions();
+		g._syncPlayerFromSkills();
 	}
 
 	// ─── Status ──────────────────────────────────────────────────────────────

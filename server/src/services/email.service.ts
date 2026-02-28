@@ -100,6 +100,16 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   });
 
   if (error) {
+    const statusCode = (error as { statusCode?: number })?.statusCode;
+    const name = (error as { name?: string })?.name;
+
+    if (env.NODE_ENV !== 'production' && statusCode === 403 && name === 'validation_error') {
+      console.warn('[email.service] Resend sandbox restriction. Falling back to logged reset link in development.');
+      console.warn('[email.service] To send to any recipient, verify a domain in Resend and set EMAIL_FROM to that domain.');
+      console.log(`\n[email.service] DEV FALLBACK — password reset link for ${to}:\n  ${resetUrl}\n`);
+      return;
+    }
+
     console.error('[email.service] Resend error:', error);
     throw new EmailError('Failed to send password reset email. Please try again later.');
   }

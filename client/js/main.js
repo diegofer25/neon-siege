@@ -298,6 +298,19 @@ async function init() {
     const loginScreen = document.querySelector('login-screen');
     const leaderboardScreen = document.querySelector('leaderboard-screen');
 
+    // Open reset-password flow directly when arriving from email link
+    const resetTokenFromUrl = urlParams.get('reset_token') || urlParams.get('resetToken');
+    if (resetTokenFromUrl) {
+        loginScreen.showResetScreen(resetTokenFromUrl);
+
+        // Remove sensitive token from URL after we've captured it
+        const sanitized = new URL(window.location.href);
+        sanitized.searchParams.delete('reset_token');
+        sanitized.searchParams.delete('resetToken');
+        const nextUrl = `${sanitized.pathname}${sanitized.search}${sanitized.hash}`;
+        window.history.replaceState({}, '', nextUrl);
+    }
+
     // Show leaderboard from any screen
     const showLeaderboard = () => leaderboardScreen.show();
     startScreen.addEventListener('show-leaderboard', showLeaderboard);
@@ -376,6 +389,35 @@ async function init() {
             _onAuthSuccess();
         } catch (err) {
             loginScreen.setError(err.message);
+        }
+    });
+
+    loginScreen.addEventListener('auth-forgot-password', async (e) => {
+        const { email } = /** @type {CustomEvent} */ (e).detail;
+        try {
+            loginScreen.setError(null);
+            loginScreen.setLoading(true);
+            await authService.requestPasswordReset(email);
+            loginScreen.showForgotPasswordSuccess();
+        } catch (err) {
+            loginScreen.setError(err.message);
+        } finally {
+            loginScreen.setLoading(false);
+        }
+    });
+
+    loginScreen.addEventListener('auth-reset-password', async (e) => {
+        const { token, newPassword } = /** @type {CustomEvent} */ (e).detail;
+        try {
+            loginScreen.setError(null);
+            loginScreen.setLoading(true);
+            await authService.resetPassword(token, newPassword);
+            loginScreen.setUser(authService.getCurrentUser());
+            _onAuthSuccess();
+        } catch (err) {
+            loginScreen.setError(err.message);
+        } finally {
+            loginScreen.setLoading(false);
         }
     });
 
