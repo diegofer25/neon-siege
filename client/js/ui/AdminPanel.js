@@ -591,15 +591,7 @@ export class AdminPanel {
 		const mod = ASCENSION_POOL.find((m) => m.id === modId);
 		if (!mod) return false;
 
-		const alreadyOwned = g.ascensionSystem.activeModifiers.some((m) => m.id === modId);
-		if (alreadyOwned) return false;
-
-		g.ascensionSystem.activeModifiers.push(mod);
-		g.ascensionSystem.offeredIds.add(mod.id);
-
-		if (mod.consumeOnPick && mod.effect) {
-			g.ascensionSystem._applyConsumeEffect(mod.effect);
-		}
+		if (!g.ascensionSystem.grantModifier(mod)) return false;
 
 		if (g.skillEffectEngine?.hasPlugin(mod.id)) {
 			g.skillEffectEngine.equipSkill(mod.id, 1, mod);

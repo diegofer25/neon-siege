@@ -390,7 +390,7 @@ class StartScreen extends BaseComponent {
             <div class="overlay">
           <div class="menu-shell">
             <div class="menu-utility">
-              <neon-button id="loginBtn" class="utility-btn">PROFILE</neon-button>
+              <neon-button id="loginBtn" class="utility-btn">SIGN IN / REGISTER</neon-button>
                     </div>
             <div class="menu-main">
               <img class="start-logo" src="assets/images/start_screen_logo.png" alt="Neon Siege emblem">
@@ -421,7 +421,7 @@ class StartScreen extends BaseComponent {
             </div>
             <div class="menu-footer">
               <neon-button id="leaderboardBtn">LEADERBOARD</neon-button>
-              <span class="version-badge">v${APP_VERSION}</span>
+              <span id="versionBadge" class="version-badge">v${APP_VERSION}</span>
             </div>
                 </div>
             </div>
@@ -433,7 +433,28 @@ class StartScreen extends BaseComponent {
         this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
         this._$('#loginBtn').addEventListener('click', () => this._emit('show-login'));
         this._setupDifficultyControls();
+        this._syncVersionBadge();
     }
+
+      /** @private */
+      async _syncVersionBadge() {
+        const badge = this._$('#versionBadge');
+        if (!badge) return;
+
+        badge.textContent = `v${APP_VERSION}`;
+
+        try {
+          const response = await fetch('./package.json', { cache: 'no-store' });
+          if (!response.ok) return;
+          const pkg = await response.json();
+          const version = typeof pkg?.version === 'string' ? pkg.version.trim() : '';
+          if (version) {
+            badge.textContent = `v${version}`;
+          }
+        } catch {
+          // Keep compile-time version fallback
+        }
+      }
 
     /** @private */
     _setupDifficultyControls() {
@@ -597,15 +618,15 @@ class StartScreen extends BaseComponent {
         el.style.display = 'block';
     }
 
-    /** @param {{ display_name: string }|null} user */
+    /** @param {{ display_name: string, auth_provider?: string }|null} user */
     setAuthUser(user) {
         const btn = this._$('#loginBtn');
         if (!btn) return;
-      if (user) {
-        btn.textContent = 'PROFILE';
-      } else {
-        btn.textContent = 'PROFILE';
-      }
+        if (user && user.auth_provider !== 'anonymous') {
+            btn.textContent = 'PROFILE';
+        } else {
+            btn.textContent = 'SIGN IN / REGISTER';
+        }
     }
 
 }

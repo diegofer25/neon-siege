@@ -263,8 +263,13 @@ async function init() {
     const settingsModalEl = document.querySelector('settings-modal');
     const gameHudEl = document.querySelector('game-hud');
 
-    // Start game — no auth required, anyone can play
+    // Start game — requires a registered signed-in account
     startScreen.addEventListener('start-game', () => {
+        if (!authService.isRegisteredUser()) {
+            loginScreen.setUser(authService.getCurrentUser());
+            loginScreen.show();
+            return;
+        }
         startGame();
     });
     startScreen.addEventListener('continue-game', handleContinue);

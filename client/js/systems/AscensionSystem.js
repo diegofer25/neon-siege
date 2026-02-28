@@ -82,14 +82,9 @@ export class AscensionSystem {
 		const selected = this.currentOptions.find(m => m.id === modifierId);
 		if (!selected) return false;
 
-		this.activeModifiers.push(selected);
+		if (!this.grantModifier(selected)) return false;
 		this.pendingPick = false;
 		this.currentOptions = null;
-
-		// Handle consume-on-pick modifiers (e.g., instant point grants)
-		if (selected.consumeOnPick && selected.effect) {
-			this._applyConsumeEffect(selected.effect);
-		}
 
 		// VFX celebration
 		const { width, height } = this.game.getLogicalCanvasSize();
@@ -97,6 +92,29 @@ export class AscensionSystem {
 		this.game.effectsManager.addScreenShake(8, 400);
 		createFloatingText(`ASCENSION: ${selected.name}`, width / 2, height / 2 - 40, 'milestone-major');
 		playSFX('boss_defeat');
+
+		return true;
+	}
+
+	/**
+	 * Grant a modifier directly by id or object (e.g., admin tools), bypassing option UI.
+	 * @param {string|Object} modifierOrId
+	 * @returns {boolean}
+	 */
+	grantModifier(modifierOrId) {
+		const mod = typeof modifierOrId === 'string'
+			? ASCENSION_POOL.find(m => m.id === modifierOrId)
+			: modifierOrId;
+
+		if (!mod?.id) return false;
+		if (this.activeModifiers.some((m) => m.id === mod.id)) return false;
+
+		this.activeModifiers.push(mod);
+		this.offeredIds.add(mod.id);
+
+		if (mod.consumeOnPick && mod.effect) {
+			this._applyConsumeEffect(mod.effect);
+		}
 
 		return true;
 	}
