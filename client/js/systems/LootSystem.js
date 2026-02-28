@@ -1,6 +1,7 @@
 import { playSFX } from '../main.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 import { ActionTypes } from '../state/ActionDispatcher.js';
+import { GameConfig } from '../config/GameConfig.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 
 const DROP_TABLE = [
@@ -281,21 +282,89 @@ export class LootSystem {
 
     _applyTempBuff(drop) {
         const player = this.game.player;
-        const buff = { type: drop.buff, remaining: drop.duration, duration: drop.duration };
+        let normalizedType = drop.buff;
+        let multiplier = null;
+        let label = drop.label;
+        let icon = '✨';
+        let description = '';
 
         switch (drop.buff) {
-            case 'doubleFireRate':
+            case 'doubleFireRate': {
+                normalizedType = 'fireRate';
+                multiplier = GameConfig.BALANCE.LOOT_FIRE_RATE_MULTIPLIER;
+                label = 'Rapid Fire';
+                icon = '⚡';
+                description = `Firing speed increased by ${Math.round((multiplier - 1) * 100)}%.`;
+                break;
+            }
+            case 'doubleDamage': {
+                normalizedType = 'damage';
+                multiplier = GameConfig.BALANCE.LOOT_DAMAGE_MULTIPLIER;
+                label = 'Damage Surge';
+                icon = '💥';
+                description = `Damage increased by ${Math.round((multiplier - 1) * 100)}%.`;
+                break;
+            }
+            case 'shield': {
+                normalizedType = 'shield';
+                label = 'Temp Shield';
+                icon = '🛡️';
+                description = 'Temporary barrier absorbs incoming damage.';
+                break;
+            }
+            case 'godMode': {
+                normalizedType = 'godMode';
+                label = 'God Mode';
+                icon = '👑';
+                description = 'Temporary invulnerability to all damage.';
+                break;
+            }
+        }
+
+        const existing = this.activeTempBuffs.find((active) => active.type === normalizedType);
+        if (existing) {
+            existing.remaining = drop.duration;
+            existing.duration = drop.duration;
+            existing.label = label;
+            existing.icon = icon;
+            existing.description = description;
+            if (multiplier !== null) existing.multiplier = multiplier;
+
+            if (this.game.dispatcher) {
+                this.game.dispatcher.dispatch({
+                    type: ActionTypes.BUFF_REFRESH,
+                    payload: {
+                        buff: {
+                            ...existing,
+                        },
+                    },
+                });
+            }
+            return;
+        }
+
+        const buff = {
+            type: normalizedType,
+            remaining: drop.duration,
+            duration: drop.duration,
+            label,
+            icon,
+            description,
+        };
+
+        switch (normalizedType) {
+            case 'fireRate':
                 if (this._originalFireRateMod === null) this._originalFireRateMod = player.fireRateMod;
-                player.fireRateMod *= 2;
-                buff.multiplier = 2;
-                buff.type = 'fireRate';
+                player.fireRateMod *= GameConfig.BALANCE.LOOT_FIRE_RATE_MULTIPLIER;
+                buff.multiplier = GameConfig.BALANCE.LOOT_FIRE_RATE_MULTIPLIER;
                 break;
-            case 'doubleDamage':
+            case 'damage': {
                 if (this._originalDamageMod === null) this._originalDamageMod = player.damageMod;
-                player.damageMod *= 2;
-                buff.multiplier = 2;
-                buff.type = 'damage';
+                const nextDamage = player.damageMod * GameConfig.BALANCE.LOOT_DAMAGE_MULTIPLIER;
+                player.damageMod = Math.min(nextDamage, GameConfig.BALANCE.MAX_LOOT_DAMAGE_MULTIPLIER);
+                buff.multiplier = GameConfig.BALANCE.LOOT_DAMAGE_MULTIPLIER;
                 break;
+            }
             case 'shield':
                 player.hasShield = true;
                 player.shieldHp = Math.max(player.shieldHp, 50);
@@ -320,13 +389,13 @@ export class LootSystem {
     _removeTempBuff(buff) {
         const player = this.game.player;
         switch (buff.type) {
-            case 'doubleFireRate':
+            case 'fireRate':
                 if (this._originalFireRateMod !== null) {
                     player.fireRateMod = this._originalFireRateMod;
                     this._originalFireRateMod = null;
                 }
                 break;
-            case 'doubleDamage':
+            case 'damage':
                 if (this._originalDamageMod !== null) {
                     player.damageMod = this._originalDamageMod;
                     this._originalDamageMod = null;

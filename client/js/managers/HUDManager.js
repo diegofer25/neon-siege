@@ -77,6 +77,10 @@ class HUDManager {
         /** @type {(HTMLElement|null)[]} */ this._skillSlots = [];
         /** @type {HTMLElement[]} */ this._passiveNames = [];
         /** @type {(HTMLElement|null)[]} */ this._passiveSlots = [];
+        /** @type {HTMLElement} */ this._passiveSlotsContainer = NOOP_EL;
+        /** @type {HTMLElement} */ this._lootBuffSlotsContainer = NOOP_EL;
+        /** @type {number} */ this._passiveSlotCount = 0;
+        /** @type {Map<string, any>} */ this._lootBuffTooltipData = new Map();
 
         // Ascension
         /** @type {HTMLElement} */ this._ascensionSlots = NOOP_EL;
@@ -150,7 +154,8 @@ class HUDManager {
             const nameEl = $(`skillName${i}`, skillRoot);
             this._skillNames.push(nameEl);
             this._skillCds.push($(`skillCd${i}`, skillRoot));
-            const slotEl = nameEl !== NOOP_EL ? nameEl.closest('.skill-slot') : null;
+            const slotMatch = nameEl !== NOOP_EL ? nameEl.closest('.skill-slot') : null;
+            const slotEl = slotMatch instanceof HTMLElement ? slotMatch : null;
             this._skillSlots.push(slotEl);
             if (slotEl) {
                 slotEl.addEventListener('click', () => {
@@ -164,6 +169,7 @@ class HUDManager {
 
         // Passive slots — inside <hud-passive-slots>
         this._passiveSlotsContainer = $('passiveSlots', sub('hud-passive-slots'));
+        this._lootBuffSlotsContainer = $('lootBuffSlots', sub('hud-passive-slots'));
         this._passiveSlotCount = 0;
 
         // Ascension — inside <hud-ascension-badges>
@@ -302,6 +308,8 @@ class HUDManager {
             this._syncPassiveSlots(g);
         }
 
+        this._syncLootBuffs(g);
+
         // Ascension modifier badges
         if (g.ascensionSystem) {
             const mods = g.ascensionSystem.activeModifiers;
@@ -404,6 +412,49 @@ class HUDManager {
         }
     }
 
+    /** @param {import('../Game.js').Game} g */
+    _syncLootBuffs(g) {
+        const container = this._lootBuffSlotsContainer;
+        if (!container || container === NOOP_EL) return;
+
+        const activeBuffs = g.store?.get('player')?.activeBuffs || [];
+        const allowedOrder = ['fireRate', 'damage', 'shield', 'godMode'];
+        const merged = new Map();
+
+        for (const buff of activeBuffs) {
+            if (!allowedOrder.includes(buff?.type)) continue;
+            const current = merged.get(buff.type);
+            if (!current || (buff.remaining || 0) > (current.remaining || 0)) {
+                merged.set(buff.type, { ...buff });
+            } else {
+                current.remaining = Math.max(current.remaining || 0, buff.remaining || 0);
+                current.duration = Math.max(current.duration || 0, buff.duration || 0);
+                current.label = current.label || buff.label;
+                current.icon = current.icon || buff.icon;
+                current.description = current.description || buff.description;
+            }
+        }
+
+        const ordered = allowedOrder.filter((type) => merged.has(type)).map((type) => merged.get(type));
+        this._lootBuffTooltipData = new Map(ordered.map((buff) => [buff.type, buff]));
+
+        const renderKey = ordered
+            .map((buff) => `${buff.type}:${Math.max(0, Math.ceil((buff.remaining || 0) / 1000))}`)
+            .join('|');
+        if (this._lastLootBuffRenderKey === renderKey) {
+            container.classList.toggle('with-shield', !!g.player.hasShield);
+            return;
+        }
+
+        this._lastLootBuffRenderKey = renderKey;
+        container.classList.toggle('with-shield', !!g.player.hasShield);
+        container.innerHTML = ordered.map((buff) => {
+            const seconds = Math.max(0, Math.ceil((buff.remaining || 0) / 1000));
+            const icon = buff.icon || '✨';
+            return `<div class="loot-buff-badge" data-tooltip-type="lootBuff" data-buff-type="${buff.type}" title=""><span class="loot-buff-icon">${icon}</span><span class="loot-buff-timer">${seconds}s</span></div>`;
+        }).join('');
+    }
+
     // ------------------------------------------------------------------
     // Performance overlay
     // ------------------------------------------------------------------
@@ -470,11 +521,21 @@ class HUDManager {
             const path = e.composedPath();
 
             const skillSlot = findInPath(path, el =>
-                el.classList.contains('skill-slot') && 'tooltipType' in el.dataset);
+                el instanceof HTMLElement
+                && el.classList.contains('skill-slot')
+                && 'tooltipType' in el.dataset);
             const passiveSlot = !skillSlot && findInPath(path, el =>
-                el.classList.contains('passive-slot') && 'tooltipType' in el.dataset);
-            const ascBadge = !skillSlot && !passiveSlot && findInPath(path, el =>
-                el.classList.contains('ascension-badge') && 'modId' in el.dataset);
+                el instanceof HTMLElement
+                && el.classList.contains('passive-slot')
+                && 'tooltipType' in el.dataset);
+            const lootBuffBadge = !skillSlot && !passiveSlot && findInPath(path, el =>
+                el instanceof HTMLElement
+                && el.classList.contains('loot-buff-badge')
+                && 'buffType' in el.dataset);
+            const ascBadge = !skillSlot && !passiveSlot && !lootBuffBadge && findInPath(path, el =>
+                el instanceof HTMLElement
+                && el.classList.contains('ascension-badge')
+                && 'modId' in el.dataset);
 
             if (skillSlot) {
                 this._handleSkillSlotTooltip(skillSlot);
@@ -484,6 +545,12 @@ class HUDManager {
 
             if (passiveSlot) {
                 this._handlePassiveSlotTooltip(passiveSlot);
+                this._hudTooltipEl.positionTooltip(e.clientX, e.clientY);
+                return;
+            }
+
+            if (lootBuffBadge) {
+                this._handleLootBuffTooltip(lootBuffBadge);
                 this._hudTooltipEl.positionTooltip(e.clientX, e.clientY);
                 return;
             }
@@ -570,6 +637,39 @@ class HUDManager {
                 type: 'ascension',
             }, badge);
         }
+    }
+
+    /** @param {HTMLElement} badge */
+    _handleLootBuffTooltip(badge) {
+        const buffType = badge.dataset.buffType;
+        if (!buffType) {
+            this._hideTooltip();
+            return;
+        }
+
+        const buff = this._lootBuffTooltipData.get(buffType);
+        if (!buff) {
+            this._hideTooltip();
+            return;
+        }
+
+        const fallbackName = buffType === 'fireRate'
+            ? 'Rapid Fire'
+            : buffType === 'damage'
+                ? 'Damage Surge'
+                : buffType === 'shield'
+                    ? 'Temp Shield'
+                    : 'God Mode';
+        const remainingSeconds = Math.max(0, Math.ceil((buff.remaining || 0) / 1000));
+
+        this._showTooltip({
+            icon: buff.icon || '✨',
+            name: buff.label || fallbackName,
+            meta: 'Loot Buff',
+            desc: buff.description || 'Temporary buff from loot pickup.',
+            cd: `Remaining: ${remainingSeconds}s`,
+            type: 'loot',
+        }, badge);
     }
 
     /** @param {{ icon:string, iconImage?:string, name:string, meta:string, desc:string, cd?:string, type:string }} info @param {HTMLElement} anchorEl */

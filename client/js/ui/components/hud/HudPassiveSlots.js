@@ -68,6 +68,55 @@ const styles = createSheet(/* css */`
     box-shadow: 0 0 10px rgba(255, 45, 236, 0.3);
   }
 
+  .loot-buff-slots {
+    position: absolute;
+    top: 124px;
+    left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 220px;
+    z-index: 10;
+    pointer-events: auto;
+    transition: top var(--transition-normal);
+  }
+
+  .loot-buff-slots.with-shield {
+    top: 172px;
+  }
+
+  .loot-buff-badge {
+    min-width: 42px;
+    height: 20px;
+    padding: 0 5px;
+    border: 1px solid rgba(0, 255, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.58);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: transform 0.12s, border-color 0.12s;
+  }
+
+  .loot-buff-badge:hover {
+    transform: scale(1.05);
+    border-color: rgba(255, 45, 236, 0.75);
+  }
+
+  .loot-buff-icon {
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .loot-buff-timer {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: rgba(255, 255, 255, 0.9);
+    letter-spacing: 0;
+  }
+
   /* Responsive — Tablet */
   @media (max-width: 768px) {
     .passive-slots { bottom: 124px; }
@@ -83,6 +132,7 @@ class HudPassiveSlots extends BaseComponent {
     connectedCallback() {
         this._render(/* html */`
             <div id="passiveSlots" class="passive-slots"></div>
+      <div id="lootBuffSlots" class="loot-buff-slots"></div>
         `, styles);
     }
 }

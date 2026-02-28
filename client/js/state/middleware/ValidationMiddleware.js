@@ -30,6 +30,7 @@ const GAMEPLAY_ONLY_ACTIONS = new Set([
 	ActionTypes.WAVE_ENEMY_SPAWNED,
 	ActionTypes.WAVE_ENEMY_KILLED,
 	ActionTypes.BUFF_APPLY,
+	ActionTypes.BUFF_REFRESH,
 	ActionTypes.BUFF_REMOVE,
 	ActionTypes.BUFF_TICK,
 	ActionTypes.COOLDOWN_TICK,

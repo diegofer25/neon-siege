@@ -71,6 +71,15 @@ export const GameConfig = {
         /** @type {number} Reference height used as scale baseline (scale = 1.0 at this height) */
         MAX_HEIGHT: 600,
 
+        /** @type {number} Minimum spawn-pressure scaling multiplier */
+        PRESSURE_SCALE_MIN: 0.75,
+
+        /** @type {number} Maximum spawn-pressure scaling multiplier */
+        PRESSURE_SCALE_MAX: 2.25,
+
+        /** @type {number} Maximum device pixel ratio used for canvas backing store */
+        MAX_DEVICE_PIXEL_RATIO: 2,
+
         /** @type {number} Hard upper limit on canvas width (supports up to 8K) */
         HARD_MAX_WIDTH: 7680,
 
@@ -728,7 +737,19 @@ export const GameConfig = {
         PERFORMANCE_BONUS_THRESHOLD: 0.8,
 
         /** @type {number} Base multiplier for diminishing returns on stacking multipliers */
-        DIMINISHING_RETURN_BASE: 0.85
+        DIMINISHING_RETURN_BASE: 0.85,
+
+        /** @type {number} Minimum interval for basic attack cadence (ms) */
+        MIN_BASIC_FIRE_INTERVAL_MS: 110,
+
+        /** @type {number} Temporary loot buff fire rate multiplier */
+        LOOT_FIRE_RATE_MULTIPLIER: 1.4,
+
+        /** @type {number} Temporary loot buff damage multiplier */
+        LOOT_DAMAGE_MULTIPLIER: 1.6,
+
+        /** @type {number} Maximum allowed total damage multiplier from loot damage buffs */
+        MAX_LOOT_DAMAGE_MULTIPLIER: 1.8
     },
 
     /**

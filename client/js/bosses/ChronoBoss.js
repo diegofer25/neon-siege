@@ -55,12 +55,12 @@ export class ChronoBoss extends Boss {
         const dy = player.y - this.y;
         const distance = MathUtils.distance(this.x, this.y, player.x, player.y);
         const speedMult = (this.game?.modifierState?.enemySpeedMultiplier) || 1;
-        const arenaScale = this.game?.getArenaScale?.() || 1;
+        const pressureScale = this.game?.getPressureScale?.() || 1;
         const phaseFactor = this._phase === 'speed' ? this.speedBurstFactor : 0.6;
         const keepDist = this._phase === 'speed' ? 60 : 180;
 
         if (distance > keepDist) {
-            const actualSpeed = this.speed * phaseFactor * arenaScale * speedMult * deltaSeconds;
+            const actualSpeed = this.speed * phaseFactor * pressureScale * speedMult * deltaSeconds;
             this.x += (dx / distance) * actualSpeed;
             this.y += (dy / distance) * actualSpeed;
         }

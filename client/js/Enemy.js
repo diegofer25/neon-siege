@@ -91,10 +91,10 @@ export class Enemy {
             const speedMultiplier = (game && game.modifierState && game.modifierState.enemySpeedMultiplier) ? game.modifierState.enemySpeedMultiplier : 1;
             // Apply global enemy slow from ascension Bullet Time plugin
             const globalSlow = (game && game.player && game.player.globalEnemySlow) ? (1 - game.player.globalEnemySlow) : 1;
-            const arenaScale = game?.getArenaScale?.() || 1;
+            const pressureScale = game?.getPressureScale?.() || 1;
 
             // Convert speed from pixels per second to pixels per frame
-            const actualSpeed = this.speed * arenaScale * speedMultiplier * globalSlow * this.slowFactor * (delta / 1000);
+            const actualSpeed = this.speed * pressureScale * speedMultiplier * globalSlow * this.slowFactor * (delta / 1000);
             
             // Store previous position for velocity calculation
             this.prevX = this.x;

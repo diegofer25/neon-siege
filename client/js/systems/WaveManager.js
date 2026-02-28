@@ -114,8 +114,7 @@ export class WaveManager {
 
         const centerX = canvasWidth / 2;
         const centerY = canvasHeight / 2;
-        const arenaScale = this.game.getArenaScale?.() || 1;
-        const spawnMargin = GameConfig.ENEMY.SPAWN_MARGIN * arenaScale;
+        const spawnMargin = GameConfig.ENEMY.SPAWN_MARGIN;
         const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + spawnMargin;
         
         const angle = Math.random() * Math.PI * 2;
@@ -280,7 +279,12 @@ export class WaveManager {
     _handleEnemySpawning(delta) {
         if (this.enemiesToSpawn > 0) {
             this.enemySpawnTimer += delta;
-            if (this.enemySpawnTimer >= this.enemySpawnInterval) {
+            const pressureScale = this.game.getPressureScale?.() || 1;
+            const effectiveInterval = Math.max(
+                GameConfig.WAVE.MIN_SPAWN_INTERVAL,
+                this.enemySpawnInterval / pressureScale
+            );
+            if (this.enemySpawnTimer >= effectiveInterval) {
                 this.spawnEnemy();
                 this.enemiesToSpawn--;
                 this.enemiesSpawned++;

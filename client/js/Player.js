@@ -491,15 +491,15 @@ export class Player {
         dx /= len;
         dy /= len;
 
-        const arenaScale = game?.getArenaScale?.() || 1;
-        const speed = GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * arenaScale * (delta / 1000);
+        const pressureScale = game?.getPressureScale?.() || 1;
+        const speed = GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * pressureScale * (delta / 1000);
         this.x += dx * speed;
         this.y += dy * speed;
 
         // Store velocity for renderer (px/s, normalized direction × move speed)
         this.isMoving = true;
-        this.moveVx = dx * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * arenaScale;
-        this.moveVy = dy * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * arenaScale;
+        this.moveVx = dx * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * pressureScale;
+        this.moveVy = dy * GameConfig.PLAYER.MOVE_SPEED * this.moveSpeedMod * pressureScale;
 
         // Clamp to canvas bounds
         const { width: cw, height: ch } = game.getLogicalCanvasSize();
@@ -791,7 +791,7 @@ export class Player {
         if (ff) {
             mod *= ff.fireRateMultiplier;
         }
-        return this.baseFireRate / mod;
+        return Math.max(this.baseFireRate / mod, GameConfig.BALANCE.MIN_BASIC_FIRE_INTERVAL_MS);
     }
     
     /**

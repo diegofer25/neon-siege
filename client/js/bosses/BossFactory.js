@@ -27,8 +27,7 @@ export function createBoss(game) {
 
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
-    const arenaScale = game.getArenaScale?.() || 1;
-    const spawnMargin = GameConfig.ENEMY.SPAWN_MARGIN * arenaScale;
+    const spawnMargin = GameConfig.ENEMY.SPAWN_MARGIN;
     const spawnRadius = Math.max(canvasWidth, canvasHeight) / 2 + spawnMargin;
     const angle = Math.random() * Math.PI * 2;
     const x = centerX + Math.cos(angle) * spawnRadius;

@@ -45,7 +45,7 @@ export class Boss extends Enemy {
         const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
             ? this.game.modifierState.enemySpeedMultiplier
             : 1;
-        const arenaScale = this.game?.getArenaScale?.() || 1;
+        const pressureScale = this.game?.getPressureScale?.() || 1;
 
         // Store previous position for velocity calculation
         this.prevX = this.x;
@@ -64,7 +64,7 @@ export class Boss extends Enemy {
         } else if (distance > 200) { // Keep some distance
             const normalizedDx = dx / distance;
             const normalizedDy = dy / distance;
-            const actualSpeed = this.speed * arenaScale * speedMultiplier * deltaSeconds;
+            const actualSpeed = this.speed * pressureScale * speedMultiplier * deltaSeconds;
             this.x += normalizedDx * actualSpeed;
             this.y += normalizedDy * actualSpeed;
         }
@@ -132,8 +132,8 @@ export class Boss extends Enemy {
         const speedMultiplier = (this.game && this.game.modifierState && this.game.modifierState.enemySpeedMultiplier)
             ? this.game.modifierState.enemySpeedMultiplier
             : 1;
-        const arenaScale = this.game?.getArenaScale?.() || 1;
-        const chargeSpeed = this.speed * 3 * arenaScale * speedMultiplier;
+        const pressureScale = this.game?.getPressureScale?.() || 1;
+        const chargeSpeed = this.speed * 3 * pressureScale * speedMultiplier;
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const distance = MathUtils.distance(this.x, this.y, player.x, player.y);

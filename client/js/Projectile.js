@@ -161,11 +161,11 @@ export class Projectile {
         
         // Update position using velocity and frame time
         // Convert from pixels per second to pixels per frame
-        // Scale by arenaScale so projectiles traverse the screen in consistent
-        // proportional time regardless of viewport size (matches enemy scaling).
-        const arenaScale = game?.getArenaScale?.() || 1;
-        this.x += this.vx * arenaScale * (delta / 1000);
-        this.y += this.vy * arenaScale * (delta / 1000);
+        // Scale by pressureScale so projectile pace follows normalized spawn pressure
+        // across viewport sizes (matching enemy/player movement normalization).
+        const pressureScale = game?.getPressureScale?.() || 1;
+        this.x += this.vx * pressureScale * (delta / 1000);
+        this.y += this.vy * pressureScale * (delta / 1000);
         
         // Track projectile age for automatic cleanup
         this.lifetime += delta;

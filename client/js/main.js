@@ -420,7 +420,7 @@ function setupCanvas() {
     canvas.logicalHeight = logicalHeight;
 
     // Handle high DPI displays by resizing the backing store
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, GameConfig.CANVAS.MAX_DEVICE_PIXEL_RATIO || 2);
     const ctx = canvas.getContext('2d');
     canvas.width = Math.round(logicalWidth * dpr);
     canvas.height = Math.round(logicalHeight * dpr);

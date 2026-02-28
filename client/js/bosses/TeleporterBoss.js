@@ -49,10 +49,10 @@ export class TeleporterBoss extends Boss {
         const dy = player.y - this.y;
         const distance = MathUtils.distance(this.x, this.y, player.x, player.y);
         const speedMult = (this.game?.modifierState?.enemySpeedMultiplier) || 1;
-        const arenaScale = this.game?.getArenaScale?.() || 1;
+        const pressureScale = this.game?.getPressureScale?.() || 1;
 
         if (distance > 250) {
-            const actualSpeed = this.speed * 0.5 * arenaScale * speedMult * deltaSeconds;
+            const actualSpeed = this.speed * 0.5 * pressureScale * speedMult * deltaSeconds;
             this.x += (dx / distance) * actualSpeed;
             this.y += (dy / distance) * actualSpeed;
         }

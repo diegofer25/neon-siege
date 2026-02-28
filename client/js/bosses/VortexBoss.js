@@ -40,10 +40,10 @@ export class VortexBoss extends Boss {
         const distToPlayer = MathUtils.distance(this.x, this.y, player.x, player.y);
 
         const speedMult = (this.game?.modifierState?.enemySpeedMultiplier) || 1;
-        const arenaScale = this.game?.getArenaScale?.() || 1;
+        const pressureScale = this.game?.getPressureScale?.() || 1;
 
         if (distToPlayer > 100) {
-            const moveSpeed = this.speed * 0.8 * arenaScale * speedMult * deltaSeconds;
+            const moveSpeed = this.speed * 0.8 * pressureScale * speedMult * deltaSeconds;
             this.x += ((player.x - this.x) / distToPlayer) * moveSpeed;
             this.y += ((player.y - this.y) / distToPlayer) * moveSpeed;
         }

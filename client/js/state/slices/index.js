@@ -318,6 +318,26 @@ export function registerAllReducers(dispatcher) {
 		return updates;
 	});
 
+	dispatcher.addReducer(ActionTypes.BUFF_REFRESH, 'player', (state, action) => {
+		const buff = action.payload.buff;
+		if (!buff?.type || state.activeBuffs.length === 0) return {};
+
+		const idx = state.activeBuffs.findIndex((active) => active.type === buff.type);
+		if (idx < 0) return {};
+
+		const newBuffs = [...state.activeBuffs];
+		newBuffs[idx] = {
+			...newBuffs[idx],
+			remaining: buff.remaining ?? newBuffs[idx].remaining,
+			duration: buff.duration ?? newBuffs[idx].duration,
+			label: buff.label ?? newBuffs[idx].label,
+			icon: buff.icon ?? newBuffs[idx].icon,
+			description: buff.description ?? newBuffs[idx].description,
+		};
+
+		return { activeBuffs: newBuffs };
+	});
+
 	dispatcher.addReducer(ActionTypes.BUFF_REMOVE, 'player', (state, action) => {
 		const buffIndex = action.payload.index;
 		const removedBuff = state.activeBuffs[buffIndex];

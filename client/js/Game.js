@@ -406,6 +406,24 @@ export class Game {
 		return Math.max(0.2, Math.min(widthScale, heightScale));
 	}
 
+	getReferenceSpawnRadius() {
+		return Math.max(GameConfig.CANVAS.MAX_WIDTH, GameConfig.CANVAS.MAX_HEIGHT) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+	}
+
+	getSpawnRadiusForSize(width, height) {
+		return Math.max(width, height) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+	}
+
+	getPressureScale() {
+		const { width, height } = this.getLogicalCanvasSize();
+		const currentSpawnRadius = this.getSpawnRadiusForSize(width, height);
+		const referenceSpawnRadius = this.getReferenceSpawnRadius();
+		const pressureScale = referenceSpawnRadius > 0 ? (currentSpawnRadius / referenceSpawnRadius) : 1;
+		const minScale = GameConfig.CANVAS.PRESSURE_SCALE_MIN ?? 0.75;
+		const maxScale = GameConfig.CANVAS.PRESSURE_SCALE_MAX ?? 2.25;
+		return Math.max(minScale, Math.min(maxScale, pressureScale));
+	}
+
 	getEntityScale() {
 		return Math.max(0.72, Math.min(this.getArenaScale(), 1.5));
 	}
@@ -662,8 +680,10 @@ export class Game {
 	 */
 	updateCanvasSize(previousSize = null) {
 		const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
-		const prevWidth = previousSize?.width || logicalWidth;
-		const prevHeight = previousSize?.height || logicalHeight;
+		const prevWidthRaw = Number(previousSize?.width);
+		const prevHeightRaw = Number(previousSize?.height);
+		const prevWidth = Number.isFinite(prevWidthRaw) && prevWidthRaw > 0 ? prevWidthRaw : logicalWidth;
+		const prevHeight = Number.isFinite(prevHeightRaw) && prevHeightRaw > 0 ? prevHeightRaw : logicalHeight;
 		
 		const centerX = logicalWidth / 2;
 		const centerY = logicalHeight / 2;
@@ -685,8 +705,7 @@ export class Game {
 			enemy.y = (enemy.y / prevHeight) * logicalHeight;
 
 			const distance = MathUtils.distance(enemy.x, enemy.y, centerX, centerY);
-			const maxDistance =
-				Math.max(logicalWidth, logicalHeight) / 2 + GameConfig.ENEMY.SPAWN_MARGIN;
+			const maxDistance = this.getSpawnRadiusForSize(logicalWidth, logicalHeight);
 
 			if (distance > maxDistance) {
 				const angle = MathUtils.angleBetween(centerX, centerY, enemy.x, enemy.y);
