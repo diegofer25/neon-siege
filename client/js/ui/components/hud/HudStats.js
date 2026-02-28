@@ -12,25 +12,25 @@ const styles = createSheet(/* css */`
 
   #statsDisplay {
     position: absolute;
-    bottom: 0;
+    bottom: 2px;
     right: 0;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 6px;
+    gap: 5px;
   }
 
   .stat-item {
     display: flex;
     align-items: center;
     margin-bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 7px 10px;
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(0, 255, 255, 0.28);
+    background: rgba(4, 10, 26, 0.72);
+    padding: 6px 10px;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(0, 255, 255, 0.34);
     box-shadow:
-      0 0 8px rgba(0, 255, 255, 0.2),
-      inset 0 0 8px rgba(0, 255, 255, 0.08);
+      0 0 10px rgba(0, 255, 255, 0.2),
+      inset 0 0 10px rgba(0, 255, 255, 0.08);
     min-width: 150px;
     justify-content: space-between;
   }
@@ -46,7 +46,7 @@ const styles = createSheet(/* css */`
     font-family: var(--font-pixel);
     color: var(--color-primary-neon);
     text-shadow: 0 0 3px var(--color-primary-neon);
-    font-size: 8px;
+    font-size: 7px;
     margin-right: var(--spacing-xs);
     flex-shrink: 0;
   }
@@ -55,7 +55,7 @@ const styles = createSheet(/* css */`
     font-family: var(--font-pixel);
     color: #fff;
     text-shadow: 0 0 3px #fff;
-    font-size: 8px;
+    font-size: 7px;
     text-align: right;
     flex-grow: 1;
     transition: color 0.3s, text-shadow 0.3s, transform 0.3s;

@@ -49,6 +49,11 @@ class HUDManager {
         // Health
         /** @type {HTMLElement} */ this._healthFill = NOOP_EL;
         /** @type {HTMLElement} */ this._healthText = NOOP_EL;
+        /** @type {HTMLElement} */ this._playerName = NOOP_EL;
+        /** @type {HTMLElement} */ this._playerLevel = NOOP_EL;
+
+        /** @type {{ display_name?: string, auth_provider?: string }|null} */
+        this._authUser = null;
 
         // Defense
         /** @type {HTMLElement} */ this._defenseBar = NOOP_EL;
@@ -120,6 +125,8 @@ class HUDManager {
         const healthRoot = sub('hud-health-bars');
         this._healthFill = $('healthFill', healthRoot);
         this._healthText = $('healthText', healthRoot);
+        this._playerName = $('playerName', healthRoot);
+        this._playerLevel = $('playerLevel', healthRoot);
         this._defenseBar = $('defenseBar', healthRoot);
         this._defenseFill = $('defenseFill', healthRoot);
         this._defenseText = $('defenseText', healthRoot);
@@ -210,10 +217,11 @@ class HUDManager {
         }
         const healthStr = `${Math.max(0, Math.floor(g.player.hp))}/${g.player.maxHp}`;
         if (this._healthText.textContent !== healthStr) this._healthText.textContent = healthStr;
+        this._updateIdentityDisplay(g);
 
         // Defense / shield bar
         if (g.player.hasShield) {
-            this._defenseBar.style.display = 'block';
+            this._defenseBar.style.display = 'flex';
             const cur = g.player.shieldHp;
             const max = g.player.maxShieldHp;
             const pct = max > 0 ? Math.max(0, (cur / max) * 100) : 0;
@@ -484,6 +492,28 @@ class HUDManager {
     setPerformanceStatsVisible(visible) {
         this.showPerformanceStats = visible;
         this._perfContainer.style.display = visible ? 'flex' : 'none';
+    }
+
+    /** @param {{ display_name?: string, auth_provider?: string }|null} user */
+    setAuthUser(user) {
+        this._authUser = user || null;
+        if (this._cached && this.game) {
+            this._updateIdentityDisplay(this.game);
+        }
+    }
+
+    /** @param {import('../Game.js').Game} g */
+    _updateIdentityDisplay(g) {
+        const rawName = this._authUser?.display_name || 'Player';
+        const playerName = String(rawName).trim() || 'Player';
+        if (this._playerName.textContent !== playerName) {
+            this._playerName.textContent = playerName;
+        }
+
+        const levelText = `LV ${g.skillManager?.level || 1}`;
+        if (this._playerLevel.textContent !== levelText) {
+            this._playerLevel.textContent = levelText;
+        }
     }
 
     // ------------------------------------------------------------------

@@ -12,16 +12,18 @@ const styles = createSheet(/* css */`
 
   .score-display {
     position: absolute;
-    top: 0;
-    right: 70px;
+    top: 4px;
+    right: 68px;
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: rgba(0, 0, 0, 0.55);
-    border: 1px solid rgba(255, 45, 236, 0.35);
-    border-radius: var(--radius-md);
-    box-shadow: 0 0 10px rgba(255, 45, 236, 0.16);
+    padding: 8px 11px;
+    background: rgba(4, 10, 26, 0.72);
+    border: 1px solid rgba(255, 45, 236, 0.4);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      0 0 12px rgba(255, 45, 236, 0.2),
+      inset 0 0 10px rgba(255, 45, 236, 0.06);
     pointer-events: none;
   }
 
@@ -29,15 +31,16 @@ const styles = createSheet(/* css */`
     font-family: var(--font-pixel);
     color: #fff;
     text-shadow: 0 0 5px #fff;
-    font-size: 12px;
+    font-size: 10px;
     line-height: 1;
+    letter-spacing: 0.4px;
   }
 
   .score-multiplier {
     font-family: var(--font-pixel);
     color: var(--color-accent-yellow);
     text-shadow: 0 0 8px var(--color-accent-yellow);
-    font-size: 10px;
+    font-size: 9px;
     animation: pulseGlow 0.6s ease-in-out infinite alternate;
   }
 

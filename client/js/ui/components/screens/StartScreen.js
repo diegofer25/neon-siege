@@ -622,7 +622,7 @@ class StartScreen extends BaseComponent {
     setAuthUser(user) {
         const btn = this._$('#loginBtn');
         if (!btn) return;
-        if (user && user.auth_provider !== 'anonymous') {
+      if (user) {
             btn.textContent = 'PROFILE';
         } else {
             btn.textContent = 'SIGN IN / REGISTER';

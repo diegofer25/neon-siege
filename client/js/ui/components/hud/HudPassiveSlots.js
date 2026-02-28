@@ -15,7 +15,7 @@ const styles = createSheet(/* css */`
     flex-wrap: wrap;
     gap: 4px;
     position: absolute;
-    top: 90px;
+    top: 128px;
     left: 0;
     max-width: 220px;
     z-index: 10;
@@ -24,15 +24,15 @@ const styles = createSheet(/* css */`
   }
 
   .passive-slots.with-shield {
-    top: 138px;
+    top: 160px;
   }
 
   .passive-slot {
     width: 40px;
     height: 26px;
-    border: 1px solid rgba(0, 255, 255, 0.35);
+    border: 1px solid rgba(0, 255, 255, 0.4);
     border-radius: 6px;
-    background: rgba(0, 0, 0, 0.58);
+    background: rgba(4, 10, 26, 0.62);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -64,13 +64,13 @@ const styles = createSheet(/* css */`
   }
 
   .passive-slot.filled {
-    border-color: rgba(255, 45, 236, 0.55);
-    box-shadow: 0 0 10px rgba(255, 45, 236, 0.3);
+    border-color: rgba(255, 45, 236, 0.6);
+    box-shadow: 0 0 10px rgba(255, 45, 236, 0.34);
   }
 
   .loot-buff-slots {
     position: absolute;
-    top: 124px;
+    top: 162px;
     left: 0;
     display: flex;
     flex-wrap: wrap;
@@ -82,16 +82,16 @@ const styles = createSheet(/* css */`
   }
 
   .loot-buff-slots.with-shield {
-    top: 172px;
+    top: 194px;
   }
 
   .loot-buff-badge {
     min-width: 42px;
     height: 20px;
     padding: 0 5px;
-    border: 1px solid rgba(0, 255, 255, 0.35);
+    border: 1px solid rgba(0, 255, 255, 0.4);
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.58);
+    background: rgba(4, 10, 26, 0.62);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -119,12 +119,25 @@ const styles = createSheet(/* css */`
 
   /* Responsive — Tablet */
   @media (max-width: 768px) {
-    .passive-slots { bottom: 124px; }
+    .passive-slots { top: 114px; }
+    .passive-slots.with-shield { top: 142px; }
+    .loot-buff-slots { top: 142px; }
+    .loot-buff-slots.with-shield { top: 170px; }
   }
 
   /* Responsive — Mobile */
   @media (max-width: 480px) {
-    .passive-slots { bottom: 116px; }
+    .passive-slots { top: 102px; }
+    .passive-slots.with-shield { top: 126px; }
+    .loot-buff-slots { top: 128px; }
+    .loot-buff-slots.with-shield { top: 152px; }
+  }
+
+  @media (max-width: 900px) and (orientation: landscape) {
+    .passive-slots { top: 96px; }
+    .passive-slots.with-shield { top: 118px; }
+    .loot-buff-slots { top: 120px; }
+    .loot-buff-slots.with-shield { top: 142px; }
   }
 `);
 

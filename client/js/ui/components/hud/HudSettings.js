@@ -13,29 +13,29 @@ const styles = createSheet(/* css */`
 
   #settingsButton {
     position: absolute;
-    top: 0;
+    top: 4px;
     right: 0;
     pointer-events: auto;
   }
 
   #settingsBtn {
-    background: rgba(20, 20, 28, 0.88);
-    border: 2px solid var(--color-secondary-neon);
+    background: rgba(4, 10, 26, 0.78);
+    border: 1px solid var(--color-secondary-neon);
     color: var(--color-secondary-neon);
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 7px 10px;
     cursor: pointer;
-    font-size: 16px;
-    border-radius: var(--radius-md);
+    font-size: 14px;
+    border-radius: var(--radius-lg);
     transition: var(--transition-normal);
     box-shadow:
-      0 0 10px rgba(255, 45, 236, 0.4),
-      inset 0 0 8px rgba(255, 45, 236, 0.12);
+      0 0 12px rgba(255, 45, 236, 0.22),
+      inset 0 0 8px rgba(255, 45, 236, 0.1);
   }
 
   #settingsBtn:hover {
-    background: #333;
-    box-shadow: 0 0 15px var(--color-secondary-neon);
-    transform: translateY(-2px);
+    background: rgba(16, 16, 34, 0.95);
+    box-shadow: 0 0 14px var(--color-secondary-neon);
+    transform: translateY(-1px);
   }
 
   /* Responsive — Mobile */

@@ -32,10 +32,10 @@ import './hud/HudSettings.js';
 const hudSheet = createSheet(/* css */`
   :host {
     position: absolute;
-    top: var(--spacing-lg);
-    left: var(--spacing-lg);
-    right: var(--spacing-lg);
-    bottom: var(--spacing-lg);
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
     pointer-events: none;
     z-index: var(--z-hud);
     display: block;

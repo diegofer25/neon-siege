@@ -20,32 +20,76 @@ const styles = createSheet(/* css */`
     pointer-events: auto;
   }
 
-  #healthBar {
+  #playerIdentity {
     position: absolute;
     top: 0;
     left: 0;
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    padding: 6px var(--spacing-sm);
-    background: rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(0, 255, 255, 0.26);
+    gap: 6px;
+    padding: 5px var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.46);
+    border: 1px solid rgba(0, 255, 255, 0.24);
     border-radius: var(--radius-md);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.16);
+    box-shadow:
+      0 0 10px rgba(0, 255, 255, 0.14),
+      inset 0 0 8px rgba(0, 255, 255, 0.06);
+    pointer-events: none;
   }
 
-  #defenseBar {
+  #playerName {
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-pixel);
+    font-size: 9px;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.3px;
+  }
+
+  #playerLevel {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    color: var(--color-primary-neon);
+    text-shadow: 0 0 5px var(--color-primary-neon);
+    border: 1px solid rgba(0, 255, 255, 0.34);
+    border-radius: 999px;
+    padding: 2px 6px;
+    background: rgba(0, 255, 255, 0.08);
+  }
+
+  #healthBar {
     position: absolute;
-    top: 46px;
+    top: 30px;
     left: 0;
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
     padding: 6px var(--spacing-sm);
-    background: rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(255, 45, 236, 0.26);
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 255, 255, 0.34);
     border-radius: var(--radius-md);
-    box-shadow: 0 0 10px rgba(255, 45, 236, 0.16);
+    box-shadow:
+      0 0 12px rgba(0, 255, 255, 0.2),
+      inset 0 0 10px rgba(0, 255, 255, 0.06);
+  }
+
+  #defenseBar {
+    position: absolute;
+    top: 62px;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 6px var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 45, 236, 0.34);
+    border-radius: var(--radius-md);
+    box-shadow:
+      0 0 12px rgba(255, 45, 236, 0.2),
+      inset 0 0 10px rgba(255, 45, 236, 0.06);
   }
 
   .healthbar, .defensebar {
@@ -90,8 +134,8 @@ const styles = createSheet(/* css */`
 
   .coin-display {
     position: absolute;
-    top: 52px;
-    left: 120px;
+    top: 98px;
+    left: 0;
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -106,8 +150,8 @@ const styles = createSheet(/* css */`
   }
 
   .coin-display.with-shield {
-    top: 100px;
-    left: 120px;
+    top: 130px;
+    left: 0;
   }
 
   .coin-icon {
@@ -125,36 +169,48 @@ const styles = createSheet(/* css */`
 
   /* Responsive — Tablet */
   @media (max-width: 768px) {
+    #playerIdentity { padding: 4px 6px; gap: 5px; }
+    #playerName { max-width: 138px; font-size: 8px; }
+    #playerLevel { font-size: 7px; padding: 2px 5px; }
     #healthBar, #defenseBar { padding: 5px 6px; gap: 6px; }
-    #defenseBar { top: 42px; }
+    #healthBar { top: 26px; }
+    #defenseBar { top: 54px; }
     .healthbar, .defensebar { width: clamp(120px, 33vw, 180px); height: 12px; }
     #healthText, #defenseText { font-size: 8px; }
-    .coin-display { top: 42px; padding: 5px 7px; }
-    .coin-display.with-shield { top: 78px; }
+    .coin-display { top: 84px; padding: 5px 7px; }
+    .coin-display.with-shield { top: 112px; }
     .coin-icon { font-size: 10px; }
     .coin-amount { font-size: 8px; }
   }
 
   /* Responsive — Mobile */
   @media (max-width: 480px) {
+    #playerIdentity { padding: 3px 5px; gap: 4px; }
+    #playerName { max-width: 112px; font-size: 7px; }
+    #playerLevel { font-size: 6px; padding: 2px 4px; }
     #healthBar, #defenseBar { max-width: calc(100vw - 112px); padding: 4px 5px; gap: 5px; }
-    #defenseBar { top: 39px; }
+    #healthBar { top: 23px; }
+    #defenseBar { top: 49px; }
     .healthbar, .defensebar { width: clamp(104px, 35vw, 150px); height: 11px; }
     #healthText, #defenseText { font-size: 7px; }
-    .coin-display { top: 40px; padding: 5px 7px; }
-    .coin-display.with-shield { top: 74px; }
+    .coin-display { top: 77px; padding: 5px 7px; }
+    .coin-display.with-shield { top: 102px; }
     .coin-icon { font-size: 10px; }
     .coin-amount { font-size: 8px; }
   }
 
   /* Responsive — Landscape */
   @media (max-width: 900px) and (orientation: landscape) {
+    #playerIdentity { padding: 3px 6px; }
+    #playerName { max-width: 122px; font-size: 7px; }
+    #playerLevel { font-size: 6px; }
     #healthBar, #defenseBar { padding: 4px 6px; gap: 5px; }
-    #defenseBar { top: 34px; }
+    #healthBar { top: 22px; }
+    #defenseBar { top: 46px; }
     .healthbar, .defensebar { width: clamp(120px, 18vw, 170px); height: 10px; }
     #healthText, #defenseText { font-size: 7px; }
-    .coin-display { top: 36px; padding: 4px 8px; }
-    .coin-display.with-shield { top: 68px; }
+    .coin-display { top: 72px; padding: 4px 8px; }
+    .coin-display.with-shield { top: 95px; }
     .coin-icon { font-size: 10px; }
     .coin-amount { font-size: 10px; }
   }
@@ -163,6 +219,10 @@ const styles = createSheet(/* css */`
 class HudHealthBars extends BaseComponent {
     connectedCallback() {
         this._render(/* html */`
+          <div id="playerIdentity" class="hud-element">
+            <span id="playerName">PLAYER</span>
+            <span id="playerLevel">LV 1</span>
+          </div>
             <div id="healthBar" class="hud-element">
                 <div class="healthbar">
                     <div class="healthfill" id="healthFill"></div>

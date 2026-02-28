@@ -434,15 +434,18 @@ async function init() {
         await authService.logout();
         loginScreen.setUser(null);
         startScreen.setAuthUser(null);
+        hudManager.setAuthUser(null);
     });
 
     // Update start screen button when auth changes
     authService.onAuthChange((user) => {
         startScreen.setAuthUser(user);
+        hudManager.setAuthUser(user);
     });
 
     // Try restoring session from refresh token, then sync save state from server
     await authService.restoreSession();
+    hudManager.setAuthUser(authService.getCurrentUser());
     await saveStateManager.init();
 
     setupGlobalHoverSfxHooks();
