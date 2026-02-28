@@ -1058,10 +1058,10 @@ async function handleContinue() {
 async function handleBuyCredits() {
     const continueUi = getContinueUiTarget();
 
-    // Block anonymous users from purchasing
+    // Block only unauthenticated users from purchasing
     const user = authService.getCurrentUser();
-    if (!user || user.auth_provider === 'anonymous') {
-        continueUi?.showContinueError?.('Create an account to purchase credits.');
+    if (!user) {
+        continueUi?.showContinueError?.('Sign in to purchase continues.');
         return;
     }
 

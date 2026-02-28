@@ -76,27 +76,36 @@ export async function loginWithGoogle(idToken: string) {
   return UserModel.toPublicUser(user);
 }
 
-export async function resumeAnonymous(userId: string) {
-  const user = await UserModel.findById(userId);
-  if (!user || user.auth_provider !== 'anonymous') {
+export async function resumeAnonymous(deviceId: string) {
+  const user = await UserModel.findAnonymousByDeviceId(deviceId);
+  if (!user) {
     throw new AuthError('Guest session not found', 404);
   }
   return UserModel.toPublicUser(user);
 }
 
-export async function createAnonymous(displayName: string) {
-  const existing = await UserModel.findByDisplayName(displayName);
+export async function createAnonymous(displayName: string, deviceId: string) {
+  const existingForDevice = await UserModel.findAnonymousByDeviceId(deviceId);
+  if (existingForDevice) {
+    if (existingForDevice.display_name === displayName) {
+      return UserModel.toPublicUser(existingForDevice);
+    }
 
-  if (existing) {
-    // Allow re-login for anonymous accounts: the same guest name can be reclaimed
-    // from any browser. Only block if the name belongs to a registered account.
-    if (existing.auth_provider !== 'anonymous') {
+    const nameTaken = await UserModel.findByDisplayName(displayName);
+    if (nameTaken && nameTaken.id !== existingForDevice.id) {
       throw new AuthError('Player name already taken', 409);
     }
-    return UserModel.toPublicUser(existing);
+
+    const updated = await UserModel.updateDisplayName(existingForDevice.id, displayName);
+    return UserModel.toPublicUser(updated ?? existingForDevice);
   }
 
-  const user = await UserModel.createAnonymousUser(displayName);
+  const existing = await UserModel.findByDisplayName(displayName);
+  if (existing) {
+    throw new AuthError('Player name already taken', 409);
+  }
+
+  const user = await UserModel.createAnonymousUser(displayName, deviceId);
   return UserModel.toPublicUser(user);
 }
 

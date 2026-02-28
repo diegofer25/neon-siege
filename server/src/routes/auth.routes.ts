@@ -140,7 +140,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     '/anonymous/resume',
     async ({ body, accessJwt, refreshJwt, cookie: { refreshToken }, set }) => {
       try {
-        const user = await authService.resumeAnonymous(body.userId);
+        const user = await authService.resumeAnonymous(body.deviceId);
 
         const accessToken = await accessJwt.sign({ sub: user.id, displayName: user.display_name });
         const refresh = await refreshJwt.sign({ sub: user.id });
@@ -165,7 +165,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     },
     {
       body: t.Object({
-        userId: t.String(),
+        deviceId: t.String({ minLength: 10, maxLength: 128 }),
       }),
     }
   )
@@ -174,7 +174,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     '/anonymous',
     async ({ body, accessJwt, refreshJwt, cookie: { refreshToken }, set }) => {
       try {
-        const user = await authService.createAnonymous(body.displayName);
+        const user = await authService.createAnonymous(body.displayName, body.deviceId);
 
         const accessToken = await accessJwt.sign({ sub: user.id, displayName: user.display_name });
         const refresh = await refreshJwt.sign({ sub: user.id });
@@ -200,6 +200,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     {
       body: t.Object({
         displayName: t.String({ minLength: 1, maxLength: 50 }),
+        deviceId: t.String({ minLength: 10, maxLength: 128 }),
       }),
     }
   )

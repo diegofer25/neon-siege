@@ -5,7 +5,7 @@
  *   GET    /api/credits           — get balance
  *   POST   /api/credits/continue  — deduct 1 credit, get continue token + save
  *   POST   /api/credits/redeem    — consume continue token, delete old save
- *   POST   /api/credits/checkout  — create Stripe checkout session (non-anonymous only)
+ *   POST   /api/credits/checkout  — create Stripe checkout session
  *   POST   /api/credits/webhook   — Stripe webhook (unauthenticated, raw body)
  */
 
@@ -115,7 +115,7 @@ const authedRoutes = new Elysia({ prefix: '/api/credits' })
 
   /**
    * POST /api/credits/checkout
-   * Create a Stripe Checkout session. Requires non-anonymous auth (Stripe needs email).
+    * Create a Stripe Checkout session.
    */
   .post(
     '/checkout',

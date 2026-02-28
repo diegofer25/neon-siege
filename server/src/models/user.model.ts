@@ -7,6 +7,7 @@ export interface User {
   display_name: string;
   auth_provider: 'email' | 'google' | 'anonymous';
   google_id: string | null;
+  anonymous_device_id: string | null;
   country: string | null;
   country_code: string | null;
   region: string | null;
@@ -41,6 +42,15 @@ export async function findByGoogleId(googleId: string): Promise<User | null> {
   return queryOne<User>('SELECT * FROM users WHERE google_id = $1', [googleId]);
 }
 
+export async function findAnonymousByDeviceId(deviceId: string): Promise<User | null> {
+  return queryOne<User>(
+    `SELECT *
+     FROM users
+     WHERE auth_provider = 'anonymous' AND anonymous_device_id = $1`,
+    [deviceId]
+  );
+}
+
 export async function createEmailUser(email: string, passwordHash: string, displayName: string): Promise<User> {
   const result = await queryOne<User>(
     `INSERT INTO users (email, password_hash, display_name, auth_provider)
@@ -68,14 +78,24 @@ export async function findByDisplayName(displayName: string): Promise<User | nul
   );
 }
 
-export async function createAnonymousUser(displayName: string): Promise<User> {
+export async function createAnonymousUser(displayName: string, deviceId: string): Promise<User> {
   const result = await queryOne<User>(
-    `INSERT INTO users (display_name, auth_provider)
-     VALUES ($1, 'anonymous')
+    `INSERT INTO users (display_name, auth_provider, anonymous_device_id)
+     VALUES ($1, 'anonymous', $2)
      RETURNING *`,
-    [displayName]
+    [displayName, deviceId]
   );
   return result!;
+}
+
+export async function updateDisplayName(userId: string, displayName: string): Promise<User | null> {
+  return queryOne<User>(
+    `UPDATE users
+     SET display_name = $2, updated_at = NOW()
+     WHERE id = $1
+     RETURNING *`,
+    [userId, displayName]
+  );
 }
 
 export async function upgradeAnonymousToEmail(
@@ -84,7 +104,7 @@ export async function upgradeAnonymousToEmail(
   passwordHash: string
 ): Promise<User | null> {
   return queryOne<User>(
-    `UPDATE users SET email = $2, password_hash = $3, auth_provider = 'email', updated_at = NOW()
+    `UPDATE users SET email = $2, password_hash = $3, auth_provider = 'email', anonymous_device_id = NULL, updated_at = NOW()
      WHERE id = $1 AND auth_provider = 'anonymous'
      RETURNING *`,
     [userId, email, passwordHash]
@@ -97,7 +117,7 @@ export async function upgradeAnonymousToGoogle(
   email: string
 ): Promise<User | null> {
   return queryOne<User>(
-    `UPDATE users SET google_id = $2, email = $3, auth_provider = 'google', updated_at = NOW()
+    `UPDATE users SET google_id = $2, email = $3, auth_provider = 'google', anonymous_device_id = NULL, updated_at = NOW()
      WHERE id = $1 AND auth_provider = 'anonymous'
      RETURNING *`,
     [userId, googleId, email]

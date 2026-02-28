@@ -7,6 +7,7 @@
 import { apiFetch, setAccessToken, tryRestoreSession } from './ApiClient.js';
 
 const STORAGE_KEY = 'neon_siege_auth';
+const DEVICE_STORAGE_KEY = 'neon_siege_device_id';
 
 /** @type {{ id: string, display_name: string, auth_provider: string, country?: string, country_code?: string, region?: string, city?: string }|null} */
 let _currentUser = null;
@@ -70,6 +71,33 @@ function _loadFromStorage() {
   }
 }
 
+function _generateDeviceId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `device_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function _getOrCreateDeviceId() {
+  try {
+    const existing = localStorage.getItem(DEVICE_STORAGE_KEY);
+    if (existing) return existing;
+    const created = _generateDeviceId();
+    localStorage.setItem(DEVICE_STORAGE_KEY, created);
+    return created;
+  } catch {
+    return _generateDeviceId();
+  }
+}
+
+function _getStoredDeviceId() {
+  try {
+    return localStorage.getItem(DEVICE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Set user after a successful auth call and persist.
  * @param {any} data - Response with { accessToken, user }
@@ -98,13 +126,14 @@ export async function restoreSession() {
   }
 
   // For anonymous users: if the refresh cookie expired/cleared, resume the
-  // guest session using the stored userId as a device-bound token.
+  // guest session using the device-bound ID stored in localStorage.
   const stored = _loadFromStorage();
-  if (stored?.auth_provider === 'anonymous' && stored?.id) {
+  const deviceId = _getStoredDeviceId();
+  if (stored?.auth_provider === 'anonymous' && deviceId) {
     try {
       const resumed = await apiFetch('/api/auth/anonymous/resume', {
         method: 'POST',
-        body: JSON.stringify({ userId: stored.id }),
+        body: JSON.stringify({ deviceId }),
       });
       _setAuthData(resumed);
       return true;
@@ -165,9 +194,10 @@ export async function loginGoogle(idToken) {
  * @param {string} displayName
  */
 export async function loginAnonymous(displayName) {
+  const deviceId = _getOrCreateDeviceId();
   const data = await apiFetch('/api/auth/anonymous', {
     method: 'POST',
-    body: JSON.stringify({ displayName }),
+    body: JSON.stringify({ displayName, deviceId }),
   });
   _setAuthData(data);
   return _currentUser;

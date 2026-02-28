@@ -80,7 +80,7 @@ export async function redeemContinue(continueToken) {
  * Polls the balance endpoint until credits arrive or 5 minutes elapse.
  *
  * @returns {Promise<{ success: boolean, balance: object }>}
- * @throws {ApiError} 403 if anonymous user
+ * @throws {ApiError} if checkout session creation fails
  */
 export async function openCheckout() {
   const user = getCurrentUser();
