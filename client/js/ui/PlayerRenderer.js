@@ -269,76 +269,102 @@ export function renderPlayer(ctx, p) {
 
     const r = p.radius;
 
-    // ── Exosuit body path ──────────────────────────────────────────
+    // ── Soldier body (top-down view) ──────────────────────────────
+
+    // Torso — oval, slightly elongated toward facing direction
     ctx.fillStyle = bodyColor;
     ctx.strokeStyle = synergyColor || '#fff';
     ctx.lineWidth = 2;
-
     ctx.beginPath();
-    ctx.moveTo(r * 0.85, 0);
-    ctx.lineTo(r * 0.1, -r * 0.6);
-    ctx.lineTo(-r * 0.15, -r * 0.55);
-    ctx.lineTo(-r * 0.55, -r * 0.4);
-    ctx.lineTo(-r * 0.45, -r * 0.12);
-    ctx.lineTo(-r * 0.6, 0);
-    ctx.lineTo(-r * 0.45, r * 0.12);
-    ctx.lineTo(-r * 0.55, r * 0.4);
-    ctx.lineTo(-r * 0.15, r * 0.55);
-    ctx.lineTo(r * 0.1, r * 0.6);
-    ctx.closePath();
+    ctx.ellipse(-r * 0.05, 0, r * 0.58, r * 0.38, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // ── Inner armor detail lines ───────────────────────────────────
+    // Legs — two small ellipses at the back
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.38, -r * 0.28, r * 0.22, r * 0.13, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.38, r * 0.28, r * 0.22, r * 0.13, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Left arm (non-gun side, upper)
+    ctx.beginPath();
+    ctx.ellipse(r * 0.05, -r * 0.46, r * 0.26, r * 0.12, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Right arm (gun arm, lower) — reaching forward toward gun
+    ctx.beginPath();
+    ctx.ellipse(r * 0.18, r * 0.44, r * 0.30, r * 0.13, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Head — front-center circle
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(r * 0.44, 0, r * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // ── Inner armor plate detail ───────────────────────────────────
     ctx.strokeStyle = bodyColor === '#ffffff' ? '#cccccc' : '#ffffff';
     ctx.lineWidth = 1;
     ctx.globalAlpha = 0.3;
     ctx.beginPath();
-    ctx.moveTo(r * 0.5, 0);
-    ctx.lineTo(r * 0.05, -r * 0.35);
-    ctx.moveTo(r * 0.5, 0);
-    ctx.lineTo(r * 0.05, r * 0.35);
+    ctx.moveTo(r * 0.2, -r * 0.2);
+    ctx.lineTo(r * 0.2, r * 0.2);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(-r * 0.1, 0);
-    ctx.lineTo(-r * 0.5, 0);
+    ctx.moveTo(-r * 0.15, -r * 0.22);
+    ctx.lineTo(-r * 0.15, r * 0.22);
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // ── Visor ─────────────────────────────────────────────────────
+    // ── Helmet visor ──────────────────────────────────────────────
     ctx.strokeStyle = bodyCfg.VISOR_COLOR;
     ctx.lineWidth = 2.5;
     ctx.globalAlpha = 0.8 + 0.2 * Math.sin(now / 600);
     ctx.beginPath();
-    ctx.arc(r * 0.45, 0, r * 0.22, -0.7, 0.7);
+    ctx.arc(r * 0.44, 0, r * 0.18, -0.65, 0.65);
     ctx.stroke();
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = bodyCfg.VISOR_COLOR;
     ctx.beginPath();
-    ctx.arc(r * 0.45, 0, r * 0.3, -0.8, 0.8);
+    ctx.arc(r * 0.44, 0, r * 0.26, -0.8, 0.8);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // ── GUN BARREL — dual-rail weapon mount ────────────────────────
+    // ── GUN — held on right side (+y), barrel extending forward ───
 
-    const barrelStart = r * 0.85;
-    const barrelEnd = barrelStart + 15;
-    const barrelSpread = 2.5;
+    const gunY = r * 0.42;          // offset to right side of body
+    const barrelStart = r * 0.52;
+    const barrelEnd = barrelStart + 18;
 
+    // Gun body / receiver
+    ctx.fillStyle = '#555';
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(r * 0.08, gunY - 3.5, r * 0.46, 7);
+    ctx.fill();
+    ctx.stroke();
+
+    // Barrel
     ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(barrelStart, gunY);
+    ctx.lineTo(barrelEnd, gunY);
+    ctx.stroke();
+    // Muzzle cap
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(barrelStart, -barrelSpread);
-    ctx.lineTo(barrelEnd, -barrelSpread * 0.6);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(barrelStart, barrelSpread);
-    ctx.lineTo(barrelEnd, barrelSpread * 0.6);
-    ctx.stroke();
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(barrelEnd, -barrelSpread * 0.6);
-    ctx.lineTo(barrelEnd, barrelSpread * 0.6);
+    ctx.moveTo(barrelEnd, gunY - 3.5);
+    ctx.lineTo(barrelEnd, gunY + 3.5);
     ctx.stroke();
 
     // Sharp Rounds
@@ -347,10 +373,10 @@ export function renderPlayer(ctx, p) {
         ctx.lineWidth = 2;
         ctx.globalAlpha = 0.7;
         ctx.beginPath();
-        ctx.moveTo(barrelStart, -barrelSpread);
-        ctx.lineTo(barrelEnd, -barrelSpread * 0.6);
-        ctx.moveTo(barrelStart, barrelSpread);
-        ctx.lineTo(barrelEnd, barrelSpread * 0.6);
+        ctx.moveTo(barrelStart, gunY - 1.5);
+        ctx.lineTo(barrelEnd, gunY - 1.5);
+        ctx.moveTo(barrelStart, gunY + 1.5);
+        ctx.lineTo(barrelEnd, gunY + 1.5);
         ctx.stroke();
         ctx.globalAlpha = 1;
     }
@@ -361,14 +387,14 @@ export function renderPlayer(ctx, p) {
         ctx.lineWidth = 2;
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.moveTo(barrelStart + 2, -barrelSpread);
-        ctx.lineTo(barrelEnd, -barrelSpread * 0.6);
-        ctx.moveTo(barrelStart + 2, barrelSpread);
-        ctx.lineTo(barrelEnd, barrelSpread * 0.6);
+        ctx.moveTo(barrelStart + 2, gunY - 1.5);
+        ctx.lineTo(barrelEnd, gunY - 1.5);
+        ctx.moveTo(barrelStart + 2, gunY + 1.5);
+        ctx.lineTo(barrelEnd, gunY + 1.5);
         ctx.stroke();
         if (vs.learnedSkills.has('techno_bigger_booms')) {
             ctx.globalAlpha = 0.9;
-            const emberY = Math.sin(now / 150) * 3;
+            const emberY = gunY + Math.sin(now / 150) * 2;
             ctx.fillStyle = '#ff8c00';
             ctx.beginPath();
             ctx.arc(barrelEnd - 3, emberY, 1.5, 0, Math.PI * 2);
@@ -383,9 +409,9 @@ export function renderPlayer(ctx, p) {
         ctx.lineWidth = 1.5;
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.moveTo(barrelEnd, -barrelSpread * 0.4);
-        ctx.lineTo(barrelEnd + 13, 0);
-        ctx.lineTo(barrelEnd, barrelSpread * 0.4);
+        ctx.moveTo(barrelEnd, gunY - 3);
+        ctx.lineTo(barrelEnd + 13, gunY);
+        ctx.lineTo(barrelEnd, gunY + 3);
         ctx.stroke();
         ctx.globalAlpha = 1;
     }
@@ -397,7 +423,7 @@ export function renderPlayer(ctx, p) {
         const tipX = barrelEnd + 3;
         for (const spreadAngle of [-0.25, 0, 0.25]) {
             ctx.beginPath();
-            ctx.arc(tipX * Math.cos(spreadAngle), tipX * Math.sin(spreadAngle), 1.5, 0, Math.PI * 2);
+            ctx.arc(tipX * Math.cos(spreadAngle), gunY + tipX * Math.sin(spreadAngle), 1.5, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.globalAlpha = 1;
@@ -410,12 +436,12 @@ export function renderPlayer(ctx, p) {
         ctx.globalAlpha = 0.5 + 0.2 * Math.sin(now / 300);
         const reticleX = barrelEnd + 5;
         ctx.beginPath();
-        ctx.arc(reticleX, 0, 5, 0, Math.PI * 2);
+        ctx.arc(reticleX, gunY, 5, 0, Math.PI * 2);
         ctx.stroke();
         for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
             ctx.beginPath();
-            ctx.moveTo(reticleX + Math.cos(a) * 3, Math.sin(a) * 3);
-            ctx.lineTo(reticleX + Math.cos(a) * 7, Math.sin(a) * 7);
+            ctx.moveTo(reticleX + Math.cos(a) * 3, gunY + Math.sin(a) * 3);
+            ctx.lineTo(reticleX + Math.cos(a) * 7, gunY + Math.sin(a) * 7);
             ctx.stroke();
         }
         ctx.globalAlpha = 1;
