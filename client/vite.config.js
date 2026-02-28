@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 // When running inside Docker, VITE_API_TARGET is set to the server service name.
-// Locally it falls back to localhost:3000.
-const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:3000';
+// Locally it falls back to localhost:8787 (Cloudflare Worker dev server).
+const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:8787';
 const wsTarget  = apiTarget.replace(/^http/, 'ws');
 const isDocker  = !!process.env.VITE_API_TARGET;
 
