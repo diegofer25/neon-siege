@@ -168,17 +168,18 @@ export class SkillManager {
 		if (!skill) return { allowed: false, reason: 'Skill not found.' };
 
 		const currentRank = this.skillRanks[skillId] || 0;
-		const nextRank = currentRank + 1;
 		if (currentRank >= skill.maxRank) return { allowed: false, reason: 'Max rank reached.' };
 		if (this.unspentSkillPoints < 1) return { allowed: false, reason: 'No skill points available.' };
 
 		// Prerequisite check (skip for ultimates — they are standalone nodes)
+		// A prerequisite just needs to be learned (rank >= 1) to unlock any rank of a downstream skill.
+		// This avoids dead-ends when the prerequisite has a lower maxRank than the dependent skill.
 		if (skill.type !== 'ultimate') {
 			const prereq = this._getTierPrerequisite(skillId, archetypeKey);
 			if (prereq) {
 				const prereqRank = this.skillRanks[prereq.id] || 0;
-				if (prereqRank < nextRank) {
-					return { allowed: false, reason: `Need ${prereq.name} at rank ${nextRank}.` };
+				if (prereqRank < 1) {
+					return { allowed: false, reason: `Need ${prereq.name} learned first.` };
 				}
 			}
 		}

@@ -12,6 +12,7 @@ declare global {
         readonly PROD: boolean;
         readonly MODE: string;
         readonly BASE_URL: string;
+        readonly APP_VERSION: string;
     }
 
     interface ImportMeta {

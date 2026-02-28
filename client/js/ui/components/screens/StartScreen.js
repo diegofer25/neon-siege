@@ -22,6 +22,7 @@ import { overlayStyles, createSheet } from '../shared-styles.js';
 import { GameConfig } from '../../../config/GameConfig.js';
 
 const RUN_DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
+const APP_VERSION = import.meta.env.APP_VERSION || '0.0.0';
 
 /** @param {string} value @returns {string} */
 function normalizeDifficulty(value) {
@@ -157,6 +158,19 @@ const styles = createSheet(/* css */ `
   #buyBtn {
     --neon-bg: linear-gradient(45deg, #00c853, #00e676);
   }
+  .version-badge {
+    position: absolute;
+    right: 14px;
+    bottom: 10px;
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: var(--color-primary-neon);
+    text-shadow: 0 0 6px var(--color-primary-neon);
+    letter-spacing: 0.4px;
+    opacity: 0.9;
+    pointer-events: none;
+    user-select: none;
+  }
 `);
 
 class StartScreen extends BaseComponent {
@@ -191,6 +205,7 @@ class StartScreen extends BaseComponent {
                     <div class="last-run-row"><span>Last Run: </span><span>Wave <span id="lastRunWave">0</span> — <span id="lastRunScore">0</span> pts</span></div>
                     <div class="last-run-row best"><span>Best: </span><span>Wave <span id="bestWave">0</span> — <span id="bestScore">0</span> pts</span></div>
                 </div>
+                <span class="version-badge">v${APP_VERSION}</span>
             </div>
         `, overlayStyles, styles);
 

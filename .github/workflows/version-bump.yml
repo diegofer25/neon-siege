@@ -1,0 +1,68 @@
+name: Auto Bump Client Version
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  bump-client-version:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Bump client patch beta version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current_version="$(node -p "require('./client/package.json').version")"
+
+          if [[ ! "$current_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-beta$ ]]; then
+            echo "Expected version format x.y.z-beta, got: $current_version"
+            exit 1
+          fi
+
+          major="${BASH_REMATCH[1]}"
+          minor="${BASH_REMATCH[2]}"
+          patch="${BASH_REMATCH[3]}"
+          next_patch=$((patch + 1))
+          next_version="${major}.${minor}.${next_patch}-beta"
+
+          echo "Bumping client version: $current_version -> $next_version"
+          cd client
+          npm version "$next_version" --no-git-tag-version
+          cd ..
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add client/package.json
+          if [[ -f client/package-lock.json ]]; then
+            git add client/package-lock.json
+          fi
+          if [[ -f package-lock.json ]]; then
+            git add package-lock.json
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No version changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(version): bump client to ${next_version} [skip ci]"
+          git push
