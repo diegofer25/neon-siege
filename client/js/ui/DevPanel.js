@@ -166,12 +166,7 @@ export class DevPanel {
 		document.getElementById('dp-jump-wave').addEventListener('click', () => {
 			const n = parseInt(/** @type {HTMLInputElement} */ (document.getElementById('dp-wave')).value, 10);
 			if (!n || n < 1) return;
-			g.wave = n;
-			g.enemies.length = 0;
-			g.projectiles.length = 0;
-			g.waveManager.reset();
-			g.waveManager.setDifficulty(g.runDifficulty);
-			g.waveManager.startWave(n);
+			g.skipToWave(n);
 		});
 
 		document.getElementById('dp-complete-wave').addEventListener('click', () => {

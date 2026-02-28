@@ -21,6 +21,7 @@ import { isAuthenticated } from './AuthService.js';
  * @param {object} params.runDetails
  * @param {number} [params.gameDurationMs]
  * @param {number} [params.startWave] - Wave the run started from (>1 when loaded from save)
+ * @param {number} [params.continuesUsed] - Number of continues used during the run
  * @returns {Promise<{entry: any, rank: number|null}|null>}
  */
 export async function submitScore(params) {

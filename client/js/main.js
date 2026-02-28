@@ -12,8 +12,8 @@ import { saveStateManager } from './managers/SaveStateManager.js';
 import { audioManager } from './managers/AudioManager.js';
 import { hudManager } from './managers/HUDManager.js';
 import { skillUI } from './ui/SkillUIController.js';
-import { DevPanel } from './ui/DevPanel.js';
-import { AdminPanel } from './ui/AdminPanel.js';
+// DevPanel & AdminPanel are dynamically imported only in dev mode (see initGame)
+// This ensures they are tree-shaken from production builds.
 import * as authService from './services/AuthService.js';
 import * as creditService from './services/CreditService.js';
 
@@ -195,13 +195,17 @@ async function init() {
     hudManager.game = game;
     skillUI.game = game;
 
-    // Developer panel (gated by ?dev=true)
-    const devPanel = new DevPanel(game);
-    appRuntime.devPanel = devPanel;
-
-    // Admin panel (always available, password-protected)
-    const adminPanel = new AdminPanel(game);
-    appRuntime.adminPanel = adminPanel;
+    // Developer panel & Admin panel — only loaded in dev builds
+    if (import.meta.env.DEV) {
+        const [{ DevPanel }, { AdminPanel }] = await Promise.all([
+            import('./ui/DevPanel.js'),
+            import('./ui/AdminPanel.js'),
+        ]);
+        const devPanel = new DevPanel(game);
+        appRuntime.devPanel = devPanel;
+        const adminPanel = new AdminPanel(game);
+        appRuntime.adminPanel = adminPanel;
+    }
     
     // Configure all input event listeners
     setupInputHandlers();
@@ -275,14 +279,16 @@ async function init() {
     settingsModalEl.addEventListener('clear-save', clearSavedGame);
     settingsModalEl.addEventListener('reset-settings', resetSettingsToDefaults);
     settingsModalEl.addEventListener('setting-change', handleSettingChange);
-    settingsModalEl.addEventListener('toggle-dev-panel', () => {
-        appRuntime.devPanel?.toggle();
-        closeSettingsModal();
-    });
+    if (import.meta.env.DEV) {
+        settingsModalEl.addEventListener('toggle-dev-panel', () => {
+            appRuntime.devPanel?.toggle();
+            closeSettingsModal();
+        });
 
-    // Show Admin Panel button in settings if ?dev=true
-    if (appRuntime.devPanel?.enabled) {
-        settingsModalEl.setDevPanelVisible(true);
+        // Show Admin Panel button in settings if ?dev=true
+        if (appRuntime.devPanel?.enabled) {
+            settingsModalEl.setDevPanelVisible(true);
+        }
     }
 
     // Auth & leaderboard screens
@@ -473,16 +479,27 @@ function setupInputHandlers() {
     document.addEventListener('keydown', (e) => {
         input.keys[e.code] = true;
 
-        // Toggle admin panel (semicolon key — always available, password-protected)
-        if (e.code === 'Semicolon') {
-            appRuntime.adminPanel?.toggle();
-            return;
-        }
+        if (import.meta.env.DEV) {
+            // Toggle admin panel (semicolon key — dev only, password-protected)
+            if (e.code === 'Semicolon') {
+                appRuntime.adminPanel?.toggle();
+                return;
+            }
 
-        // Toggle developer panel (backtick key, requires ?dev=true)
-        if (e.code === 'Backquote' && appRuntime.devPanel?.enabled) {
-            appRuntime.devPanel.toggle();
-            return;
+            // Toggle developer panel (backtick key, requires ?dev=true)
+            if (e.code === 'Backquote' && appRuntime.devPanel?.enabled) {
+                appRuntime.devPanel.toggle();
+                return;
+            }
+
+            // Quick wave jump: Ctrl+Shift+W — prompts for wave number
+            if (e.code === 'KeyW' && e.ctrlKey && e.shiftKey && game?.gameState === 'playing') {
+                e.preventDefault();
+                const input = window.prompt('Jump to wave:');
+                const waveNum = parseInt(input, 10);
+                if (waveNum >= 1) game.skipToWave(waveNum);
+                return;
+            }
         }
 
         // Game pause toggle
@@ -1002,7 +1019,7 @@ async function handleBuyCredits() {
 
     // Block anonymous users from purchasing
     const user = authService.getCurrentUser();
-    if (!user || user.provider === 'anonymous') {
+    if (!user || user.auth_provider === 'anonymous') {
         goScreen.showContinueError('Create an account to purchase credits.');
         return;
     }
@@ -1073,8 +1090,8 @@ function clearSavedGame() {
 function syncSaveButtons() {
     const hasSave = saveStateManager.hasSave();
 
-    document.querySelector('settings-modal')?.setSaveButtonStates({ hasSave });
-    document.querySelector('game-over-screen')?.setLoadSaveVisible(hasSave);
+    /** @type {any} */ (document.querySelector('settings-modal'))?.setSaveButtonStates?.({ hasSave });
+    /** @type {any} */ (document.querySelector('game-over-screen'))?.setLoadSaveVisible?.(hasSave);
 }
 
 function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {

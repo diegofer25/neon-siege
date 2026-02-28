@@ -540,6 +540,47 @@ export class Game {
 	 * Continue to endless mode after victory.
 	 * Resets the victory-tracked flag and resumes wave progression.
 	 */
+	/**
+	 * DEV-ONLY: Skip directly to a specific wave number.
+	 * Clears current enemies/projectiles, resets wave manager, and starts the target wave
+	 * with proper store dispatch and countdown.
+	 * @param {number} targetWave - The wave number to jump to (must be >= 1)
+	 */
+	skipToWave(targetWave) {
+		if (typeof targetWave !== 'number' || targetWave < 1) return;
+		if (this.gameState !== 'playing' && this.gameState !== 'paused') return;
+
+		// Clear current battlefield
+		this.enemies.length = 0;
+		this.projectiles.length = 0;
+		this.particles.length = 0;
+
+		// Set the target wave
+		this.wave = targetWave;
+		this.gameState = 'playing';
+
+		// Reset and reconfigure wave manager for new wave
+		this._clearWaveCountdownTimeouts();
+		this.waveManager.reset();
+		this.waveManager.setDifficulty(this.runDifficulty);
+
+		// Run countdown then start the wave with proper store dispatch
+		this._runWaveCountdown(() => {
+			this._waveStartTime = performance.now();
+			this.challengeSystem.onWaveStart();
+			this.waveManager.startWave(targetWave);
+
+			this.dispatcher.dispatch({
+				type: ActionTypes.WAVE_START,
+				payload: {
+					wave: targetWave,
+					enemiesToSpawn: this.waveManager.enemiesToSpawn,
+					isBoss: this.waveManager.isBossWave,
+				},
+			});
+		});
+	}
+
 	continueToEndless() {
 		this._endlessMode = true;
 		this._gameOverTracked = false;
