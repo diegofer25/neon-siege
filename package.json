@@ -5,12 +5,16 @@
   "description": "Neon Siege — a browser-based 2D shooter with infinite wave survival and neon aesthetics",
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "server-cf"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=client",
-    "dev:server": "npm run dev --workspace=server",
-    "dev:all": "npm run dev --workspace=client & npm run dev --workspace=server",
+    "dev:server": "npm run dev --workspace=server-cf",
+    "dev:all": "concurrently -k -n client,worker,stripe -c cyan,magenta,yellow \"npm run dev --workspace=client\" \"npm run dev --workspace=server-cf\" \"stripe listen --forward-to http://127.0.0.1:8787/api/credits/webhook\"",
+    "dev:no-stripe": "concurrently -k -n client,worker -c cyan,magenta \"npm run dev --workspace=client\" \"npm run dev --workspace=server-cf\"",
+    "dev:sync-env": "bash ./scripts/sync-dev-vars.sh",
+    "dev:all:infisical": "npm run dev:sync-env && npm run dev:all",
     "build": "npm run build --workspace=client",
     "lint": "npm run lint --workspace=client",
     "docker:dev": "docker compose -f docker-compose.dev.yml up --build",
@@ -35,5 +39,8 @@
   "repository": {
     "type": "git",
     "url": "your-repo-url"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

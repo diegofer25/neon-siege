@@ -69,3 +69,5 @@ dist
 # Bun
 bun.lockb
 bun.lock
+
+server-cf/.wrangler
