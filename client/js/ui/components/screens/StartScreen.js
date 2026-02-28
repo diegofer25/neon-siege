@@ -175,7 +175,6 @@ const styles = createSheet(/* css */ `
     transform: translateY(0) scale(0.99);
   }
   .primary-actions {
-    width: min(100%, 520px);
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
