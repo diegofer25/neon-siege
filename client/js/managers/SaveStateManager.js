@@ -24,6 +24,7 @@ import {
     getSaveSessionToken,
     clearSaveSession,
 } from '../services/SaveApiService.js';
+import { isRegisteredUser } from '../services/AuthService.js';
 
 const SAVE_SCHEMA_VERSION = 2;
 
@@ -44,10 +45,21 @@ export class SaveStateManager {
      */
     async init() {
         this._initialized = true;
+        if (!isRegisteredUser()) {
+            this._cache = null;
+            clearSaveSession();
+            return;
+        }
+
         try {
             const serverSave = await loadSaveFromServer();
             this._cache = serverSave; // null when the user has no save yet
         } catch (err) {
+            if (err?.status === 403) {
+                this._cache = null;
+                clearSaveSession();
+                return;
+            }
             console.warn('[SaveStateManager] Could not load save from server:', err.message);
             // Keep whatever was in _cache (null on first load, stale on retry)
         }
@@ -76,6 +88,10 @@ export class SaveStateManager {
      * @param {object} snapshot
      */
     saveSnapshot(snapshot) {
+        if (!isRegisteredUser()) {
+            return;
+        }
+
         const payload = {
             schemaVersion: SAVE_SCHEMA_VERSION,
             savedAt: Date.now(),
@@ -106,6 +122,11 @@ export class SaveStateManager {
         this._cache = null;
         clearSaveSession();
 
+        if (!isRegisteredUser()) {
+            telemetry.track('save_cleared');
+            return true;
+        }
+
         deleteSaveFromServer().catch(err =>
             console.warn('[SaveStateManager] Server delete failed:', err.message)
         );
@@ -122,6 +143,10 @@ export class SaveStateManager {
      * @param {object} payload
      */
     async _syncToServer(payload) {
+        if (!isRegisteredUser()) {
+            return;
+        }
+
         try {
             if (!getSaveSessionToken()) {
                 await startSaveSession();

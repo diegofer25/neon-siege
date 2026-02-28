@@ -3,6 +3,7 @@ import { authPlugin } from '../plugins/auth.plugin';
 import * as saveService from '../services/save.service';
 import { SaveError } from '../services/save.service';
 import { createRateLimiter } from '../middleware/rateLimit';
+import * as UserModel from '../models/user.model';
 
 const saveWriteLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
 
@@ -20,6 +21,18 @@ export const saveRoutes = new Elysia({ prefix: '/api/save' })
       set.status = 401;
       throw new Error('Invalid or expired access token');
     }
+
+    const user = await UserModel.findById(payload.sub as string);
+    if (!user) {
+      set.status = 401;
+      throw new Error('Authenticated user not found');
+    }
+
+    if (!UserModel.isRegisteredUser(user)) {
+      set.status = 403;
+      throw new Error('Saving is only available for registered accounts');
+    }
+
     return { userId: payload.sub as string };
   })
 

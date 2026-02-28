@@ -16,6 +16,14 @@ export interface User {
   updated_at: Date;
 }
 
+export function isRegisteredAuthProvider(provider: User['auth_provider'] | null | undefined): boolean {
+  return provider != null && provider !== 'anonymous';
+}
+
+export function isRegisteredUser(user: Pick<User, 'auth_provider'> | null | undefined): boolean {
+  return !!user && isRegisteredAuthProvider(user.auth_provider);
+}
+
 export type PublicUser = Pick<User, 'id' | 'display_name' | 'auth_provider' | 'country' | 'country_code' | 'region' | 'city'>;
 
 export function toPublicUser(user: User): PublicUser {

@@ -4,7 +4,7 @@
  */
 
 import { apiFetch } from './ApiClient.js';
-import { isAuthenticated } from './AuthService.js';
+import { isRegisteredUser } from './AuthService.js';
 
 /**
  * Submit a completed run to the leaderboard.
@@ -25,7 +25,7 @@ import { isAuthenticated } from './AuthService.js';
  * @returns {Promise<{entry: any, rank: number|null}|null>}
  */
 export async function submitScore(params) {
-  if (!isAuthenticated()) return null;
+  if (!isRegisteredUser()) return null;
 
   try {
     const result = await apiFetch('/api/leaderboard/submit', {

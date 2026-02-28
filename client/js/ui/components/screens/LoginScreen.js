@@ -887,6 +887,24 @@ class LoginScreen extends BaseComponent {
         super.show();
     }
 
+    /**
+     * Open the overlay directly on the registration screen.
+     * @param {string} [displayName]
+     */
+    showRegistration(displayName = '') {
+      this._resetToQuickPlay();
+      super.show();
+      requestAnimationFrame(() => {
+        this._switchScreen('register');
+        const nameInput = /** @type {HTMLInputElement|null} */ (this._$('#registerForm input[name="displayName"]'));
+        if (!nameInput) return;
+        const value = String(displayName || '').trim();
+        if (value) {
+          nameInput.value = value;
+        }
+      });
+    }
+
     hide() {
         const root = this._$('.overlay');
         if (!root || !root.classList.contains('show')) return;

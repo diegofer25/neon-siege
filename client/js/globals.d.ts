@@ -61,6 +61,7 @@ declare global {
         setNewRecord(isNew: boolean): void;
         setNearMiss(text: string | null): void;
         setLoadSaveVisible(visible: boolean): void;
+        setRegistrationPrompt(required: boolean): void;
     }
 
     interface VictoryScreenElement extends HTMLElement {
@@ -121,6 +122,7 @@ declare global {
 
     interface LoginScreenElement extends HTMLElement {
         show(): void;
+        showRegistration(displayName?: string): void;
         hide(): void;
         isVisible(): boolean;
         setUser(user: { id: string; display_name: string; auth_provider: string } | null): void;

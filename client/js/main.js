@@ -36,6 +36,7 @@ let showPerformanceStats = false;
 /** @type {number|null} Active animation frame request id */
 let animationFrameId = null;
 let settingsModalWasPlaying = false;
+let pendingGameOverUnlock = null;
 
 const APP_RUNTIME_KEY = '__NEON_TD_RUNTIME__';
 const appRuntime = window[APP_RUNTIME_KEY] || (window[APP_RUNTIME_KEY] = {
@@ -303,6 +304,14 @@ async function init() {
     gameOverScreen.addEventListener('show-leaderboard', showLeaderboard);
     victoryScreen.addEventListener('show-leaderboard', showLeaderboard);
 
+    gameOverScreen.addEventListener('register-to-save', () => {
+        const authOverlay = /** @type {any} */ (loginScreen);
+        const currentUser = authService.getCurrentUser();
+        const guestName = currentUser?.auth_provider === 'anonymous' ? (currentUser.display_name || '') : '';
+        authOverlay.setUser(null);
+        authOverlay.showRegistration(guestName);
+    });
+
     // Show login/profile
     startScreen.addEventListener('show-login', () => {
         loginScreen.setUser(authService.getCurrentUser());
@@ -314,7 +323,15 @@ async function init() {
     const _onAuthSuccess = () => {
         loginScreen.hide();
         // Sync save from server after login so save buttons update correctly
-        saveStateManager.init().then(() => {
+        saveStateManager.init().then(async () => {
+            const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+            if (pendingGameOverUnlock && goScreen?.isVisible?.() && authService.isRegisteredUser()) {
+                saveStateManager.saveSnapshot(pendingGameOverUnlock.snapshot);
+                game?._submitScoreToLeaderboard?.(false);
+                pendingGameOverUnlock = null;
+                goScreen.setRegistrationPrompt?.(false);
+                await refreshCreditInfo();
+            }
             syncSaveButtons();
             refreshContinueInfo();
         });
@@ -606,6 +623,7 @@ export function toggleMute() {
  * Hides start screen, starts audio, and begins game loop
  */
 export function startGame() {
+    pendingGameOverUnlock = null;
     document.querySelector('start-screen').hide();
     document.querySelector('game-over-screen').hide();
     playSFX('ui_start_game');
@@ -637,6 +655,7 @@ export function startGame() {
  * Hides game over screen and restarts game loop
  */
 function restartGame() {
+    pendingGameOverUnlock = null;
     document.querySelector('game-over-screen').hide();
     document.querySelector('victory-screen').hide();
     document.querySelector('start-screen').hide();
@@ -742,7 +761,8 @@ function gameLoop(timestamp = 0) {
  * Stops background music and shows final wave reached
  */
 function showGameOver() {
-    const goScreen = document.querySelector('game-over-screen');
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    const isRegistered = authService.isRegisteredUser();
     goScreen.setStats({
         wave: game.wave,
         score: game.score,
@@ -764,11 +784,16 @@ function showGameOver() {
         goScreen.setNearMiss(null);
     }
 
+    goScreen.setRegistrationPrompt?.(!isRegistered);
+    pendingGameOverUnlock = !isRegistered ? { snapshot: game.getSaveSnapshot() } : null;
+
     goScreen.show();
     syncSaveButtons();
 
-    // Refresh credit balance from server and update continue UI
-    refreshCreditInfo();
+    // Continue credits are only relevant for registered users (guest users are prompted to register)
+    if (isRegistered) {
+        refreshCreditInfo();
+    }
 
     playSFX('game_over');
 

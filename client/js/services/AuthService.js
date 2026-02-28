@@ -20,6 +20,11 @@ export function isAuthenticated() {
   return _currentUser !== null;
 }
 
+/** @param {{ auth_provider?: string }|null} [user] */
+export function isRegisteredUser(user = _currentUser) {
+  return !!user && user.auth_provider !== 'anonymous';
+}
+
 /** @returns {{ id: string, display_name: string, auth_provider: string, country?: string, country_code?: string, region?: string, city?: string }|null} */
 export function getCurrentUser() {
   return _currentUser;

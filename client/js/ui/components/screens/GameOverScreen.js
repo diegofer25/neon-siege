@@ -14,6 +14,7 @@
  *   'continue'      — "Continue" button clicked (spend 1 credit)
  *   'buy-credits'   — "Buy Credits" button clicked
  *   'show-leaderboard' — "View Leaderboard" button clicked
+ *   'register-to-save' — "Register to Save & Submit Score" button clicked
  */
 
 import { BaseComponent } from '../BaseComponent.js';
@@ -56,6 +57,31 @@ const styles = createSheet(/* css */ `
     margin-top: 4px;
     display: none;
   }
+
+    .register-lock {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0 14px;
+        max-width: 560px;
+    }
+
+    .register-lock p {
+        margin: 0;
+        font-size: 14px;
+        color: #fff;
+        line-height: 1.5;
+        text-align: center;
+    }
+
+    .register-lock .register-hint {
+        color: var(--color-primary-neon);
+        text-shadow: 0 0 8px var(--color-primary-neon);
+        font-family: var(--font-pixel);
+        font-size: 10px;
+        letter-spacing: 0.6px;
+    }
 `);
 
 class GameOverScreen extends BaseComponent {
@@ -71,6 +97,12 @@ class GameOverScreen extends BaseComponent {
                     <div class="go-stat-row"><span>Level Reached</span><span id="level">1</span></div>
                 </div>
                 <div id="nearMiss" class="near-miss" style="display: none;"></div>
+
+                <div id="registerLock" class="register-lock">
+                    <p>Save progress and submit your score by creating a registered account.</p>
+                    <p class="register-hint">YOUR RUN STAYS ON SCREEN — REGISTER NOW TO UNLOCK SAVE + LEADERBOARD</p>
+                    <neon-button id="registerBtn" variant="primary">REGISTER TO SAVE &amp; SUBMIT SCORE</neon-button>
+                </div>
 
                 <div class="credit-section">
                     <neon-button id="continueBtn" variant="primary" style="display: none;">CONTINUE</neon-button>
@@ -88,6 +120,9 @@ class GameOverScreen extends BaseComponent {
         this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
         this._$('#continueBtn').addEventListener('click', () => this._emit('continue'));
         this._$('#buyBtn').addEventListener('click', () => this._emit('buy-credits'));
+        this._$('#registerBtn').addEventListener('click', () => this._emit('register-to-save'));
+
+        this._registrationRequired = false;
     }
 
     /** @param {{ wave: number, score: number, combo: number, level: number }} data */
@@ -122,6 +157,10 @@ class GameOverScreen extends BaseComponent {
      * @param {boolean} hasSave — whether a save checkpoint exists to continue from
      */
     setCreditInfo(credits, hasSave = false) {
+        if (this._registrationRequired) {
+            return;
+        }
+
         const continueBtn = this._$('#continueBtn');
         const buyBtn = this._$('#buyBtn');
         const badge = this._$('#creditBadge');
@@ -153,6 +192,25 @@ class GameOverScreen extends BaseComponent {
             badge.textContent = '';
             buyBtn.style.display = 'none';
         }
+    }
+
+    /** @param {boolean} required */
+    setRegistrationPrompt(required) {
+        this._registrationRequired = !!required;
+
+        const lock = this._$('#registerLock');
+        const leaderboardBtn = this._$('#leaderboardBtn');
+        const continueBtn = this._$('#continueBtn');
+        const buyBtn = this._$('#buyBtn');
+        const badge = this._$('#creditBadge');
+        const errorEl = this._$('#continueError');
+
+        if (lock) lock.style.display = required ? 'flex' : 'none';
+        if (leaderboardBtn) leaderboardBtn.style.display = required ? 'none' : 'inline-block';
+        if (continueBtn && required) continueBtn.style.display = 'none';
+        if (buyBtn && required) buyBtn.style.display = 'none';
+        if (badge && required) badge.textContent = '';
+        if (errorEl && required) errorEl.style.display = 'none';
     }
 
     /**

@@ -82,9 +82,17 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
       set.status = 401;
       throw new Error('Invalid or expired access token');
     }
+
+    const user = await UserModel.findById(payload.sub as string);
+    if (!user) {
+      set.status = 401;
+      throw new Error('Authenticated user not found');
+    }
+
     return {
       userId: payload.sub as string,
       displayName: payload.displayName as string,
+      isRegistered: UserModel.isRegisteredUser(user),
     };
   })
   .get(
@@ -101,8 +109,13 @@ const authRoutes = new Elysia({ prefix: '/api/leaderboard' })
   )
   .post(
     '/submit',
-    async ({ body, userId, set, headers, server, request }) => {
+    async ({ body, userId, isRegistered, set, headers, server, request }) => {
       try {
+        if (!isRegistered) {
+          set.status = 403;
+          return { error: 'Leaderboard submission requires a registered account' };
+        }
+
         const result = await leaderboardService.submitScore({
           userId,
           difficulty: body.difficulty,
