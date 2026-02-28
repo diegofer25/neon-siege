@@ -1,11 +1,11 @@
 /**
- * @fileoverview AscensionSystem — manages the Ascension pick event every 10 waves.
+ * @fileoverview AscensionSystem — manages the Ascension pick event every 5 waves.
  *
- * Every 10 waves, the player picks 1 of 3 random run-warping modifiers from the pool.
+ * Every 5 waves, the player picks 1 of 3 random run-warping modifiers from the pool.
  * Modifiers stack and persist for the entire run.
  */
 
-import { ASCENSION_POOL, ASCENSION_PICKS, ASCENSION_WAVES } from '../config/SkillConfig.js';
+import { ASCENSION_POOL, ASCENSION_PICKS, ASCENSION_INTERVAL } from '../config/SkillConfig.js';
 import { playSFX } from '../main.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 import { ActionTypes } from '../state/index.js';
@@ -38,7 +38,7 @@ export class AscensionSystem {
 	 * @returns {boolean}
 	 */
 	isAscensionWave(wave) {
-		return ASCENSION_WAVES.includes(wave);
+		return Number.isInteger(wave) && wave > 0 && wave % ASCENSION_INTERVAL === 0;
 	}
 
 	/**

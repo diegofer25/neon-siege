@@ -6,7 +6,7 @@
  * - 5 archetype skill trees (2 shipped: Gunner, Technomancer; 3 stubbed)
  * - 4 tiers per tree with gate thresholds (3/6/10 points)
  * - Ultimates per archetype, unlocked by completing branch (T4 passive learned)
- * - Ascension modifiers (pick 1 of 3 every 10 waves)
+ * - Ascension modifiers (pick 1 of 3 every 5 waves)
  * - XP/level curve targeting 15-20 levels in a 50-wave run
  */
 // cspell:words Technomancer TECHNOMANCER cooldowns crits aimbot Aimbot Debuffs
@@ -613,5 +613,5 @@ export const ASCENSION_POOL = [
 /** Number of ascension picks offered per event */
 export const ASCENSION_PICKS = 3;
 
-/** Waves at which Ascension events trigger */
-export const ASCENSION_WAVES = [5, 10, 15, 20, 25, 30];
+/** Ascension trigger cadence (every N waves, indefinitely in endless mode) */
+export const ASCENSION_INTERVAL = 5;

@@ -922,7 +922,7 @@ export class Game {
 	 * @private
 	 */
 	_showBetweenWaveUI() {
-		// Ascension event every 10 waves
+		// Ascension event every 5 waves
 		if (this.ascensionSystem.isAscensionWave(this.wave)) {
 			this.gameState = Game.STATES.ASCENSION;
 			showAscensionPanel();

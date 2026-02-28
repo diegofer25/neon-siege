@@ -25,12 +25,9 @@ const MIN_GAME_DURATION_MS = 600_000;
 // Max plausible score per wave (generous upper bound — high-combo explosive builds can exceed 15k/wave)
 const MAX_SCORE_PER_WAVE = 30_000;
 
-// Max wave in the game
-const MAX_WAVE = 30;
-
 export async function validateScore(payload: ScorePayload): Promise<ValidationResult> {
   // Hard rejection: impossible wave
-  if (payload.wave < 1 || payload.wave > MAX_WAVE) {
+  if (payload.wave < 1) {
     return { valid: false, flagged: true, reason: 'Invalid wave number' };
   }
 
