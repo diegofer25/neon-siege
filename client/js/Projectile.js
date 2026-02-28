@@ -401,10 +401,27 @@ export class Projectile {
      * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
      */
     draw(ctx) {
+        const speed = Math.hypot(this.vx, this.vy);
+        const dirX = speed > 0 ? this.vx / speed : Math.cos(this.angle);
+        const dirY = speed > 0 ? this.vy / speed : Math.sin(this.angle);
+        const drawAngle = Math.atan2(dirY, dirX);
+
+        const isBasicBullet = !this.isOverchargeBurst && !this.isCriticalVisual && !this.hasShieldBreaker;
+        const hasPiercingAccent = this.piercing;
+        const hasExplosiveAccent = this.explosive;
+
         // Fake glow: larger semi-transparent circle behind the body (replaces shadowBlur)
-        const glowAlpha = this.isCriticalVisual ? 0.35 : 0.2;
-        const glowRadius = this.isCriticalVisual ? 12 : 8;
-        const glowColor = this.isCriticalVisual ? this.glowColor : '#fff';
+        const glowAlpha = this.isOverchargeBurst ? 0.42 : this.isCriticalVisual ? 0.35 : this.hasShieldBreaker ? 0.28 : hasExplosiveAccent ? 0.26 : 0.2;
+        const glowRadius = this.isOverchargeBurst ? 14 : this.isCriticalVisual ? 12 : this.hasShieldBreaker ? 10 : hasExplosiveAccent ? 9 : 8;
+        const glowColor = this.isOverchargeBurst
+            ? (this.glowColor || '#ffff00')
+            : this.isCriticalVisual
+                ? this.glowColor
+                : this.hasShieldBreaker
+                    ? '#66e6ff'
+                    : hasExplosiveAccent
+                        ? '#ff9b3d'
+                        : '#fff';
         ctx.globalAlpha = glowAlpha;
         ctx.fillStyle = glowColor;
         ctx.beginPath();
@@ -436,17 +453,214 @@ export class Projectile {
             strokeColor = '#0088ff';
             lineWidth = 3;
             drawSize = 5;
+        } else if (hasExplosiveAccent) {
+            // Explosive rounds - orange/amber core
+            fillColor = '#ffb35c';
+            strokeColor = '#ff7a00';
+            lineWidth = 2.5;
+            drawSize = 4.8;
+        } else if (hasPiercingAccent) {
+            // Piercing rounds - cooler cyan tone
+            fillColor = '#b8f7ff';
+            strokeColor = '#32d9ff';
+            lineWidth = 2.2;
+            drawSize = 4.2;
         }
         
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = lineWidth;
-        
-        // Draw projectile body
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, drawSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+
+        if (isBasicBullet) {
+            // Directional bullet silhouette: pointed tip + compact core + tail glow
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(drawAngle);
+
+            // Tail glow
+            ctx.globalAlpha = 0.45;
+            ctx.fillStyle = '#aee8ff';
+            ctx.beginPath();
+            ctx.ellipse(-6.5, 0, 5, 2.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main body (capsule-like)
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#f8fbff';
+            ctx.strokeStyle = '#7fd8ff';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(-4.8, -2.1);
+            ctx.lineTo(2.6, -2.1);
+            ctx.quadraticCurveTo(5.2, 0, 2.6, 2.1);
+            ctx.lineTo(-4.8, 2.1);
+            ctx.quadraticCurveTo(-6.6, 0, -4.8, -2.1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Neon core stripe
+            ctx.strokeStyle = '#00e5ff';
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(-3.6, 0);
+            ctx.lineTo(3.2, 0);
+            ctx.stroke();
+
+            // Tip spark
+            ctx.globalAlpha = 0.95;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(4.2, 0, 1.25, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        } else if (this.isOverchargeBurst) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(drawAngle + this.lifetime * 0.01);
+
+            // Energy corona
+            ctx.globalAlpha = 0.45;
+            ctx.fillStyle = '#fff58a';
+            ctx.beginPath();
+            ctx.arc(0, 0, drawSize + 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Star core
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const a = (Math.PI * 2 / 8) * i;
+                const rr = i % 2 === 0 ? drawSize + 1.5 : drawSize - 1.8;
+                const px = Math.cos(a) * rr;
+                const py = Math.sin(a) * rr;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        } else if (this.isCriticalVisual) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(drawAngle);
+
+            // Critical diamond slug
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(6.6, 0);
+            ctx.lineTo(0, -4.6);
+            ctx.lineTo(-5.6, 0);
+            ctx.lineTo(0, 4.6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Crown sparks
+            ctx.globalAlpha = 0.85;
+            ctx.strokeStyle = '#ffe27a';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(1.5, -3.5);
+            ctx.lineTo(5, -6.8);
+            ctx.moveTo(2, 0);
+            ctx.lineTo(7.5, 0);
+            ctx.moveTo(1.5, 3.5);
+            ctx.lineTo(5, 6.8);
+            ctx.stroke();
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        } else if (this.hasShieldBreaker) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(drawAngle);
+
+            // Shield-breaker bolt body
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(6.2, 0);
+            ctx.lineTo(1.5, -3.6);
+            ctx.lineTo(-5.8, -2.2);
+            ctx.lineTo(-2.2, 0);
+            ctx.lineTo(-5.8, 2.2);
+            ctx.lineTo(1.5, 3.6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Disruptor ring
+            ctx.globalAlpha = 0.7;
+            ctx.strokeStyle = '#b8f7ff';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.arc(-1.2, 0, 4.8, 0.45, Math.PI * 2 - 0.45);
+            ctx.stroke();
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        } else {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(drawAngle);
+
+            // Generic enhanced round for remaining variants (e.g., explosive/piercing-only)
+            ctx.beginPath();
+            ctx.ellipse(0.4, 0, drawSize + 1.3, Math.max(2.4, drawSize * 0.56), 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.globalAlpha = 0.8;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(drawSize * 0.8, 0, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
+
+        // Additive accents for projectile modifiers
+        if (hasPiercingAccent) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(drawAngle);
+            ctx.strokeStyle = '#63f0ff';
+            ctx.lineWidth = 1.3;
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(-8.5, -2.2);
+            ctx.lineTo(-2.5, -0.9);
+            ctx.moveTo(-8.5, 2.2);
+            ctx.lineTo(-2.5, 0.9);
+            ctx.stroke();
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
+
+        if (hasExplosiveAccent) {
+            const pulse = 0.55 + 0.45 * Math.sin(this.lifetime * 0.028);
+            ctx.strokeStyle = '#ff9b3d';
+            ctx.lineWidth = 1.6;
+            ctx.globalAlpha = 0.45 * pulse;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, drawSize + 2.8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
 
         // DEX tracer — extended glowing trail behind the projectile (ring buffer)
         if (this.tracerLevel > 0 && this._trailCount >= 2) {
