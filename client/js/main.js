@@ -266,6 +266,8 @@ async function init() {
     startScreen.addEventListener('start-game', () => {
         startGame();
     });
+    startScreen.addEventListener('continue-game', handleContinue);
+    startScreen.addEventListener('buy-credits', handleBuyCredits);
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('load-save', () => loadGameFromSave('game_over'));
     gameOverScreen.addEventListener('continue', handleContinue);
@@ -312,7 +314,10 @@ async function init() {
     const _onAuthSuccess = () => {
         loginScreen.hide();
         // Sync save from server after login so save buttons update correctly
-        saveStateManager.init().then(syncSaveButtons);
+        saveStateManager.init().then(() => {
+            syncSaveButtons();
+            refreshContinueInfo();
+        });
     };
 
     loginScreen.addEventListener('auth-login-anonymous', async (e) => {
@@ -379,6 +384,7 @@ async function init() {
     setupGlobalHoverSfxHooks();
     setupMenuScrollSoundHooks();
     syncSaveButtons();
+    refreshContinueInfo();
     populateLastRunStats();
 }
 
@@ -946,16 +952,51 @@ async function refreshCreditInfo() {
         const hasSave = saveStateManager.hasSave();
         goScreen.setCreditInfo(balance, hasSave);
     }
+
+    refreshContinueInfo();
+}
+
+/**
+ * Refresh continue UI on both Start and Game Over screens.
+ */
+async function refreshContinueInfo() {
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    const startScreen = /** @type {any} */ (document.querySelector('start-screen'));
+    const hasSave = saveStateManager.hasSave();
+    const saveData = hasSave ? saveStateManager.getRawSave() : null;
+
+    try {
+        const balance = await creditService.getBalance();
+        goScreen?.setCreditInfo?.(balance, hasSave);
+        startScreen?.setContinueInfo?.(balance, saveData);
+    } catch (err) {
+        console.warn('[main] Failed to refresh continue info:', err.message);
+        const balance = creditService.getCachedBalance();
+        goScreen?.setCreditInfo?.(balance, hasSave);
+        startScreen?.setContinueInfo?.(balance, saveData);
+    }
+}
+
+/**
+ * Return whichever screen currently handles continue UX.
+ * Prefers game-over when both exist.
+ */
+function getContinueUiTarget() {
+    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    if (goScreen?.isVisible?.()) return goScreen;
+
+    const startScreen = /** @type {any} */ (document.querySelector('start-screen'));
+    return startScreen?.isVisible?.() ? startScreen : goScreen;
 }
 
 /**
  * Handle "Continue" button — spend 1 credit, restore from server save.
  */
 async function handleContinue() {
-    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    const continueUi = getContinueUiTarget();
     if (!game) return;
 
-    goScreen.setContinueLoading(true);
+    continueUi?.setContinueLoading?.(true);
 
     try {
         // 1. Request continue from server (deducts credit, returns token + save)
@@ -964,14 +1005,15 @@ async function handleContinue() {
         // 2. Restore game state from the server-provided save
         const restored = game.restoreFromContinue(save, continueToken);
         if (!restored) {
-            goScreen.showContinueError('Failed to restore save data.');
-            goScreen.setContinueLoading(false);
+            continueUi?.showContinueError?.('Failed to restore save data.');
+            continueUi?.setContinueLoading?.(false);
             return;
         }
 
         // 3. Hide overlays and resume the game loop
         playSFX('ui_click');
-        goScreen.hide();
+        document.querySelector('start-screen')?.hide();
+        document.querySelector('game-over-screen')?.hide();
         document.querySelector('pause-screen')?.hide();
 
         telemetry.track('continue_used', {
@@ -1004,10 +1046,9 @@ async function handleContinue() {
             : err?.status === 404
                 ? 'No save found to continue from.'
                 : 'Continue failed. Please try again.';
-        goScreen.showContinueError(message);
-        goScreen.setContinueLoading(false);
-        // Refresh credit info in case it changed
-        refreshCreditInfo();
+        continueUi?.showContinueError?.(message);
+        continueUi?.setContinueLoading?.(false);
+        refreshContinueInfo();
     }
 }
 
@@ -1015,12 +1056,12 @@ async function handleContinue() {
  * Handle "Buy Credits" button — open Stripe Checkout popup.
  */
 async function handleBuyCredits() {
-    const goScreen = /** @type {any} */ (document.querySelector('game-over-screen'));
+    const continueUi = getContinueUiTarget();
 
     // Block anonymous users from purchasing
     const user = authService.getCurrentUser();
     if (!user || user.auth_provider === 'anonymous') {
-        goScreen.showContinueError('Create an account to purchase credits.');
+        continueUi?.showContinueError?.('Create an account to purchase credits.');
         return;
     }
 
@@ -1033,10 +1074,10 @@ async function handleBuyCredits() {
             });
         }
         // Always refresh credit info after checkout flow
-        refreshCreditInfo();
+        refreshContinueInfo();
     } catch (err) {
         console.error('[main] Checkout failed:', err);
-        goScreen.showContinueError('Purchase failed. Please try again.');
+        continueUi?.showContinueError?.('Purchase failed. Please try again.');
     }
 }
 
@@ -1089,9 +1130,13 @@ function clearSavedGame() {
 
 function syncSaveButtons() {
     const hasSave = saveStateManager.hasSave();
+    const startScreen = /** @type {any} */ (document.querySelector('start-screen'));
+    const saveData = hasSave ? saveStateManager.getRawSave() : null;
+    const balance = creditService.getCachedBalance();
 
     /** @type {any} */ (document.querySelector('settings-modal'))?.setSaveButtonStates?.({ hasSave });
     /** @type {any} */ (document.querySelector('game-over-screen'))?.setLoadSaveVisible?.(hasSave);
+    startScreen?.setContinueInfo?.(balance, saveData);
 }
 
 function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {
