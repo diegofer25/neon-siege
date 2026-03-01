@@ -623,7 +623,7 @@ class LoginScreen extends BaseComponent {
                                     <div class="guest-label">Or jump in without an account</div>
                                     <form class="auth-form guest-form" id="anonForm">
                                         <div class="input-wrapper">
-                                            <input type="text" name="displayName" placeholder="Guest name" required minlength="1" maxlength="50" autocomplete="off">
+                                            <input type="text" name="displayName" placeholder="Guest name" required minlength="1" maxlength="24" autocomplete="off">
                                         </div>
                                         <neon-button type="submit" variant="default" id="anonSubmit">PLAY AS GUEST</neon-button>
                                     </form>
@@ -660,7 +660,7 @@ class LoginScreen extends BaseComponent {
                                 <h2 class="auth-heading">CREATE ACCOUNT</h2>
                                 <form class="auth-form" id="registerForm">
                                     <div class="input-wrapper">
-                                        <input type="text" name="displayName" placeholder="Player name" required minlength="1" maxlength="50" autocomplete="off">
+                                        <input type="text" name="displayName" placeholder="Player name" required minlength="1" maxlength="24" autocomplete="off">
                                     </div>
                                     <div class="input-wrapper">
                                         <input type="email" name="email" placeholder="Email" required autocomplete="email">

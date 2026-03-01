@@ -151,14 +151,14 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
- * Display name validation: 1-50 chars, no leading/trailing whitespace,
+ * Display name validation: 1-24 chars, no leading/trailing whitespace,
  * allows letters, numbers, spaces, hyphens, underscores, and common punctuation.
  */
 const DISPLAY_NAME_RE = /^[\p{L}\p{N}\s\-_.'!]+$/u;
 function isValidDisplayName(name: string): string | null {
   const trimmed = name.trim();
-  if (trimmed.length < 1 || trimmed.length > 50) {
-    return 'Display name must be 1-50 characters';
+  if (trimmed.length < 1 || trimmed.length > 24) {
+    return 'Display name must be 1-24 characters';
   }
   if (!DISPLAY_NAME_RE.test(trimmed)) {
     return 'Display name contains invalid characters';
