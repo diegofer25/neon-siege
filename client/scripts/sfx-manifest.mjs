@@ -78,7 +78,11 @@ export const SOUND_EFFECT_MANIFEST = [
     { key: 'combo_tier_mid', category: 'progression', durationSeconds: 1.5, promptInfluence: 0.4, text: 'Mid combo tier reached cue, brighter layered synth hit with confident arcade energy, no voice.' },
     { key: 'combo_tier_high', category: 'progression', durationSeconds: 1.7, promptInfluence: 0.35, text: 'High combo tier reached cue, intense celebratory electronic burst with strong impact, no voice.' },
     { key: 'combo_tier_max', category: 'progression', durationSeconds: 1.9, promptInfluence: 0.35, text: 'Maximum combo tier cue, elite neon triumph stinger, powerful and clean, no voice.' },
-    { key: 'combo_break', category: 'progression', durationSeconds: 1.2, promptInfluence: 0.4, text: 'Combo streak broken cue, short downward digital fall with subtle disappointment, no voice.' }
+    { key: 'combo_break', category: 'progression', durationSeconds: 1.2, promptInfluence: 0.4, text: 'Combo streak broken cue, short downward digital fall with subtle disappointment, no voice.' },
+
+    { key: 'lore_breach_rumble', category: 'cinematic', durationSeconds: 3.0, promptInfluence: 0.4, text: 'Deep ominous rumble with tearing and ripping sounds, distant explosions, reality fracturing. Dark and foreboding.' },
+    { key: 'lore_awakening_power', category: 'cinematic', durationSeconds: 2.0, promptInfluence: 0.4, text: 'Powerful energy ignition sound. Building electrical charge culminating in a bright whoosh of power. Heroic and energetic.' },
+    { key: 'lore_transition_whoosh', category: 'cinematic', durationSeconds: 1.0, promptInfluence: 0.4, text: 'Smooth cinematic scene transition whoosh. Subtle, clean, quick sweep.' }
 ];
 
 export const SOUND_STYLE_PREFIX = 'Modern high-fidelity sci-fi game sound effect. Polished, professional, punchy, clean transients, fun and energetic, cinematic mix, no vocals, no spoken words. ';

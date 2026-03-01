@@ -41,6 +41,7 @@ const MUSIC_TRACKS = {
     music_gameover_defeat:          { src: 'assets/audio/music/music_gameover_defeat.mp3',          loop: false },
     music_restore_resume_stinger:   { src: 'assets/audio/music/music_restore_resume_stinger.mp3',   loop: false },
     music_run_resume_stinger:       { src: 'assets/audio/music/music_run_resume_stinger.mp3',       loop: false },
+    music_lore_intro:               { src: 'assets/audio/music/music_lore_intro.mp3',               loop: false },
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

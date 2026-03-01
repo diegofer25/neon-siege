@@ -26,6 +26,7 @@ import './screens/SettingsModal.js';
 import './screens/LoginScreen.js';
 import './screens/LeaderboardScreen.js';
 import './screens/AchievementsScreen.js';
+import './screens/LoreIntro.js';
 
 // Panel overlays
 import './panels/LevelUpPanel.js';

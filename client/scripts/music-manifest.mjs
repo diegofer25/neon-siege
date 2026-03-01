@@ -110,6 +110,14 @@ export const MUSIC_MANIFEST = [
         loop: false,
         promptInfluence: 0.35,
         text: 'Short instrumental resume cue returning to gameplay, crisp and motivating, no vocals.'
+    },
+    {
+        key: 'music_lore_intro',
+        category: 'cinematic',
+        durationMs: 90000,
+        loop: false,
+        promptInfluence: 0.5,
+        text: 'Sweeping cinematic intro sequence. Starts quiet and mysterious with ambient synth pads, then builds with orchestral strings and pulsing bass as tension rises. Crescendos to an epic heroic climax with driving drums and soaring synths. Ends with a powerful sustained note that fades to silence. Dramatic, emotional, building from despair to hope and determination.'
     }
 ];
 

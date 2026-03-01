@@ -267,12 +267,23 @@ async function init() {
     const gameHudEl = document.querySelector('game-hud');
 
     // Start game — requires authentication (guest or registered)
+    const loreIntro = document.querySelector('lore-intro');
     startScreen.addEventListener('start-game', () => {
         if (!authService.isAuthenticated()) {
             loginScreen.setUser(authService.getCurrentUser());
             loginScreen.show();
             return;
         }
+
+        // First-time player: show lore intro before starting
+        const progression = game?.progressionManager?.getSnapshot?.();
+        const isFirstRun = !progression || (progression.totalRuns ?? 0) === 0;
+        if (isFirstRun && loreIntro) {
+            loreIntro.addEventListener('lore-complete', () => startGame(), { once: true });
+            loreIntro.show();
+            return;
+        }
+
         startGame();
     });
     startScreen.addEventListener('continue-game', handleContinue);
