@@ -162,9 +162,10 @@ const styles = createSheet(/* css */ `
     inset: 0;
     background: linear-gradient(
       to top,
-      rgba(0, 0, 0, 0.92) 0%,
-      rgba(0, 0, 0, 0.5) 35%,
-      transparent 55%
+      rgba(0, 0, 0, 0.95) 0%,
+      rgba(0, 0, 0, 0.85) 25%,
+      rgba(0, 0, 0, 0.5) 45%,
+      transparent 65%
     );
     z-index: 1;
   }
@@ -175,7 +176,8 @@ const styles = createSheet(/* css */ `
     z-index: 2;
     max-width: 800px;
     width: 90%;
-    padding: 24px 16px 48px;
+    padding: 24px 16px;
+    margin-bottom: max(10%, 60px);
     font-family: var(--font-primary, 'Audiowide', cursive);
     font-size: clamp(14px, 2.2vw, 20px);
     line-height: 1.7;
