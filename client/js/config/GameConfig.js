@@ -622,20 +622,30 @@ export const GameConfig = {
                 FLASH_DURATION: 300,
             },
 
-            /** Movement thruster visual */
+            /** Movement thruster visual (hover effect replaces legs) */
             THRUSTER: {
-                /** Thruster glow color */
+                /** Thruster glow color (overridden by archetype theme) */
                 COLOR: '#00e5ff',
-                /** Secondary thruster color */
+                /** Secondary thruster color (overridden by archetype theme) */
                 COLOR_ALT: '#ff2dec',
                 /** Number of thruster dots */
                 PARTICLES: 3,
                 /** Maximum alpha */
                 MAX_ALPHA: 0.6,
+                /** Idle maximum alpha (dimmer when not moving) */
+                IDLE_MAX_ALPHA: 0.3,
                 /** Dot radius (px) */
-                SIZE: 4,
+                SIZE: 3.5,
+                /** Large inner core radius (px) */
+                CORE_SIZE: 2,
                 /** Thruster offset from body rear (px) */
-                OFFSET: 6,
+                OFFSET: 8,
+                /** Spread angle of thruster dots (rad) */
+                SPREAD: 0.5,
+                /** Exhaust trail length when moving (px) */
+                TRAIL_LENGTH: 12,
+                /** Exhaust flicker speed */
+                FLICKER_SPEED: 0.008,
             },
 
             /** Idle breathing and movement body modifiers */
@@ -648,6 +658,47 @@ export const GameConfig = {
                 MOVE_TILT_SQUISH: 0.92,
                 /** Visor arc glow color */
                 VISOR_COLOR: '#00ffff',
+                /** Hover bob amplitude (px) when idle */
+                HOVER_BOB_AMPLITUDE: 1.2,
+                /** Hover bob speed (for sin frequency) */
+                HOVER_BOB_SPEED: 0.002,
+            },
+
+            /**
+             * Archetype-based color themes for the player body.
+             * Each theme defines the full color palette used by the renderer.
+             */
+            ARCHETYPE_THEMES: {
+                /** Default theme before any archetype is chosen */
+                DEFAULT: {
+                    bodyColor: '#ff2dec',
+                    bodyColorActive: '#ff6d00',
+                    glowColor: '#ff2dec',
+                    visorColor: '#00ffff',
+                    gunAccentColor: '#aaaaaa',
+                    thrusterColor: '#00e5ff',
+                    thrusterColorAlt: '#ff2dec',
+                },
+                /** Gunner — aggressive reds & oranges */
+                GUNNER: {
+                    bodyColor: '#ff6d00',
+                    bodyColorActive: '#ff4500',
+                    glowColor: '#ff4500',
+                    visorColor: '#ff2dec',
+                    gunAccentColor: '#ff4444',
+                    thrusterColor: '#ff6d00',
+                    thrusterColorAlt: '#ff4500',
+                },
+                /** Technomancer — arcane cyans & purples */
+                TECHNOMANCER: {
+                    bodyColor: '#aa44ff',
+                    bodyColorActive: '#00e5ff',
+                    glowColor: '#00e5ff',
+                    visorColor: '#00ffff',
+                    gunAccentColor: '#6666ff',
+                    thrusterColor: '#00e5ff',
+                    thrusterColorAlt: '#aa44ff',
+                },
             },
 
             /** Skill-specific VFX timing */

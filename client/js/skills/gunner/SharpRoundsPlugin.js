@@ -11,4 +11,14 @@ export class SharpRoundsPlugin extends BaseSkillPlugin {
 			{ stat: 'damage', op: 'add', value: this.skillConfig.effect.damageBonus * rank },
 		];
 	}
+
+	/** @param {number} _rank */
+	getVisualOverrides(_rank) {
+		return {
+			gunSkin: {
+				barrelColor: '#ff4444',
+				barrelGlow: '#ff4444',
+			},
+		};
+	}
 }

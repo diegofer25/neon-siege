@@ -18,4 +18,18 @@ export class OverchargePlugin extends BaseSkillPlugin {
 			},
 		};
 	}
+
+	/** @param {number} _rank */
+	getVisualOverrides(_rank) {
+		return {
+			glowColor: '#ffff00',
+			gunSkin: {
+				barrelGlow: '#ffff00',
+				muzzleEffect: 'spark',
+			},
+			overlays: [
+				{ type: 'ring', color: '#ffff00', radius: 14, alpha: 0.4, pulse: true },
+			],
+		};
+	}
 }

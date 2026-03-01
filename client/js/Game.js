@@ -1139,6 +1139,23 @@ export class Game {
 			}
 		}
 
+		// ── Archetype theme — determined by highest tree investment ──
+		const themes = GameConfig.VFX.PLAYER_AURAS.ARCHETYPE_THEMES;
+		let dominantArchetype = null;
+		let maxInvestment = 0;
+		for (const [key, pts] of Object.entries(this.skillManager.treeInvestment)) {
+			if (pts > maxInvestment) {
+				maxInvestment = pts;
+				dominantArchetype = key;
+			}
+		}
+		this.player.visualState.archetypeTheme =
+			(dominantArchetype && themes[dominantArchetype]) || themes.DEFAULT;
+
+		// ── Skill visual overrides (aggregated from plugins) ──
+		this.player.visualState.skillVisuals =
+			this.skillEffectEngine.getAggregatedVisuals(context);
+
 		// Emit stats:sync event for plugins that need to react to stat changes
 		this.eventBus.emit('stats:sync', { player: this.player, attrs });
 

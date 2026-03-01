@@ -240,7 +240,7 @@ export class Player {
 		this._skillBuffs = {};
 
 		// ── Visual state (driven by _syncPlayerFromSkills, read in draw) ──
-		/** @type {{strLevel:number, dexLevel:number, vitLevel:number, intLevel:number, luckLevel:number, learnedSkills:Set<string>, flashTimer:number, flashColor:string}} */
+		/** @type {{strLevel:number, dexLevel:number, vitLevel:number, intLevel:number, luckLevel:number, learnedSkills:Set<string>, flashTimer:number, flashColor:string, archetypeTheme:Object|null, skillVisuals:Object|null}} */
 		this.visualState = {
 			strLevel: 0,
 			dexLevel: 0,
@@ -250,6 +250,10 @@ export class Player {
 			learnedSkills: new Set(),
 			flashTimer: 0,
 			flashColor: '#fff',
+			/** @type {Object|null} Archetype color palette from GameConfig.VFX.PLAYER_AURAS.ARCHETYPE_THEMES */
+			archetypeTheme: null,
+			/** @type {{ bodyColor?:string, glowColor?:string, outlineColor?:string, gunSkin?:Object, overlays:Array }|null} Aggregated skill visual overrides */
+			skillVisuals: null,
 		};
 
 		// ── Aura animation state (internal timers, not saved) ──

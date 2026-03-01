@@ -122,6 +122,36 @@ export class BaseSkillPlugin {
 		return null;
 	}
 
+	// ─── VISUAL OVERRIDES ─────────────────────────────────────────────────────────────────
+
+	/**
+	 * Return visual overrides that modify player rendering when this skill is active.
+	 * These are aggregated by SkillEffectEngine and stored in player.visualState.skillVisuals.
+	 * Override in subclass to customize player appearance per-skill.
+	 *
+	 * Supported override keys:
+	 *   bodyColor    {string}  - Override body fill color
+	 *   glowColor    {string}  - Override glow/aura color
+	 *   outlineColor {string}  - Override stroke/outline color
+	 *   gunSkin      {Object}  - Gun appearance mods:
+	 *     barrelColor  {string}  - Barrel stroke color
+	 *     barrelGlow   {string}  - Barrel glow color
+	 *     muzzleEffect {string}  - 'flame'|'spark'|'plasma'|null
+	 *   overlays     {Array}   - Post-body overlay layers:
+	 *     type   {string}  - 'ring'|'particles'|'radialGlow'
+	 *     color  {string}  - Effect color
+	 *     radius {number}  - Effect radius offset from player
+	 *     alpha  {number}  - Effect opacity (0-1)
+	 *     pulse  {boolean} - Whether to pulse the effect
+	 *
+	 * @param {number} rank - Current skill rank
+	 * @param {Object} context - { attrs, ascension }
+	 * @returns {Object|null} Visual overrides, or null for no customization
+	 */
+	getVisualOverrides(rank, context) {
+		return null;
+	}
+
 	// ─── UTILITIES ───────────────────────────────────────────────────────────────
 
 	/**

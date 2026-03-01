@@ -219,10 +219,19 @@ export function renderPlayer(ctx, p) {
         ctx.globalAlpha = 1;
     }
 
-    // ── BODY: Exosuit silhouette + fake glow ────────────────────────
+    // ── BODY: Hovering exosuit silhouette + fake glow ──────────────
+
+    // Resolve archetype theme colors (fallback to legacy hardcoded)
+    const theme = vs.archetypeTheme || auraCfg.ARCHETYPE_THEMES?.DEFAULT;
+    const skillVis = vs.skillVisuals;
+    const baseBodyColor = (skillVis?.bodyColor) || (theme ? theme.bodyColor : '#ff2dec');
+    const activeBodyColor = (skillVis?.bodyColor) || (theme ? theme.bodyColorActive : '#ff6d00');
+    const baseGlowColor = (skillVis?.glowColor) || (theme ? theme.glowColor : '#ff2dec');
+    const visorColor = (theme ? theme.visorColor : auraCfg.BODY?.VISOR_COLOR) || '#00ffff';
+    const outlineColor = (skillVis?.outlineColor) || '#fff';
 
     // Fake glow behind body (performance-friendly, no shadowBlur)
-    const glowColor = p.isRotating ? '#ff6d00' : '#ff2dec';
+    const glowColor = p.isRotating ? activeBodyColor : baseGlowColor;
     const strGlowBoost = vs.strLevel * auraCfg.STR.GLOW_PER_POINT;
     const glowRadius = p.radius + 8 + strGlowBoost * 0.3;
     const fakeGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowRadius);
@@ -239,16 +248,18 @@ export function renderPlayer(ctx, p) {
     ctx.translate(p.x, p.y);
     ctx.rotate(p.angle);
 
-    // Idle breathing or movement tilt
+    // Idle hover bob or movement tilt
     const bodyCfg = auraCfg.BODY;
     if (p.isMoving) {
         ctx.scale(1, bodyCfg.MOVE_TILT_SQUISH);
     } else if (!p.isRotating) {
         const breathe = 1 + bodyCfg.IDLE_BREATHE_SCALE * Math.sin(now * bodyCfg.IDLE_BREATHE_SPEED);
+        const hoverBob = (bodyCfg.HOVER_BOB_AMPLITUDE || 1.2) * Math.sin(now * (bodyCfg.HOVER_BOB_SPEED || 0.002));
+        ctx.translate(0, hoverBob);
         ctx.scale(breathe, breathe);
     }
 
-    let bodyColor = p.isRotating ? '#ff6d00' : '#ff2dec';
+    let bodyColor = p.isRotating ? activeBodyColor : baseBodyColor;
     if (vs.flashTimer > 0) {
         const flashT = vs.flashTimer / auraCfg.PURCHASE.FLASH_DURATION;
         bodyColor = flashT > 0.5 ? '#ffffff' : bodyColor;
@@ -269,103 +280,203 @@ export function renderPlayer(ctx, p) {
 
     const r = p.radius;
 
-    // ── Soldier body (top-down view) ──────────────────────────────
+    // ── Hover thrusters (replace legs — drawn behind body) ────────
 
-    // Torso — oval, slightly elongated toward facing direction
+    const thrCfg = auraCfg.THRUSTER;
+    const thrColor1 = (theme ? theme.thrusterColor : thrCfg.COLOR) || thrCfg.COLOR;
+    const thrColor2 = (theme ? theme.thrusterColorAlt : thrCfg.COLOR_ALT) || thrCfg.COLOR_ALT;
+    const thrAlpha = p.isMoving ? thrCfg.MAX_ALPHA : (thrCfg.IDLE_MAX_ALPHA || 0.3);
+    const thrFlicker = 0.7 + 0.3 * Math.sin(now * (thrCfg.FLICKER_SPEED || 0.008) + 1.5);
+
+    for (let ti = 0; ti < thrCfg.PARTICLES; ti++) {
+        const spread = (thrCfg.SPREAD || 0.5);
+        const angle = -Math.PI + (ti - (thrCfg.PARTICLES - 1) / 2) * spread / Math.max(1, thrCfg.PARTICLES - 1);
+        const dist = (thrCfg.OFFSET || 8) + r * 0.35;
+        const tx = Math.cos(angle) * dist;
+        const ty = Math.sin(angle) * dist * 0.6;
+        const dotColor = ti % 2 === 0 ? thrColor1 : thrColor2;
+        const dotSize = (thrCfg.CORE_SIZE || 2) + (thrCfg.SIZE || 3.5) * thrFlicker * (p.isMoving ? 1 : 0.6);
+
+        // Exhaust trail when moving
+        if (p.isMoving) {
+            const trailLen = (thrCfg.TRAIL_LENGTH || 12) * thrFlicker;
+            ctx.globalAlpha = thrAlpha * 0.25;
+            ctx.fillStyle = dotColor;
+            ctx.beginPath();
+            ctx.ellipse(tx - trailLen * 0.6, ty, trailLen * 0.5, dotSize * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Outer glow
+        ctx.globalAlpha = thrAlpha * 0.3 * thrFlicker;
+        ctx.fillStyle = dotColor;
+        ctx.beginPath();
+        ctx.arc(tx, ty, dotSize + 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core dot
+        ctx.globalAlpha = thrAlpha * thrFlicker;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(tx, ty, (thrCfg.CORE_SIZE || 2), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Colored ring
+        ctx.globalAlpha = thrAlpha * thrFlicker * 0.8;
+        ctx.strokeStyle = dotColor;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(tx, ty, dotSize, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // ── Exosuit body (hovering, no legs) ──────────────────────────
+
+    // Torso — compact oval, slightly forward
     ctx.fillStyle = bodyColor;
-    ctx.strokeStyle = synergyColor || '#fff';
+    ctx.strokeStyle = synergyColor || outlineColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(-r * 0.05, 0, r * 0.58, r * 0.38, 0, 0, Math.PI * 2);
+    ctx.ellipse(-r * 0.02, 0, r * 0.50, r * 0.34, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Legs — two small ellipses at the back
+    // Left arm (non-gun side) — tucked tighter
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(-r * 0.38, -r * 0.28, r * 0.22, r * 0.13, 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.38, r * 0.28, r * 0.22, r * 0.13, -0.2, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.06, -r * 0.40, r * 0.22, r * 0.10, -0.25, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Left arm (non-gun side, upper)
+    // Right arm (gun arm) — reaching forward toward gun
     ctx.beginPath();
-    ctx.ellipse(r * 0.05, -r * 0.46, r * 0.26, r * 0.12, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.16, r * 0.38, r * 0.26, r * 0.11, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Right arm (gun arm, lower) — reaching forward toward gun
-    ctx.beginPath();
-    ctx.ellipse(r * 0.18, r * 0.44, r * 0.30, r * 0.13, 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Head — front-center circle
+    // Head — front-center circle (slightly larger relative to compact body)
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(r * 0.44, 0, r * 0.26, 0, Math.PI * 2);
+    ctx.arc(r * 0.40, 0, r * 0.24, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // ── Inner armor plate detail ───────────────────────────────────
+    // ── Inner armor plate detail (subtle panel lines) ──────────────
     ctx.strokeStyle = bodyColor === '#ffffff' ? '#cccccc' : '#ffffff';
     ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.25;
+    // Center spine line
     ctx.beginPath();
-    ctx.moveTo(r * 0.2, -r * 0.2);
-    ctx.lineTo(r * 0.2, r * 0.2);
+    ctx.moveTo(r * 0.18, -r * 0.15);
+    ctx.lineTo(r * 0.18, r * 0.15);
+    ctx.stroke();
+    // Back panel line
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.12, -r * 0.18);
+    ctx.lineTo(-r * 0.12, r * 0.18);
+    ctx.stroke();
+    // Shoulder accent
+    ctx.beginPath();
+    ctx.moveTo(r * 0.05, -r * 0.30);
+    ctx.lineTo(r * 0.25, -r * 0.22);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(-r * 0.15, -r * 0.22);
-    ctx.lineTo(-r * 0.15, r * 0.22);
+    ctx.moveTo(r * 0.05, r * 0.30);
+    ctx.lineTo(r * 0.25, r * 0.22);
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // ── Helmet visor ──────────────────────────────────────────────
-    ctx.strokeStyle = bodyCfg.VISOR_COLOR;
+    // ── Helmet visor (themed color) ──────────────────────────────
+    ctx.strokeStyle = visorColor;
     ctx.lineWidth = 2.5;
     ctx.globalAlpha = 0.8 + 0.2 * Math.sin(now / 600);
     ctx.beginPath();
-    ctx.arc(r * 0.44, 0, r * 0.18, -0.65, 0.65);
+    ctx.arc(r * 0.40, 0, r * 0.16, -0.65, 0.65);
     ctx.stroke();
     ctx.globalAlpha = 0.15;
-    ctx.fillStyle = bodyCfg.VISOR_COLOR;
+    ctx.fillStyle = visorColor;
     ctx.beginPath();
-    ctx.arc(r * 0.44, 0, r * 0.26, -0.8, 0.8);
+    ctx.arc(r * 0.40, 0, r * 0.24, -0.8, 0.8);
     ctx.fill();
     ctx.globalAlpha = 1;
 
     // ── GUN — held on right side (+y), barrel extending forward ───
 
-    const gunY = r * 0.42;          // offset to right side of body
-    const barrelStart = r * 0.52;
-    const barrelEnd = barrelStart + 18;
+    const gunY = r * 0.38;          // offset to right side of body (tighter)
+    const barrelStart = r * 0.48;
+    const barrelEnd = barrelStart + 16;
 
     // Gun body / receiver
+    const gunSkin = skillVis?.gunSkin;
     ctx.fillStyle = '#555';
-    ctx.strokeStyle = '#aaa';
+    ctx.strokeStyle = gunSkin?.barrelColor || '#aaa';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.rect(r * 0.08, gunY - 3.5, r * 0.46, 7);
+    ctx.rect(r * 0.08, gunY - 3, r * 0.42, 6);
     ctx.fill();
     ctx.stroke();
 
-    // Barrel
-    ctx.strokeStyle = '#fff';
+    // Barrel — uses gunSkin color if present
+    ctx.strokeStyle = gunSkin?.barrelColor || '#fff';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(barrelStart, gunY);
     ctx.lineTo(barrelEnd, gunY);
     ctx.stroke();
+
+    // Gun barrel glow from plugin
+    if (gunSkin?.barrelGlow) {
+        ctx.strokeStyle = gunSkin.barrelGlow;
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = 0.25 + 0.1 * Math.sin(now / 300);
+        ctx.beginPath();
+        ctx.moveTo(barrelStart, gunY);
+        ctx.lineTo(barrelEnd, gunY);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
     // Muzzle cap
+    ctx.strokeStyle = gunSkin?.barrelColor || '#fff';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(barrelEnd, gunY - 3.5);
-    ctx.lineTo(barrelEnd, gunY + 3.5);
+    ctx.moveTo(barrelEnd, gunY - 3);
+    ctx.lineTo(barrelEnd, gunY + 3);
     ctx.stroke();
+
+    // Muzzle effect from plugin
+    if (gunSkin?.muzzleEffect) {
+        const mx = barrelEnd + 3;
+        if (gunSkin.muzzleEffect === 'flame') {
+            ctx.fillStyle = '#ff6d00';
+            ctx.globalAlpha = 0.5 + 0.3 * Math.sin(now / 100);
+            ctx.beginPath();
+            ctx.arc(mx, gunY, 3 + Math.sin(now / 80) * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (gunSkin.muzzleEffect === 'spark') {
+            ctx.fillStyle = gunSkin.barrelGlow || '#ffff00';
+            ctx.globalAlpha = 0.6 * (0.5 + 0.5 * Math.sin(now / 150));
+            for (let si = 0; si < 3; si++) {
+                const sa = (now / 200 + si * 2.1);
+                ctx.beginPath();
+                ctx.arc(mx + Math.cos(sa) * 3, gunY + Math.sin(sa) * 3, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        } else if (gunSkin.muzzleEffect === 'plasma') {
+            const plasmaGrad = ctx.createRadialGradient(mx, gunY, 0, mx, gunY, 5);
+            plasmaGrad.addColorStop(0, (gunSkin.barrelGlow || '#00e5ff') + 'aa');
+            plasmaGrad.addColorStop(1, (gunSkin.barrelGlow || '#00e5ff') + '00');
+            ctx.fillStyle = plasmaGrad;
+            ctx.globalAlpha = 0.6 + 0.2 * Math.sin(now / 200);
+            ctx.beginPath();
+            ctx.arc(mx, gunY, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
 
     // Sharp Rounds
     if (vs.learnedSkills.has('gunner_sharp_rounds')) {
@@ -448,6 +559,58 @@ export function renderPlayer(ctx, p) {
     }
 
     ctx.restore(); // End body+barrel local transform
+
+    // ── PLUGIN OVERLAYS: Skill-driven visual layers in world space ─────
+    if (skillVis?.overlays && skillVis.overlays.length > 0) {
+        for (const overlay of skillVis.overlays) {
+            const oAlpha = overlay.alpha ?? 0.5;
+            const oRadius = p.radius + (overlay.radius ?? 14);
+            const pulseT = overlay.pulse ? (0.5 + 0.5 * Math.sin(now / 300)) : 1;
+
+            if (overlay.type === 'ring') {
+                // Fake glow
+                ctx.strokeStyle = overlay.color;
+                ctx.lineWidth = 3.5;
+                ctx.globalAlpha = oAlpha * pulseT * 0.3;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, oRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                // Main ring
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = oAlpha * pulseT;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, oRadius, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (overlay.type === 'radialGlow') {
+                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, oRadius);
+                grad.addColorStop(0, overlay.color + Math.round(oAlpha * pulseT * 80).toString(16).padStart(2, '0'));
+                grad.addColorStop(1, overlay.color + '00');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, oRadius, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (overlay.type === 'particles') {
+                const count = 4;
+                ctx.fillStyle = overlay.color;
+                for (let oi = 0; oi < count; oi++) {
+                    const oAngle = p._auraOrbitAngle + (Math.PI * 2 / count) * oi;
+                    const ox = p.x + Math.cos(oAngle) * oRadius;
+                    const oy = p.y + Math.sin(oAngle) * oRadius;
+                    // Glow
+                    ctx.globalAlpha = oAlpha * pulseT * 0.3;
+                    ctx.beginPath();
+                    ctx.arc(ox, oy, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Core
+                    ctx.globalAlpha = oAlpha * pulseT;
+                    ctx.beginPath();
+                    ctx.arc(ox, oy, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+    }
 
     // ── POST-BODY: Attribute auras and skill effects in world space ────
     // All shadowBlur replaced with fake glow (semi-transparent larger shapes)

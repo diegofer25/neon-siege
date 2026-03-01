@@ -24,4 +24,14 @@ export class ChainHitPlugin extends BaseSkillPlugin {
 			chainHit: { chance, range, escalation },
 		};
 	}
+
+	/** @param {number} _rank */
+	getVisualOverrides(_rank) {
+		return {
+			glowColor: '#6666ff',
+			overlays: [
+				{ type: 'particles', color: '#6666ff', radius: 18, alpha: 0.5, pulse: false },
+			],
+		};
+	}
 }

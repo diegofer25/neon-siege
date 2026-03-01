@@ -17,4 +17,14 @@ export class ExplosiveRoundsPlugin extends BaseSkillPlugin {
 	getPlayerConfig() {
 		return { explosiveShots: true };
 	}
+
+	getVisualOverrides() {
+		return {
+			gunSkin: {
+				barrelColor: '#ff8c00',
+				barrelGlow: '#ff8c00',
+				muzzleEffect: 'flame',
+			},
+		};
+	}
 }

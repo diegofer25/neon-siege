@@ -232,7 +232,43 @@ export class SkillEffectEngine {
 
 		return plugin.onCast(this.game, skillInfo);
 	}
+	// ─── VISUAL AGGREGATION ───────────────────────────────────────────────────────────────
 
+	/**
+	 * Aggregate visual overrides from all active plugins.
+	 * Scalar values (bodyColor, glowColor, outlineColor) use last-writer-wins.
+	 * gunSkin properties merge (last writer wins per-key).
+	 * overlays arrays are concatenated (each plugin can add layers).
+	 *
+	 * @param {Object} context - { attrs, ascension }
+	 * @returns {{ bodyColor?:string, glowColor?:string, outlineColor?:string, gunSkin?:Object, overlays:Array }}
+	 */
+	getAggregatedVisuals(context = {}) {
+		const result = { overlays: [] };
+
+		for (const plugin of this._activePlugins.values()) {
+			if (!plugin.active) continue;
+
+			const vis = plugin.getVisualOverrides(plugin.rank, context);
+			if (!vis) continue;
+
+			if (vis.bodyColor) result.bodyColor = vis.bodyColor;
+			if (vis.glowColor) result.glowColor = vis.glowColor;
+			if (vis.outlineColor) result.outlineColor = vis.outlineColor;
+
+			if (vis.gunSkin) {
+				result.gunSkin = result.gunSkin
+					? Object.assign(result.gunSkin, vis.gunSkin)
+					: { ...vis.gunSkin };
+			}
+
+			if (vis.overlays && vis.overlays.length > 0) {
+				result.overlays.push(...vis.overlays);
+			}
+		}
+
+		return result;
+	}
 	// ─── QUERY ───────────────────────────────────────────────────────────────────
 
 	/**
