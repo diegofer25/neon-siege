@@ -273,7 +273,7 @@ async function init() {
     const gameHudEl = document.querySelector('game-hud');
 
     // Start game — requires authentication (guest or registered)
-    const loreIntro = document.querySelector('lore-intro');
+    const loreIntro = /** @type {HTMLElement & { show: Function, hide: Function }} */ (document.querySelector('lore-intro'));
     startScreen.addEventListener('start-game', () => {
         if (!authService.isAuthenticated()) {
             loginScreen.setUser(authService.getCurrentUser());

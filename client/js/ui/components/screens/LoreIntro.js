@@ -406,6 +406,7 @@ class LoreIntro extends BaseComponent {
         const sceneEl = this._$(`.scene[data-index="${next}"]`);
 
         // Load image if not already loaded
+        /** @type {HTMLImageElement | null} */
         const img = sceneEl?.querySelector('.scene-image');
         if (img && !img.src) {
             img.src = img.dataset.src;
@@ -470,7 +471,7 @@ class LoreIntro extends BaseComponent {
                 clearInterval(this._typeTimer);
                 // Remove cursor after a brief pause
                 setTimeout(() => {
-                    if (cursor) cursor.style.display = 'none';
+                    if (cursor) /** @type {HTMLElement} */ (cursor).style.display = 'none';
                 }, 1200);
                 onDone?.();
                 return;
