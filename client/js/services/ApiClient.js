@@ -28,7 +28,7 @@ export function getNetworkHistory() {
  * Base URL for all API calls. Empty string in dev (Vite proxy handles it).
  * Set via VITE_API_BASE_URL at build time for production deployments.
  */
-export const API_BASE = __API_BASE__;
+export const API_BASE = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : '';
 
 let _accessToken = null;
 
