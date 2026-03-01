@@ -32,7 +32,7 @@ import { ProgressionManager } from "./managers/ProgressionManager.js";
 import { saveStateManager } from "./managers/SaveStateManager.js";
 import { telemetry } from "./managers/TelemetryManager.js";
 import { MathUtils } from "./utils/MathUtils.js";
-import { submitScore, buildRunDetails } from "./services/ScoreSubmitter.js";
+import { submitScore, buildRunDetails, requestGameSession } from "./services/ScoreSubmitter.js";
 
 // ── State System ────────────────────────────────────────────────────────────
 import { createStateSystem, ActionTypes, GameFSM } from "./state/index.js";
@@ -458,6 +458,9 @@ export class Game {
 		this._endlessMode = false;
 		this._runStartTimestamp = Date.now();
 		this._saveLoadWave = null;
+
+		// Request a game session for anti-cheat score signing (non-blocking)
+		requestGameSession();
 
 		this.player.reset();
 		this.skillManager.reset();
