@@ -71,3 +71,4 @@ bun.lockb
 bun.lock
 
 server-cf/.wrangler
+server-cf/.dev.vars
