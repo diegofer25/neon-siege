@@ -146,25 +146,34 @@ export async function sendRegistrationCodeEmail(
   }
 }
 
-// ─── Bug Report Email ──────────────────────────────────────────────────────
+// ─── Feedback Email (Bug Report / Feature Request) ──────────────────────────
 
-const BUG_REPORT_TO = 'diego.lamarao92@gmail.com';
+const FEEDBACK_TO = 'diego.lamarao92@gmail.com';
 
-interface BugReportAttachment {
+interface FeedbackAttachment {
   filename: string;
   content: Buffer;
   contentType: string;
 }
 
-interface BugReportData {
+interface FeedbackData {
+  type: 'bug' | 'feature';
   description: string;
   userAgent: string;
   url: string;
-  attachments: BugReportAttachment[];
+  attachments: FeedbackAttachment[];
 }
 
-function _buildBugReportHtml(data: BugReportData): string {
+function _buildFeedbackHtml(data: FeedbackData): string {
   const ts = new Date().toISOString();
+  const isBug = data.type === 'bug';
+  const accent = isBug ? '#ff2dec' : '#0ff';
+  const accentRgba = isBug ? 'rgba(255,45,236,0.2)' : 'rgba(0,255,255,0.2)';
+  const label = isBug ? '🐛 Bug Report' : '💡 Feature Request';
+  const descHeading = isBug ? 'Description' : 'Feature Description';
+  const footerText = isBug
+    ? 'This bug report was sent from the in-game feedback tool. Check file attachments for screenshot, diagnostics JSON (console logs, network history, game state), and any user-uploaded files.'
+    : 'This feature request was sent from the in-game feedback tool.';
   const escapedDesc = data.description
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -176,13 +185,13 @@ function _buildBugReportHtml(data: BugReportData): string {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Bug Report — Neon Siege</title></head>
 <body style="margin:0;padding:0;background:#0a0a0f;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 0;"><tr><td align="center">
-    <table width="560" cellpadding="0" cellspacing="0" style="background:#0f0f1a;border:1px solid rgba(255,45,236,0.2);border-radius:12px;padding:40px 36px;">
+    <table width="560" cellpadding="0" cellspacing="0" style="background:#0f0f1a;border:1px solid ${accentRgba};border-radius:12px;padding:40px 36px;">
       <tr><td align="center" style="padding-bottom:24px;">
-        <h1 style="margin:0;font-size:26px;letter-spacing:4px;text-transform:uppercase;color:#ff2dec;text-shadow:0 0 14px #ff2dec;">NEON SIEGE</h1>
-        <p style="margin:8px 0 0;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#0ff;">🐛 Bug Report</p>
+        <h1 style="margin:0;font-size:26px;letter-spacing:4px;text-transform:uppercase;color:${accent};text-shadow:0 0 14px ${accent};">NEON SIEGE</h1>
+        <p style="margin:8px 0 0;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${isBug ? '#0ff' : '#ff2dec'};">${label}</p>
       </td></tr>
       <tr><td style="padding-bottom:20px;">
-        <h2 style="margin:0 0 12px;font-size:16px;color:#0ff;letter-spacing:1px;">Description</h2>
+        <h2 style="margin:0 0 12px;font-size:16px;color:#0ff;letter-spacing:1px;">${descHeading}</h2>
         <div style="color:#ccc;font-size:14px;line-height:1.7;padding:14px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,255,255,0.1);border-radius:6px;">${escapedDesc}</div>
       </td></tr>
       <tr><td style="padding-bottom:20px;">
@@ -195,23 +204,25 @@ function _buildBugReportHtml(data: BugReportData): string {
         </table>
       </td></tr>
       <tr><td style="border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;color:#444;font-size:11px;line-height:1.5;">
-        This bug report was sent from the in-game bug reporter. Check file attachments for screenshot, diagnostics JSON (console logs, network history, game state), and any user-uploaded files.
+        ${footerText}
       </td></tr>
     </table>
   </td></tr></table>
 </body></html>`;
 }
 
-export async function sendBugReportEmail(
+export async function sendFeedbackEmail(
   env: EmailEnv,
-  data: BugReportData,
+  data: FeedbackData,
 ): Promise<void> {
+  const isBug = data.type === 'bug';
+  const typeLabel = isBug ? 'Bug Report' : 'Feature Request';
   const subjectSnippet = data.description.slice(0, 60).replace(/\n/g, ' ');
-  const subject = `[Bug Report] Neon Siege — ${subjectSnippet}${data.description.length > 60 ? '…' : ''}`;
+  const subject = `[${typeLabel}] Neon Siege — ${subjectSnippet}${data.description.length > 60 ? '…' : ''}`;
 
   if (!env.RESEND_API_KEY) {
-    console.log(`[email.service] DEV MODE — bug report:`);
-    console.log(`  To: ${BUG_REPORT_TO}`);
+    console.log(`[email.service] DEV MODE — ${typeLabel}:`);
+    console.log(`  To: ${FEEDBACK_TO}`);
     console.log(`  Subject: ${subject}`);
     console.log(`  Description: ${data.description}`);
     console.log(`  Attachments: ${data.attachments.map((a) => a.filename).join(', ') || 'none'}`);
@@ -221,9 +232,9 @@ export async function sendBugReportEmail(
   const resend = new Resend(env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
     from: env.EMAIL_FROM,
-    to: BUG_REPORT_TO,
+    to: FEEDBACK_TO,
     subject,
-    html: _buildBugReportHtml(data),
+    html: _buildFeedbackHtml(data),
     attachments: data.attachments.map((a) => ({
       filename: a.filename,
       content: a.content,
@@ -236,13 +247,13 @@ export async function sendBugReportEmail(
 
     if (env.NODE_ENV !== 'production' && statusCode === 403 && name === 'validation_error') {
       console.warn('[email.service] Resend sandbox restriction. Falling back to console log.');
-      console.log(`[email.service] DEV FALLBACK — bug report for ${BUG_REPORT_TO}:`);
+      console.log(`[email.service] DEV FALLBACK — ${typeLabel} for ${FEEDBACK_TO}:`);
       console.log(`  Subject: ${subject}`);
       console.log(`  Description: ${data.description}`);
       return;
     }
 
     console.error('[email.service] Resend error:', error);
-    throw new EmailError('Failed to send bug report email.');
+    throw new EmailError(`Failed to send ${typeLabel.toLowerCase()} email.`);
   }
 }

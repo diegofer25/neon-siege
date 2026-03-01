@@ -1,19 +1,20 @@
 /**
- * @fileoverview <bug-report-button> — floating bug-report trigger + inline modal.
+ * @fileoverview <bug-report-button> — floating feedback trigger + inline modal.
  *
- * Fixed-position button (bottom-right) that opens a modal to submit bug reports.
- * Auto-captures canvas screenshot and diagnostics (console logs, network history,
- * game state, performance data) as attachments.
+ * Fixed-position button (bottom-left) that opens a modal to submit bug reports
+ * or feature requests. Supports a type toggle (Bug Report / Feature Request).
+ * For bug reports, auto-captures canvas screenshot and diagnostics (console logs,
+ * network history, game state, performance data) as attachments.
  *
  * Public API:
- *   open()  — capture screenshot + diagnostics, open the modal
+ *   open()  — capture screenshot + diagnostics (if bug), open the modal
  *   close() — dismiss the modal
  */
 
 import { BaseComponent } from '../BaseComponent.js';
 import { createSheet, overlayStyles } from '../shared-styles.js';
 import { collectDiagnosticsBlob } from '../../../utils/DiagnosticCollector.js';
-import { game } from '../../../main.js';
+import { game, resumeGame } from '../../../main.js';
 
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024; // 5 MB per file
 const MAX_ATTACHMENTS = 3;
@@ -49,6 +50,40 @@ const styles = createSheet(/* css */ `
       inset 0 0 10px rgba(255, 45, 236, 0.2);
   }
   .bug-btn.hidden { display: none; }
+
+  /* ─── Type toggle tabs ────────────────────────────────── */
+  .type-tabs {
+    display: flex;
+    gap: 0;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid rgba(0, 255, 255, 0.15);
+  }
+  .type-tab {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 12px;
+    font-family: var(--font-primary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #666;
+    background: rgba(0, 0, 0, 0.3);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+  }
+  .type-tab:hover { color: #aaa; background: rgba(0, 0, 0, 0.5); }
+  .type-tab.active[data-type="bug"] {
+    color: var(--color-secondary-neon);
+    background: rgba(255, 45, 236, 0.12);
+    box-shadow: inset 0 -2px 0 var(--color-secondary-neon);
+  }
+  .type-tab.active[data-type="feature"] {
+    color: var(--color-primary-neon);
+    background: rgba(0, 255, 255, 0.08);
+    box-shadow: inset 0 -2px 0 var(--color-primary-neon);
+  }
 
   @keyframes bugIdle {
     0%, 100% { box-shadow: 0 0 8px rgba(255, 45, 236, 0.3), inset 0 0 6px rgba(255, 45, 236, 0.1); }
@@ -176,6 +211,8 @@ class BugReportButton extends BaseComponent {
   constructor() {
     super();
 
+    /** @type {'bug'|'feature'} Current feedback type */
+    this._type = 'bug';
     /** @type {string|null} Base64 data URL of captured screenshot */
     this._screenshot = null;
     /** @type {File[]} Additional user-selected files */
@@ -185,14 +222,19 @@ class BugReportButton extends BaseComponent {
 
     this._render(/* html */ `
       <!-- Floating trigger -->
-      <button class="bug-btn" id="trigger" title="Report a bug">🐛</button>
+      <button class="bug-btn" id="trigger" title="Send feedback">💬</button>
 
       <!-- Modal overlay -->
       <div class="overlay" id="modal">
         <div class="report-panel">
-          <h2>🐛 Report a Bug</h2>
+          <h2 id="modalTitle">🐛 Report a Bug</h2>
 
-          <label for="desc">What happened?</label>
+          <div class="type-tabs">
+            <button class="type-tab active" data-type="bug" id="tabBug">🐛 Bug Report</button>
+            <button class="type-tab" data-type="feature" id="tabFeature">💡 Feature Request</button>
+          </div>
+
+          <label for="desc" id="descLabel">What happened?</label>
           <textarea id="desc" placeholder="Describe the bug, what you expected, and what actually happened…" maxlength="2000"></textarea>
 
           <div class="screenshot-row" id="screenshotRow" style="display:none">
@@ -206,7 +248,7 @@ class BugReportButton extends BaseComponent {
             <div class="file-list" id="fileList"></div>
           </div>
 
-          <p class="info-note">Console logs, network history, and game state will be attached automatically.</p>
+          <p class="info-note" id="infoNote">Console logs, network history, and game state will be attached automatically.</p>
 
           <div class="feedback" id="feedback"></div>
 
@@ -245,18 +287,22 @@ class BugReportButton extends BaseComponent {
     });
 
     this._$('#submitBtn').addEventListener('click', () => this._submit());
+
+    // Type toggle tabs
+    this._$('#tabBug').addEventListener('click', () => this._setType('bug'));
+    this._$('#tabFeature').addEventListener('click', () => this._setType('feature'));
   }
 
   // ─── Public API ────────────────────────────────────────
 
-  /** Capture screenshot + diagnostics and open the report modal. */
+  /** Capture screenshot + diagnostics (for bugs) and open the feedback modal. */
   open() {
     if (game?.gameState === 'playing') {
       game.pause();
     }
 
-    this._captureScreenshot();
-    this._diagnosticsBlob = collectDiagnosticsBlob();
+    // Reset to bug mode by default
+    this._setType('bug');
     this._extraFiles = [];
     /** @type {HTMLInputElement} */ (this._$('#fileInput')).value = '';
     this._renderFileList();
@@ -273,9 +319,55 @@ class BugReportButton extends BaseComponent {
     const modal = this._$('#modal');
     modal.classList.remove('show');
     this._$('#trigger').classList.remove('hidden');
+
+    if (game?.gameState === 'paused') {
+      resumeGame();
+    }
   }
 
   // ─── Internal helpers ──────────────────────────────────
+
+  /**
+   * Switch between bug report and feature request modes.
+   * @param {'bug'|'feature'} type
+   */
+  _setType(type) {
+    this._type = type;
+
+    // Update tab active states
+    this._$('#tabBug').classList.toggle('active', type === 'bug');
+    this._$('#tabFeature').classList.toggle('active', type === 'feature');
+
+    const isBug = type === 'bug';
+
+    // Update title
+    this._$('#modalTitle').textContent = isBug ? '🐛 Report a Bug' : '💡 Feature Request';
+
+    // Update label + placeholder
+    this._$('#descLabel').textContent = isBug ? 'What happened?' : 'What would you like to see?';
+    /** @type {HTMLTextAreaElement} */ (this._$('#desc')).placeholder = isBug
+      ? 'Describe the bug, what you expected, and what actually happened…'
+      : 'Describe the feature, why it would be useful, and how it might work…';
+
+    // Update submit button text
+    this._$('#submitBtn').textContent = isBug ? 'Send Report' : 'Send Request';
+
+    // Update info note
+    this._$('#infoNote').textContent = isBug
+      ? 'Console logs, network history, and game state will be attached automatically.'
+      : '';
+    this._$('#infoNote').style.display = isBug ? '' : 'none';
+
+    // Screenshot + diagnostics only for bugs
+    if (isBug) {
+      this._captureScreenshot();
+      this._diagnosticsBlob = collectDiagnosticsBlob();
+    } else {
+      this._screenshot = null;
+      this._diagnosticsBlob = null;
+      this._$('#screenshotRow').style.display = 'none';
+    }
+  }
 
   _captureScreenshot() {
     try {
@@ -331,7 +423,10 @@ class BugReportButton extends BaseComponent {
   async _submit() {
     const desc = /** @type {HTMLTextAreaElement} */ (this._$('#desc')).value.trim();
     if (!desc) {
-      this._setFeedback('Please describe the bug.', 'error');
+      this._setFeedback(
+        this._type === 'bug' ? 'Please describe the bug.' : 'Please describe the feature.',
+        'error',
+      );
       return;
     }
 
@@ -350,6 +445,7 @@ class BugReportButton extends BaseComponent {
 
     try {
       const form = new FormData();
+      form.append('type', this._type);
       form.append('description', desc);
       form.append('userAgent', navigator.userAgent);
       form.append('url', window.location.href);
@@ -379,7 +475,12 @@ class BugReportButton extends BaseComponent {
         throw new Error(body.error || `Server error (${res.status})`);
       }
 
-      this._setFeedback('Bug report sent — thank you! 🎉', 'success');
+      this._setFeedback(
+        this._type === 'bug'
+          ? 'Bug report sent — thank you! 🎉'
+          : 'Feature request sent — thank you! 💡',
+        'success',
+      );
 
       // Auto-close after a short delay
       setTimeout(() => this.close(), 2000);

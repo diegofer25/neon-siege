@@ -770,17 +770,26 @@ export function togglePause() {
             return;
         }
         playSFX('ui_pause_off');
-        game.resume();
-        syncMusicTrack();
+        resumeGame();
         document.querySelector('pause-screen').hide();
-        if (animationFrameId !== null) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-        }
-        lastTime = performance.now();
-        animationFrameId = requestAnimationFrame(gameLoop);
         syncSaveButtons();
     }
+}
+
+/**
+ * Resume game from paused state and restart the game loop.
+ * Separated from togglePause so other UI (e.g. bug report modal)
+ * can resume without toggling the pause screen.
+ */
+export function resumeGame() {
+    game.resume();
+    syncMusicTrack();
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    lastTime = performance.now();
+    animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 //=============================================================================

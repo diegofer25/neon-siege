@@ -16,7 +16,7 @@
 import { Hono } from 'hono';
 import type { Env, AppVariables } from '../types';
 import { createRateLimiter, getClientIp } from '../middleware/rateLimit';
-import { sendBugReportEmail } from '../services/email.service';
+import { sendFeedbackEmail } from '../services/email.service';
 
 type BugReportEnv = { Bindings: Env; Variables: AppVariables };
 
@@ -51,6 +51,7 @@ bugReportRoutes.post('/', limiter, async (c) => {
 
   const userAgent = (formData.get('userAgent') as string) || 'unknown';
   const url = (formData.get('url') as string) || 'unknown';
+  const type = (formData.get('type') as string) === 'feature' ? 'feature' : 'bug';
 
   // ─── Collect file attachments ───────────────────────────
 
@@ -96,13 +97,14 @@ bugReportRoutes.post('/', limiter, async (c) => {
   // ─── Send email ─────────────────────────────────────────
 
   try {
-    await sendBugReportEmail(
+    await sendFeedbackEmail(
       {
         RESEND_API_KEY: c.env.RESEND_API_KEY,
         EMAIL_FROM: c.env.EMAIL_FROM,
         NODE_ENV: c.env.NODE_ENV,
       },
       {
+        type,
         description: description.trim(),
         userAgent,
         url,
@@ -111,7 +113,7 @@ bugReportRoutes.post('/', limiter, async (c) => {
     );
   } catch (err) {
     console.error('[bug-report] Failed to send email:', err);
-    return c.json({ error: 'Failed to send bug report. Please try again later.' }, 500);
+    return c.json({ error: 'Failed to send feedback. Please try again later.' }, 500);
   }
 
   return c.json({ success: true });
