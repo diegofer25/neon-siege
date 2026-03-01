@@ -70,5 +70,5 @@ dist
 bun.lockb
 bun.lock
 
-server-cf/.wrangler
-server-cf/.dev.vars
+server/.wrangler
+server/.dev.vars
