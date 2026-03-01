@@ -12,9 +12,10 @@ const styles = createSheet(/* css */`
   :host { display: contents; }
 
   #settingsButton {
-    position: absolute;
-    top: 4px;
-    right: 0;
+    position: var(--hud-settings-position, absolute);
+    top: var(--hud-settings-top, 4px);
+    right: var(--hud-settings-right, 0);
+    z-index: var(--hud-settings-z-index, auto);
     pointer-events: auto;
   }
 

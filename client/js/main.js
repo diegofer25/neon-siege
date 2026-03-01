@@ -288,6 +288,7 @@ async function init() {
     });
     startScreen.addEventListener('continue-game', handleContinue);
     startScreen.addEventListener('buy-credits', handleBuyCredits);
+    startScreen.addEventListener('settings-click', openSettingsModal);
     gameOverScreen.addEventListener('restart', restartGame);
     gameOverScreen.addEventListener('load-save', () => loadGameFromSave('game_over'));
     gameOverScreen.addEventListener('continue', handleContinue);

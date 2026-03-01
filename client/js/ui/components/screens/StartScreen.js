@@ -14,12 +14,14 @@
  *   'start-game'         — "Click to Start" button clicked
  *   'continue-game'      — "Continue" button clicked (spends 1 credit)
  *   'buy-credits'        — "Buy Credits" button clicked
+ *   'settings-click'     — "Settings" button clicked
  *   'difficulty-change'  — difficulty option clicked, detail: { difficulty }
  */
 
 import { BaseComponent } from '../BaseComponent.js';
 import { overlayStyles, createSheet } from '../shared-styles.js';
 import { GameConfig } from '../../../config/GameConfig.js';
+import '../hud/HudSettings.js';
 
 const RUN_DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
 const APP_VERSION = import.meta.env.APP_VERSION || '0.0.0';
@@ -75,6 +77,12 @@ const styles = createSheet(/* css */ `
   .menu-utility {
     display: flex;
     justify-content: flex-end;
+  }
+  #settingsBtn {
+    --hud-settings-position: fixed;
+    --hud-settings-top: clamp(14px, 2.2vw, 20px);
+    --hud-settings-right: clamp(14px, 2.2vw, 20px);
+    --hud-settings-z-index: calc(var(--z-overlay) + 1);
   }
   .menu-main {
     display: flex;
@@ -371,6 +379,10 @@ const styles = createSheet(/* css */ `
       width: 100%;
       min-width: 0;
     }
+    #settingsBtn {
+      --hud-settings-top: 12px;
+      --hud-settings-right: 12px;
+    }
   }
   @keyframes menuReveal {
     0% {
@@ -437,6 +449,7 @@ class StartScreen extends BaseComponent {
               <span id="versionBadge" class="version-badge">v${APP_VERSION}</span>
             </div>
                 </div>
+            <hud-settings id="settingsBtn"></hud-settings>
             </div>
         `, overlayStyles, styles);
 
