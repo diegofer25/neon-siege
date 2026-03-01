@@ -3,8 +3,8 @@ import { vfxHelper } from '../managers/VFXHelper.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 import { MathUtils } from '../utils/MathUtils.js';
 import { ActionTypes } from '../state/index.js';
-import { isAuthenticated } from '../services/AuthService.js';
-import { unlockAchievementOnServer } from '../services/AchievementApiService.js';
+import { isAuthenticated, getCurrentUser } from '../services/AuthService.js';
+import { loadAchievementsFromServer, unlockAchievementOnServer } from '../services/AchievementApiService.js';
 
 export const ACHIEVEMENTS = [
     // Kill-based
@@ -50,6 +50,8 @@ export class AchievementSystem {
         this._toastQueue = [];
         this._toastActive = false;
         this._toastTimer = 0;
+        this._achievementHydrationInFlight = false;
+        this._achievementHydratedUserId = null;
 
         // Per-run tracking
         this.killsThisRun = 0;
@@ -108,6 +110,10 @@ export class AchievementSystem {
     }
 
     _checkAll() {
+        if (!this._isAchievementStateHydrated()) {
+            return;
+        }
+
         const unlocked = this.getUnlockedAchievements();
 
         for (const achievement of ACHIEVEMENTS) {
@@ -118,6 +124,52 @@ export class AchievementSystem {
                 this._unlock(achievement);
             }
         }
+    }
+
+    _isAchievementStateHydrated() {
+        const user = getCurrentUser();
+        const userId = user?.id || null;
+
+        if (!isAuthenticated() || !userId) {
+            this._achievementHydratedUserId = null;
+            return true;
+        }
+
+        if (this._achievementHydratedUserId === userId) {
+            return true;
+        }
+
+        if (this._achievementHydrationInFlight) {
+            return false;
+        }
+
+        this._achievementHydrationInFlight = true;
+        loadAchievementsFromServer()
+            .then((response) => {
+                const entries = Array.isArray(response?.achievements) ? response.achievements : [];
+
+                if (!this.game.progressionManager.state.achievements) {
+                    this.game.progressionManager.state.achievements = {};
+                }
+
+                for (const entry of entries) {
+                    const achievementId = entry?.achievementId;
+                    if (!achievementId) continue;
+                    this.game.progressionManager.state.achievements[achievementId] = true;
+                }
+
+                this._achievementHydratedUserId = userId;
+            })
+            .catch((err) => {
+                console.warn('[AchievementSystem] Failed to hydrate unlocked achievements:', err?.message || err);
+                this._achievementHydratedUserId = userId;
+            })
+            .finally(() => {
+                this._achievementHydrationInFlight = false;
+                this._checkAll();
+            });
+
+        return false;
     }
 
     _getCheckValue(check) {
@@ -154,6 +206,11 @@ export class AchievementSystem {
         if (!this.game.progressionManager.state.achievements) {
             this.game.progressionManager.state.achievements = {};
         }
+
+        if (this.game.progressionManager.state.achievements[achievement.id]) {
+            return;
+        }
+
         this.game.progressionManager.state.achievements[achievement.id] = true;
         this.game.progressionManager._saveState();
 
