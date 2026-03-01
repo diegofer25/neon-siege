@@ -18,6 +18,7 @@ import './feedback/WaveCountdown.js';
 import './feedback/HudTooltip.js';
 
 // Screen overlays
+import './screens/SplashScreen.js';
 import './screens/PauseScreen.js';
 import './screens/GameOverScreen.js';
 import './screens/VictoryScreen.js';

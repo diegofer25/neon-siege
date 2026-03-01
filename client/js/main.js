@@ -225,10 +225,8 @@ async function init() {
         }
     });
     
-    // Initialize audio system
+    // Pre-load audio buffers (no playback yet — browser policy)
     loadAudio();
-    syncMusicTrack();
-    setupAudioUnlockHooks();
 
     // Check for performance stats URL parameter fallback
     const urlParams = new URLSearchParams(window.location.search);
@@ -250,8 +248,16 @@ async function init() {
         };
     }
 
-    // Display initial start screen
-    document.querySelector('start-screen').show();
+    // Show splash gate — requires interaction before audio can play
+    const splashScreen = /** @type {HTMLElement & {show(): void}} */ (document.querySelector('splash-screen'));
+    splashScreen.addEventListener('splash-complete', () => {
+        // User has interacted — now safe to unlock & start audio
+        syncMusicTrack();
+        setupAudioUnlockHooks();
+        // Reveal the main menu
+        /** @type {HTMLElement & {show(): void}} */ (document.querySelector('start-screen')).show();
+    }, { once: true });
+    splashScreen.show();
 
     telemetry.track('app_initialized', {
         userAgent: navigator.userAgent,
