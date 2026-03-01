@@ -1,45 +1,39 @@
 /**
- * @fileoverview <splash-screen> — Pre-menu gateway screen.
+ * @fileoverview <splash-screen> — Pre-menu gateway screen with real asset loading.
  *
  * Displays a cyberpunk terminal boot sequence that requires user interaction
  * (click / tap / keypress) before the main menu loads. This satisfies the
  * browser autoplay policy so audio can play freely afterwards.
  *
- * The narrative frames the player as the SIEGE Protocol being initialized —
- * a cold-boot sequence that ends when the operator (player) engages.
+ * While the narrative plays, the AssetPreloader fetches critical images, fonts,
+ * and audio files so they are warm in the browser cache when the game starts.
+ * A progress bar and terminal output reflect real loading state.
  *
  * No audio is played by this component.
  *
  * Events (composed, bubbling):
- *   'splash-complete' — user has interacted; safe to proceed & play audio
+ *   'splash-complete' — user has interacted + assets loaded; safe to proceed
  */
 
 import { BaseComponent } from '../BaseComponent.js';
 import { createSheet } from '../shared-styles.js';
+import { AssetPreloader } from '../../../utils/AssetPreloader.js';
 
 const APP_VERSION = import.meta.env.APP_VERSION || '0.0.0';
 
-// ── Boot log lines (simulated terminal output) ──────────────────────────────
+// ── Scripted boot lines (displayed on timers — phase-tied lines added live) ──
 
 const BOOT_LINES = [
     { text: '> NEXUS PRIME DEFENSE GRID v8.71.2', delay: 0 },
     { text: '> Initializing quantum relay...', delay: 400 },
     { text: '  ✓ Relay online', delay: 800, cls: 'success' },
-    { text: '> Loading Neon Grid interface...', delay: 1100 },
-    { text: '  ✓ Grid sync established', delay: 1600, cls: 'success' },
-    { text: '> Scanning for Swarm signatures...', delay: 2000 },
-    { text: '  ⚠ THREAT LEVEL: CRITICAL', delay: 2600, cls: 'warn' },
-    { text: '  ⚠ Multiple breach vectors detected', delay: 3000, cls: 'warn' },
-    { text: '> Activating Project SIEGE...', delay: 3500 },
-    { text: '  ✓ Weapon systems armed', delay: 4000, cls: 'success' },
-    { text: '  ✓ Shield matrix calibrated', delay: 4300, cls: 'success' },
-    { text: '  ✓ Skill lattice mapped', delay: 4600, cls: 'success' },
-    { text: '> SIEGE PROTOCOL status: READY', delay: 5100, cls: 'ready' },
-    { text: '', delay: 5500 },
-    { text: '> Awaiting operator engagement...', delay: 5800, cls: 'blink' },
+    { text: '> Scanning for Swarm signatures...', delay: 1200 },
+    { text: '  ⚠ THREAT LEVEL: CRITICAL', delay: 1800, cls: 'warn' },
+    { text: '  ⚠ Multiple breach vectors detected', delay: 2200, cls: 'warn' },
+    { text: '> Activating Project SIEGE...', delay: 2700 },
 ];
 
-const TOTAL_BOOT_MS = 6200; // time until the prompt appears
+// scripted intro takes ~3100ms before real loading lines appear
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
@@ -200,6 +194,37 @@ const styles = createSheet(/* css */ `
     animation-delay: 0.5s;
   }
 
+  /* ── Progress bar ────────────────────────────────────────── */
+  .progress-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .progress-track {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(0, 255, 255, 0.1);
+    overflow: hidden;
+    border: 1px solid rgba(0, 255, 255, 0.15);
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #0ff, #ff2dec);
+    border-radius: 2px;
+    transition: width 0.3s ease-out;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+  }
+  .progress-label {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: clamp(8px, 1.2vw, 10px);
+    color: rgba(0, 255, 255, 0.5);
+    text-align: right;
+    letter-spacing: 0.5px;
+  }
+
   /* ── Decorative corner brackets ──────────────────────────── */
   .corner { position: absolute; width: 24px; height: 24px; z-index: 4; }
   .corner::before, .corner::after {
@@ -255,6 +280,10 @@ class SplashScreen extends BaseComponent {
     _timers = [];
     /** @type {boolean} */
     _engaged = false;
+    /** @type {boolean} */
+    _assetsReady = false;
+    /** @type {boolean} */
+    _userReady = false;
 
     connectedCallback() {
         this._render(/* html */ `
@@ -268,6 +297,10 @@ class SplashScreen extends BaseComponent {
                     <div class="splash-title">NEON SIEGE</div>
                     <div class="splash-subtitle" id="versionTag">Defense Protocol v${APP_VERSION}</div>
                     <div class="terminal" id="terminal"></div>
+                    <div class="progress-wrap">
+                        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+                        <div class="progress-label" id="progressLabel">Loading assets... 0%</div>
+                    </div>
                     <div class="splash-prompt" id="prompt">[ CLICK TO ENGAGE ]</div>
                     <div class="splash-prompt-sub" id="promptSub">or press any key</div>
                 </div>
@@ -291,14 +324,18 @@ class SplashScreen extends BaseComponent {
         } catch { /* keep compile-time fallback */ }
     }
 
-    /** Show the splash and kick off the boot sequence. */
+    /** Show the splash, start the boot sequence + asset loading. */
     show() {
         const root = this._$('.splash');
         if (!root) return;
         root.classList.add('show');
         root.classList.remove('exit');
         this._engaged = false;
+        this._assetsReady = false;
+        this._userReady = false;
+
         this._startBoot();
+        this._startPreload();
 
         // Listen for any interaction
         root.addEventListener('pointerdown', this._onEngage, { once: true });
@@ -312,6 +349,8 @@ class SplashScreen extends BaseComponent {
         root?.classList.remove('show', 'exit');
     }
 
+    // ── Scripted terminal boot lines ─────────────────────────────────────
+
     /** @private */
     _startBoot() {
         const terminal = this._$('#terminal');
@@ -320,23 +359,73 @@ class SplashScreen extends BaseComponent {
 
         for (const line of BOOT_LINES) {
             const tid = /** @type {any} */ (setTimeout(() => {
-                const el = document.createElement('div');
-                el.className = 'term-line' + (line.cls ? ` ${line.cls}` : '');
-                el.textContent = line.text;
-                terminal.appendChild(el);
-                // Auto-scroll
-                terminal.scrollTop = terminal.scrollHeight;
+                this._appendLine(line.text, line.cls);
             }, line.delay));
             this._timers.push(tid);
         }
-
-        // Show CTA prompt after boot completes
-        const promptTid = /** @type {any} */ (setTimeout(() => {
-            this._$('#prompt')?.classList.add('visible');
-            this._$('#promptSub')?.classList.add('visible');
-        }, TOTAL_BOOT_MS));
-        this._timers.push(promptTid);
     }
+
+    /**
+     * Append a line to the terminal panel.
+     * @private
+     * @param {string} text
+     * @param {string} [cls]
+     */
+    _appendLine(text, cls) {
+        const terminal = this._$('#terminal');
+        if (!terminal) return;
+        const el = document.createElement('div');
+        el.className = 'term-line' + (cls ? ` ${cls}` : '');
+        el.textContent = text;
+        terminal.appendChild(el);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // ── Real asset preloading ────────────────────────────────────────────
+
+    /** @private */
+    async _startPreload() {
+        const fill = this._$('#progressFill');
+        const label = this._$('#progressLabel');
+
+        /** @type {Record<string, boolean>} phases already logged with a "Loading…" line */
+        const phaseAnnounced = {};
+
+        const phaseLabels = {
+            fonts: 'Loading Neon Grid fonts',
+            images: 'Downloading visual assets',
+            audio: 'Warming weapon audio banks',
+        };
+
+        const preloader = new AssetPreloader(({ pct, phase }) => {
+            // Update progress bar
+            if (fill) fill.style.width = `${pct}%`;
+            if (label) label.textContent = `Loading assets... ${pct}%`;
+
+            // Add a terminal line the first time we enter each phase
+            if (phase !== 'done' && !phaseAnnounced[phase]) {
+                phaseAnnounced[phase] = true;
+                this._appendLine(`> ${phaseLabels[phase] || phase}...`);
+            }
+        });
+
+        try {
+            await preloader.run();
+        } catch {
+            // Never block on load failures — game has fallbacks
+        }
+
+        // Mark loading complete in terminal
+        this._appendLine('  ✓ All systems loaded', 'success');
+        this._appendLine('> SIEGE PROTOCOL status: READY', 'ready');
+        if (fill) fill.style.width = '100%';
+        if (label) label.textContent = 'Loading complete — 100%';
+
+        this._assetsReady = true;
+        this._tryShowPrompt();
+    }
+
+    // ── User interaction ─────────────────────────────────────────────────
 
     /** @private */
     _onEngage = () => {
@@ -348,14 +437,49 @@ class SplashScreen extends BaseComponent {
         root?.removeEventListener('pointerdown', this._onEngage);
         document.removeEventListener('keydown', this._onEngage);
 
-        // Play exit animation, then emit event
+        this._userReady = true;
+        this._tryShowPrompt();
+    };
+
+    /**
+     * Check if both conditions are met: assets loaded AND user interacted.
+     * If user clicked before assets finished, we wait. If assets finished
+     * before the user clicked, we show the CTA prompt.
+     * @private
+     */
+    _tryShowPrompt() {
+        if (this._assetsReady && this._userReady) {
+            // Both ready — proceed immediately
+            this._exit();
+        } else if (this._assetsReady && !this._userReady) {
+            // Assets done, waiting for user
+            this._appendLine('');
+            this._appendLine('> Awaiting operator engagement...', 'blink');
+            this._$('#prompt')?.classList.add('visible');
+            this._$('#promptSub')?.classList.add('visible');
+        } else if (!this._assetsReady && this._userReady) {
+            // User ready, still loading — show "finishing up" message
+            this._appendLine('> Finalizing asset transfer...', 'blink');
+            // Poll until assets are ready
+            const poll = setInterval(() => {
+                if (this._assetsReady) {
+                    clearInterval(poll);
+                    this._exit();
+                }
+            }, 50);
+        }
+    }
+
+    /** @private */
+    _exit() {
+        const root = this._$('.splash');
         root?.classList.add('exit');
         const exitDuration = 600;
         setTimeout(() => {
             this.hide();
             this._emit('splash-complete');
         }, exitDuration);
-    };
+    }
 
     /** @private */
     _cleanup() {
