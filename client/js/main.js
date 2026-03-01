@@ -4,6 +4,9 @@
  * 
  */
 
+// Console log collector — must be imported before anything else to capture all logs
+import './utils/LogCollector.js';
+
 import { Game } from './Game.js';
 import { GameConfig } from './config/GameConfig.js';
 import { telemetry } from './managers/TelemetryManager.js';

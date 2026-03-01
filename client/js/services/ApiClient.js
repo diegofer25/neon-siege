@@ -3,6 +3,27 @@
  * Handles JWT token management, auto-refresh on 401, and request helpers.
  */
 
+// ─── Network history ring buffer ──────────────────────────────────────────────
+
+const MAX_NETWORK_ENTRIES = 100;
+
+/**
+ * @typedef {{ method: string, url: string, status: number|null, durationMs: number, timestamp: number, error?: string }} NetworkEntry
+ */
+
+/** @type {NetworkEntry[]} */
+const _networkHistory = [];
+
+/**
+ * Return a shallow copy of the network history buffer.
+ * @returns {NetworkEntry[]}
+ */
+export function getNetworkHistory() {
+  return _networkHistory.slice();
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+
 let _accessToken = null;
 
 /** @param {string|null} token */
@@ -28,6 +49,11 @@ export async function apiFetch(path, options = {}) {
     headers['Authorization'] = `Bearer ${_accessToken}`;
   }
 
+  const method = (options.method || 'GET').toUpperCase();
+  const start = performance.now();
+  /** @type {NetworkEntry} */
+  const entry = { method, url: path, status: null, durationMs: 0, timestamp: Date.now() };
+
   let res = await fetch(path, { ...options, headers, credentials: 'include' });
 
   // Auto-refresh on 401
@@ -39,12 +65,24 @@ export async function apiFetch(path, options = {}) {
     }
   }
 
+  entry.status = res.status;
+  entry.durationMs = Math.round(performance.now() - start);
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    entry.error = body.error || res.statusText;
+    _pushNetworkEntry(entry);
     throw new ApiError(res.status, body.error || res.statusText);
   }
 
+  _pushNetworkEntry(entry);
   return res.json();
+}
+
+/** @param {NetworkEntry} entry */
+function _pushNetworkEntry(entry) {
+  if (_networkHistory.length >= MAX_NETWORK_ENTRIES) _networkHistory.shift();
+  _networkHistory.push(entry);
 }
 
 /**

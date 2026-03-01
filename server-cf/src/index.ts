@@ -15,6 +15,7 @@ import { saveRoutes } from './routes/save.routes';
 import { creditRoutes } from './routes/credit.routes';
 import { progressionRoutes } from './routes/progression.routes';
 import { achievementsRoutes } from './routes/achievements.routes';
+import { bugReportRoutes } from './routes/bugreport.routes';
 
 type AppEnv = { Bindings: Env; Variables: AppVariables };
 
@@ -50,6 +51,7 @@ app.route('/api/save', saveRoutes);
 app.route('/api/credits', creditRoutes);
 app.route('/api/progression', progressionRoutes);
 app.route('/api/achievements', achievementsRoutes);
+app.route('/api/bug-reports', bugReportRoutes);
 
 // ─── Global 404 ──────────────────────────────────────────────────────────────
 

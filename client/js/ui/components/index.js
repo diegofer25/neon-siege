@@ -12,6 +12,7 @@ import './global/NeonButton.js';
 
 // Feedback components
 import './feedback/AchievementToast.js';
+import './feedback/BugReportButton.js';
 import './feedback/FloatingTexts.js';
 import './feedback/WaveCountdown.js';
 import './feedback/HudTooltip.js';

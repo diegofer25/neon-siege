@@ -145,3 +145,104 @@ export async function sendRegistrationCodeEmail(
     throw new EmailError('Failed to send verification email. Please try again later.');
   }
 }
+
+// ─── Bug Report Email ──────────────────────────────────────────────────────
+
+const BUG_REPORT_TO = 'diego.lamarao92@gmail.com';
+
+interface BugReportAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
+interface BugReportData {
+  description: string;
+  userAgent: string;
+  url: string;
+  attachments: BugReportAttachment[];
+}
+
+function _buildBugReportHtml(data: BugReportData): string {
+  const ts = new Date().toISOString();
+  const escapedDesc = data.description
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Bug Report — Neon Siege</title></head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 0;"><tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="background:#0f0f1a;border:1px solid rgba(255,45,236,0.2);border-radius:12px;padding:40px 36px;">
+      <tr><td align="center" style="padding-bottom:24px;">
+        <h1 style="margin:0;font-size:26px;letter-spacing:4px;text-transform:uppercase;color:#ff2dec;text-shadow:0 0 14px #ff2dec;">NEON SIEGE</h1>
+        <p style="margin:8px 0 0;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#0ff;">🐛 Bug Report</p>
+      </td></tr>
+      <tr><td style="padding-bottom:20px;">
+        <h2 style="margin:0 0 12px;font-size:16px;color:#0ff;letter-spacing:1px;">Description</h2>
+        <div style="color:#ccc;font-size:14px;line-height:1.7;padding:14px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,255,255,0.1);border-radius:6px;">${escapedDesc}</div>
+      </td></tr>
+      <tr><td style="padding-bottom:20px;">
+        <h2 style="margin:0 0 12px;font-size:14px;color:#aaa;letter-spacing:1px;">Environment</h2>
+        <table width="100%" cellpadding="6" cellspacing="0" style="font-size:12px;color:#888;">
+          <tr><td style="color:#666;width:100px;">URL</td><td style="color:#ccc;word-break:break-all;">${data.url}</td></tr>
+          <tr><td style="color:#666;">User Agent</td><td style="color:#ccc;word-break:break-all;">${data.userAgent}</td></tr>
+          <tr><td style="color:#666;">Timestamp</td><td style="color:#ccc;">${ts}</td></tr>
+          <tr><td style="color:#666;">Attachments</td><td style="color:#ccc;">${data.attachments.length} file(s)</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;color:#444;font-size:11px;line-height:1.5;">
+        This bug report was sent from the in-game bug reporter. Check file attachments for screenshot, diagnostics JSON (console logs, network history, game state), and any user-uploaded files.
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+}
+
+export async function sendBugReportEmail(
+  env: EmailEnv,
+  data: BugReportData,
+): Promise<void> {
+  const subjectSnippet = data.description.slice(0, 60).replace(/\n/g, ' ');
+  const subject = `[Bug Report] Neon Siege — ${subjectSnippet}${data.description.length > 60 ? '…' : ''}`;
+
+  if (!env.RESEND_API_KEY) {
+    console.log(`[email.service] DEV MODE — bug report:`);
+    console.log(`  To: ${BUG_REPORT_TO}`);
+    console.log(`  Subject: ${subject}`);
+    console.log(`  Description: ${data.description}`);
+    console.log(`  Attachments: ${data.attachments.map((a) => a.filename).join(', ') || 'none'}`);
+    return;
+  }
+
+  const resend = new Resend(env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: env.EMAIL_FROM,
+    to: BUG_REPORT_TO,
+    subject,
+    html: _buildBugReportHtml(data),
+    attachments: data.attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+    })),
+  });
+
+  if (error) {
+    const statusCode = (error as any)?.statusCode;
+    const name = (error as any)?.name;
+
+    if (env.NODE_ENV !== 'production' && statusCode === 403 && name === 'validation_error') {
+      console.warn('[email.service] Resend sandbox restriction. Falling back to console log.');
+      console.log(`[email.service] DEV FALLBACK — bug report for ${BUG_REPORT_TO}:`);
+      console.log(`  Subject: ${subject}`);
+      console.log(`  Description: ${data.description}`);
+      return;
+    }
+
+    console.error('[email.service] Resend error:', error);
+    throw new EmailError('Failed to send bug report email.');
+  }
+}
