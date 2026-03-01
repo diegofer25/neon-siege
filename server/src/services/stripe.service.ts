@@ -46,6 +46,9 @@ export async function createCheckoutSession(
     metadata: { userId, creditsAmount: '10' },
     success_url: successUrl,
     cancel_url: cancelUrl,
+    adaptive_pricing: {
+      enabled: true,
+    },
   });
 
   if (!session.url) {
