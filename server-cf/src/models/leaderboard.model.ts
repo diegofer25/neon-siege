@@ -22,7 +22,7 @@ export interface LeaderboardEntry {
   max_combo: number;
   level: number;
   is_victory: number; // SQLite boolean
-  run_details: string; // JSON text
+  run_details: string | RunDetails; // JSON text in DB, object in API responses
   game_duration_ms: number | null;
   client_version: string | null;
   checksum: string | null;
@@ -47,6 +47,25 @@ export interface RunDetails {
 export interface LeaderboardRow extends LeaderboardEntry {
   display_name: string;
   rank: number;
+}
+
+function parseRunDetails(runDetails: unknown): RunDetails {
+  if (!runDetails) return {};
+  if (typeof runDetails === 'object') return runDetails as RunDetails;
+  if (typeof runDetails !== 'string') return {};
+  try {
+    const parsed = JSON.parse(runDetails);
+    return parsed && typeof parsed === 'object' ? (parsed as RunDetails) : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeEntry<T extends LeaderboardEntry>(entry: T): T {
+  return {
+    ...entry,
+    run_details: parseRunDetails(entry.run_details),
+  };
 }
 
 export interface CreateEntryData {
@@ -117,7 +136,7 @@ export async function upsertEntry(
       'SELECT * FROM leaderboard_entries WHERE user_id = ? AND difficulty = ?',
       [data.userId, data.difficulty],
     ))!;
-    return { entry, isNewBest: true };
+    return { entry: normalizeEntry(entry), isNewBest: true };
   }
 
   if (data.score > existing.score) {
@@ -142,10 +161,10 @@ export async function upsertEntry(
       'SELECT * FROM leaderboard_entries WHERE user_id = ? AND difficulty = ?',
       [data.userId, data.difficulty],
     ))!;
-    return { entry, isNewBest: true };
+    return { entry: normalizeEntry(entry), isNewBest: true };
   }
 
-  return { entry: existing, isNewBest: false };
+  return { entry: normalizeEntry(existing), isNewBest: false };
 }
 
 export async function getLeaderboard(
@@ -198,7 +217,7 @@ export async function getLeaderboard(
   );
 
   return {
-    entries,
+    entries: entries.map(normalizeEntry),
     total: countResult?.count ?? 0,
   };
 }
@@ -208,7 +227,7 @@ export async function getUserEntry(
   userId: string,
   difficulty: string,
 ): Promise<LeaderboardRow | null> {
-  return queryOne<LeaderboardRow>(
+  const row = await queryOne<LeaderboardRow>(
     db,
     `SELECT
       le.*,
@@ -221,6 +240,7 @@ export async function getUserEntry(
      WHERE le.user_id = ? AND le.difficulty = ?`,
     [userId, difficulty],
   );
+  return row ? normalizeEntry(row) : null;
 }
 
 export async function getUserRank(
