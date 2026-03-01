@@ -24,6 +24,12 @@ export function getNetworkHistory() {
 
 // ───────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Base URL for all API calls. Empty string in dev (Vite proxy handles it).
+ * Set via VITE_API_BASE_URL at build time for production deployments.
+ */
+export const API_BASE = __API_BASE__;
+
 let _accessToken = null;
 
 /** @param {string|null} token */
@@ -54,7 +60,7 @@ export async function apiFetch(path, options = {}) {
   /** @type {NetworkEntry} */
   const entry = { method, url: path, status: null, durationMs: 0, timestamp: Date.now() };
 
-  let res = await fetch(path, { ...options, headers, credentials: 'include' });
+  let res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include' });
 
   // Auto-refresh on 401
   if (res.status === 401 && _accessToken) {
@@ -91,7 +97,7 @@ function _pushNetworkEntry(entry) {
  */
 async function refreshToken() {
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -114,7 +120,7 @@ async function refreshToken() {
  */
 export async function tryRestoreSession() {
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });

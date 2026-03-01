@@ -465,7 +465,7 @@ class BugReportButton extends BaseComponent {
         form.append('attachments', f, f.name);
       }
 
-      const res = await fetch('/api/bug-reports', {
+      const res = await fetch(`${__API_BASE__}/api/bug-reports`, {
         method: 'POST',
         body: form,
       });

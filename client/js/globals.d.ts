@@ -15,6 +15,9 @@ declare global {
         readonly APP_VERSION: string;
     }
 
+    /** Injected at build time by vite.config.js `define.__API_BASE__` */
+    const __API_BASE__: string;
+
     interface ImportMeta {
         readonly env: ImportMetaEnv;
     }

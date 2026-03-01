@@ -13,7 +13,13 @@ export default defineConfig([
   },
   {
     files: ["**/*.{js,mjs,cjs}"],
-    languageOptions: { globals: globals.browser },
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        // Injected at build time by vite.config.js define.__API_BASE__
+        __API_BASE__: 'readonly',
+      },
+    },
     rules: {
       "no-unused-vars": [
         "error",

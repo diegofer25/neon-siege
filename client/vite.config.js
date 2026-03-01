@@ -1,17 +1,26 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { readFileSync } from 'node:fs';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
-// When running inside Docker, VITE_API_TARGET is set to the server service name.
-// Locally it falls back to localhost:8787 (Cloudflare Worker dev server).
-const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:8787';
-const wsTarget  = apiTarget.replace(/^http/, 'ws');
-const isDocker  = !!process.env.VITE_API_TARGET;
+export default defineConfig(({ mode }) => {
+  // Load .env, .env.local, .env.[mode], .env.[mode].local — makes VITE_* vars
+  // available in the config itself (not just the app bundle).
+  const env = loadEnv(mode, process.cwd(), '');
 
-export default defineConfig({
+  // When running inside Docker, VITE_API_TARGET is set to the server service name.
+  // Locally it falls back to localhost:8787 (Cloudflare Worker dev server).
+  const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:8787';
+  const wsTarget  = apiTarget.replace(/^http/, 'ws');
+  const isDocker  = !!process.env.VITE_API_TARGET;
+
+  // Production API base URL — empty in dev (Vite proxy handles /api).
+  const apiBase = env.VITE_API_BASE_URL ?? '';
+
+  return {
   define: {
     'import.meta.env.APP_VERSION': JSON.stringify(pkg.version),
+    '__API_BASE__': JSON.stringify(apiBase),
   },
   server: {
     host: true,
@@ -48,4 +57,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });
