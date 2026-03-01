@@ -50,7 +50,7 @@ fi
 
 # ── Environment config ──────────────────────────────────────────────────────
 if [[ "$ENV" == "prod" ]]; then
-  WORKER_DEPLOY_FLAGS=""
+  WORKER_DEPLOY_FLAGS='--env=""'
   CLIENT_BUILD_SCRIPT="build:prod"
   PAGES_BRANCH="main"
   LABEL="Production"
