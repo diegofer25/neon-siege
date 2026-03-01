@@ -52,6 +52,7 @@ export class Enemy {
         // Enemy type identification
         this.isBoss = false; // Whether this enemy is a boss type
         this.isSplitter = false; // Whether this enemy is a splitter type
+        this.isHealer = false; // Whether this enemy is a healer type
 
         /** @type {import('./Game.js').Game | null} */
         this.game = null;

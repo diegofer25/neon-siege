@@ -1,6 +1,6 @@
 import { createBoss } from '../bosses/BossFactory.js';
 import { GameConfig } from '../config/GameConfig.js';
-import { createBasicEnemy, createFastEnemy, createTankEnemy, createSplitterEnemy } from '../enemies/EnemyFactory.js';
+import { createBasicEnemy, createFastEnemy, createTankEnemy, createSplitterEnemy, createHealerEnemy } from '../enemies/EnemyFactory.js';
 import { playSFX } from '../main.js';
 import { ActionTypes } from '../state/ActionDispatcher.js';
 
@@ -135,8 +135,8 @@ export class WaveManager {
             } else {
                 enemy = createFastEnemy(x, y, 1);
             }
-        } else if (this.currentWave < 16) {
-            // Waves 11-15: Basic (65%), Fast (20%), Tank (15%)
+        } else if (this.currentWave < 15) {
+            // Waves 11-14: Basic (65%), Fast (20%), Tank (15%)
             if (random < 0.65) {
                 enemy = createBasicEnemy(x, y, 1);
             } else if (random < 0.85) {
@@ -145,7 +145,7 @@ export class WaveManager {
                 enemy = createTankEnemy(x, y, 1);
             }
         } else if (this.currentWave < 21) {
-            // Waves 16-20: Basic (55%), Fast (15%), Tank (15%), Splitter (15%)
+            // Waves 15-20: Basic (55%), Fast (15%), Tank (15%), Healer (15%)
             if (random < 0.55) {
                 enemy = createBasicEnemy(x, y, 1);
             } else if (random < 0.70) {
@@ -153,16 +153,18 @@ export class WaveManager {
             } else if (random < 0.85) {
                 enemy = createTankEnemy(x, y, 1);
             } else {
-                enemy = createSplitterEnemy(x, y, 1);
+                enemy = createHealerEnemy(x, y, 1);
             }
         } else {
-            // Waves 21-30+: Basic (45%), Fast (15%), Tank (20%), Splitter (20%)
+            // Waves 21-30+: Basic (45%), Fast (15%), Tank (15%), Healer (10%), Splitter (15%)
             if (random < 0.45) {
                 enemy = createBasicEnemy(x, y, 1);
             } else if (random < 0.60) {
                 enemy = createFastEnemy(x, y, 1);
-            } else if (random < 0.80) {
+            } else if (random < 0.75) {
                 enemy = createTankEnemy(x, y, 1);
+            } else if (random < 0.85) {
+                enemy = createHealerEnemy(x, y, 1);
             } else {
                 enemy = createSplitterEnemy(x, y, 1);
             }
@@ -192,7 +194,9 @@ export class WaveManager {
         }
 
         if (this.enemiesSpawned === 0) {
-            if (enemy.isSplitter) {
+            if (enemy.isHealer) {
+                playSFX('enemy_spawn_healer');
+            } else if (enemy.isSplitter) {
                 playSFX('enemy_spawn_splitter');
             } else if (enemy.color === '#f0f') {
                 playSFX('enemy_spawn_fast');

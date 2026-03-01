@@ -171,6 +171,16 @@ export const GameConfig = {
         
         /** @type {number} Distance outside screen bounds where enemies spawn */
         SPAWN_MARGIN: 50,
+
+        /**
+         * Healer enemy behavior tuning
+         */
+        HEALER: {
+            HEAL_RADIUS: 120,
+            HEAL_AMOUNT: 0.05,
+            HEAL_INTERVAL: 2000,
+            HEAL_COLOR: '#00ff88'
+        },
         
         /**
          * Enemy variant multipliers for creating different enemy types
@@ -183,7 +193,8 @@ export const GameConfig = {
         VARIANTS: {
             FAST: { health: 0.5, speed: 2.0, damage: 1.5 },
             TANK: { health: 3.0, speed: 0.5, damage: 2.5 },
-            SPLITTER: { health: 2.0, speed: 0.8, damage: 1.8 }
+            SPLITTER: { health: 2.0, speed: 0.8, damage: 1.8 },
+            HEALER: { health: 1.5, speed: 0.7, damage: 1.2 }
         }
     },
 

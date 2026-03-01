@@ -1,6 +1,7 @@
 import { Enemy } from '../Enemy.js';
 import { GameConfig } from '../config/GameConfig.js';
 import { SplitterEnemy } from './SplitterEnemy.js';
+import { HealerEnemy } from './HealerEnemy.js';
 
 /**
  * Factory functions to create different enemy types with appropriate stats.
@@ -100,4 +101,24 @@ export function createSplitterEnemy(x, y, waveScale = 1) {
     );
 
     return enemy;
+}
+
+/**
+ * Creates a healer enemy that restores nearby allies.
+ * @param {number} x - Spawn X coordinate
+ * @param {number} y - Spawn Y coordinate
+ * @param {number} waveScale - Difficulty scaling factor (default: 1)
+ * @returns {HealerEnemy} New healer enemy instance with green coloring
+ */
+export function createHealerEnemy(x, y, waveScale = 1) {
+    const baseHealth = GameConfig.ENEMY.BASE_HEALTH * GameConfig.ENEMY.VARIANTS.HEALER.health;
+    const baseSpeed = GameConfig.ENEMY.BASE_SPEED * GameConfig.ENEMY.VARIANTS.HEALER.speed;
+    const baseDamage = GameConfig.ENEMY.BASE_DAMAGE * GameConfig.ENEMY.VARIANTS.HEALER.damage;
+
+    return new HealerEnemy(
+        x, y,
+        baseSpeed * waveScale,
+        baseHealth * waveScale,
+        baseDamage * waveScale
+    );
 }
