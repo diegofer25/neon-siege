@@ -69,7 +69,7 @@ const KEY_PRIORITY = {
 };
 
 /** Volume multiplier relative to the user's soundVolume setting. */
-const VOICE_VOLUME_SCALE = 1.5;
+const VOICE_VOLUME_SCALE = 2.5;
 
 // ── VoiceManager class ──────────────────────────────────────────────────────
 

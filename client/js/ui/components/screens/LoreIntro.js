@@ -540,7 +540,7 @@ class LoreIntro extends BaseComponent {
         if (!voiceSrc) return;
 
         this._voiceAudio = new Audio(voiceSrc);
-        this._voiceAudio.volume = Math.max(0, Math.min(1, audioManager.soundVolume * 1.5));
+        this._voiceAudio.volume = Math.max(0, Math.min(1, audioManager.soundVolume * 2.5));
         this._voiceAudio.play().catch(() => {});
     }
 
