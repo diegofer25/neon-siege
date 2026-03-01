@@ -4,6 +4,8 @@
  * Already used Web Crypto in the original — fully compatible.
  */
 
+import { timingSafeEqual } from './crypto.utils';
+
 interface ScorePayload {
   score: number;
   wave: number;
@@ -26,8 +28,16 @@ interface ValidationResult {
 // Min duration: ~10 minutes for a decent run
 const MIN_GAME_DURATION_MS = 600_000;
 
-// Max plausible score per wave (generous upper bound)
-const MAX_SCORE_PER_WAVE = 30_000;
+// Max plausible score per wave.
+// Realistic breakdown at wave 30 (absolute ceiling):
+//   Kill score: ~40 enemies × 25 base × 3.0 combo × 4.0 wave mult ≈ 12K
+//   Boss kill:  500 × 3.0 × 4.0 ≈ 6K
+//   Wave clear: 100 × 30 + 200 speed + 300 perfect ≈ 3.5K
+//   Combo tier: ≈ 1.2K
+//   Loot/misc:  ≈ 1K
+// Total ≈ ~24K at wave 30. Using 12K as a generous per-wave average
+// (factoring that early waves score much less).
+const MAX_SCORE_PER_WAVE = 12_000;
 
 export async function validateScore(payload: ScorePayload): Promise<ValidationResult> {
   // Hard rejection: impossible wave
@@ -84,5 +94,5 @@ export async function verifyChecksum(
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 
-  return expected === checksum;
+  return timingSafeEqual(expected, checksum);
 }

@@ -14,7 +14,7 @@ type SaveEnv = { Bindings: Env; Variables: AppVariables };
 
 export const saveRoutes = new Hono<SaveEnv>();
 
-const saveWriteLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
+const saveWriteLimiter = createRateLimiter({ windowMs: 60_000, max: 20, prefix: 'save_write' });
 
 /**
  * Middleware: ensure user is registered (not anonymous).
@@ -65,12 +65,6 @@ saveRoutes.get('/', async (c) => {
 saveRoutes.put('/', saveWriteLimiter, async (c) => {
   const userId = c.get('userId');
 
-  // Check content length to prevent oversized saves
-  const contentLength = c.req.header('content-length');
-  if (contentLength && parseInt(contentLength, 10) > 256 * 1024) {
-    return c.json({ error: 'Save payload too large' }, 413);
-  }
-
   const body = await c.req.json<{
     sessionToken?: string;
     saveData?: Record<string, unknown>;
@@ -78,6 +72,12 @@ saveRoutes.put('/', saveWriteLimiter, async (c) => {
     gameState?: string;
     schemaVersion?: number;
   }>();
+
+  // SECURITY: Check actual parsed body size instead of trusting Content-Length header
+  const bodyStr = JSON.stringify(body);
+  if (bodyStr.length > 256 * 1024) {
+    return c.json({ error: 'Save payload too large' }, 413);
+  }
 
   if (!body.sessionToken || !body.saveData || !body.wave || !body.gameState) {
     return c.json({ error: 'Missing required fields: sessionToken, saveData, wave, gameState' }, 400);

@@ -5,12 +5,19 @@
 import { Hono } from 'hono';
 import type { Env, AppVariables } from '../types';
 import { requireAuth } from '../middleware/auth';
+import { createRateLimiter } from '../middleware/rateLimit';
 import * as AchievementModel from '../models/achievement.model';
 import * as ProgressionModel from '../models/progression.model';
 
 type AchEnv = { Bindings: Env; Variables: AppVariables };
 
 export const achievementsRoutes = new Hono<AchEnv>();
+
+const achievementUnlockLimiter = createRateLimiter({
+  windowMs: 60_000,
+  max: 30,
+  prefix: 'ach_unlock_user',
+});
 
 interface AchievementEntry {
   achievementId: string;
@@ -76,7 +83,7 @@ achievementsRoutes.get('/', async (c) => {
  * POST /:id
  * Unlock a specific achievement for the authenticated user.
  */
-achievementsRoutes.post('/:id', async (c) => {
+achievementsRoutes.post('/:id', achievementUnlockLimiter, async (c) => {
   const userId = c.get('userId');
   const achievementId = c.req.param('id');
 

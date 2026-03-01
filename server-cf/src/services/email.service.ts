@@ -148,7 +148,8 @@ export async function sendRegistrationCodeEmail(
 
 // ─── Feedback Email (Bug Report / Feature Request) ──────────────────────────
 
-const FEEDBACK_TO = 'diego.lamarao92@gmail.com';
+// Configurable via FEEDBACK_EMAIL env var (set in wrangler.toml)
+const DEFAULT_FEEDBACK_TO = 'diego.lamarao92@gmail.com';
 
 interface FeedbackAttachment {
   filename: string;
@@ -214,7 +215,9 @@ function _buildFeedbackHtml(data: FeedbackData): string {
 export async function sendFeedbackEmail(
   env: EmailEnv,
   data: FeedbackData,
+  feedbackTo?: string,
 ): Promise<void> {
+  const recipient = feedbackTo || DEFAULT_FEEDBACK_TO;
   const isBug = data.type === 'bug';
   const typeLabel = isBug ? 'Bug Report' : 'Feature Request';
   const subjectSnippet = data.description.slice(0, 60).replace(/\n/g, ' ');
@@ -222,7 +225,7 @@ export async function sendFeedbackEmail(
 
   if (!env.RESEND_API_KEY) {
     console.log(`[email.service] DEV MODE — ${typeLabel}:`);
-    console.log(`  To: ${FEEDBACK_TO}`);
+    console.log(`  To: ${recipient}`);
     console.log(`  Subject: ${subject}`);
     console.log(`  Description: ${data.description}`);
     console.log(`  Attachments: ${data.attachments.map((a) => a.filename).join(', ') || 'none'}`);
@@ -232,7 +235,7 @@ export async function sendFeedbackEmail(
   const resend = new Resend(env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
     from: env.EMAIL_FROM,
-    to: FEEDBACK_TO,
+    to: recipient,
     subject,
     html: _buildFeedbackHtml(data),
     attachments: data.attachments.map((a) => ({
@@ -247,7 +250,7 @@ export async function sendFeedbackEmail(
 
     if (env.NODE_ENV !== 'production' && statusCode === 403 && name === 'validation_error') {
       console.warn('[email.service] Resend sandbox restriction. Falling back to console log.');
-      console.log(`[email.service] DEV FALLBACK — ${typeLabel} for ${FEEDBACK_TO}:`);
+      console.log(`[email.service] DEV FALLBACK — ${typeLabel} for ${recipient}:`);
       console.log(`  Subject: ${subject}`);
       console.log(`  Description: ${data.description}`);
       return;

@@ -15,6 +15,7 @@
 
 import * as UserModel from '../models/user.model';
 import { sendPasswordResetEmail, sendRegistrationCodeEmail } from './email.service';
+import { timingSafeEqual } from './crypto.utils';
 
 const EMAIL_REGISTRATION_CODE_TTL_MS = 10 * 60 * 1000;
 const EMAIL_REGISTRATION_MAX_ATTEMPTS = 5;
@@ -84,7 +85,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
     key,
     256,
   );
-  return toHex(hash) === expectedHash;
+  return timingSafeEqual(toHex(hash), expectedHash);
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -159,6 +160,7 @@ export async function startEmailRegistration(
   email: string,
   password: string,
   displayName: string,
+  callerUserId?: string | null,
 ): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
   const normalizedDisplayName = normalizeDisplayName(displayName);
@@ -166,8 +168,22 @@ export async function startEmailRegistration(
   const existing = await UserModel.findByEmail(db, normalizedEmail);
   if (existing) throw new AuthError('Email already registered', 409);
 
+  // Check display-name uniqueness, but allow if the caller IS the anonymous
+  // user who owns the name (guest-to-email upgrade flow).
+  let anonymousUserId: string | null = null;
   const nameTaken = await UserModel.findByDisplayName(db, normalizedDisplayName);
-  if (nameTaken) throw new AuthError('Player name already taken', 409);
+  if (nameTaken) {
+    const isOwnAnonymousName =
+      nameTaken.auth_provider === 'anonymous' &&
+      callerUserId != null &&
+      nameTaken.id === callerUserId;
+
+    if (!isOwnAnonymousName) {
+      throw new AuthError('Player name already taken', 409);
+    }
+    // Caller is the guest who owns this name — mark for upgrade later.
+    anonymousUserId = nameTaken.id;
+  }
 
   const existingPending = await UserModel.findPendingEmailRegistrationByEmail(db, normalizedEmail);
   if (existingPending) {
@@ -191,6 +207,7 @@ export async function startEmailRegistration(
     passwordHash,
     codeHash,
     expiresAt,
+    anonymousUserId,
   );
 }
 
@@ -228,9 +245,36 @@ export async function verifyEmailRegistration(
   }
 
   const nameTaken = await UserModel.findByDisplayName(db, pending.display_name);
-  if (nameTaken) throw new AuthError('Player name already taken', 409);
+  if (nameTaken) {
+    // Allow if this is a guest-to-email upgrade for the same anonymous user.
+    const isUpgrade =
+      pending.anonymous_user_id != null &&
+      nameTaken.auth_provider === 'anonymous' &&
+      nameTaken.id === pending.anonymous_user_id;
 
-  const user = await UserModel.createEmailUser(db, pending.email, pending.password_hash, pending.display_name);
+    if (!isUpgrade) {
+      throw new AuthError('Player name already taken', 409);
+    }
+  }
+
+  let user: UserModel.User | null;
+
+  if (pending.anonymous_user_id) {
+    // Upgrade the existing anonymous account in-place.
+    user = await UserModel.upgradeAnonymousToEmail(
+      db,
+      pending.anonymous_user_id,
+      pending.email,
+      pending.password_hash,
+    );
+    if (!user) {
+      // Anonymous user was deleted or already upgraded — fall back to new user.
+      user = await UserModel.createEmailUser(db, pending.email, pending.password_hash, pending.display_name);
+    }
+  } else {
+    user = await UserModel.createEmailUser(db, pending.email, pending.password_hash, pending.display_name);
+  }
+
   await UserModel.deletePendingEmailRegistrationByEmail(db, normalizedEmail);
   return UserModel.toPublicUser(user);
 }

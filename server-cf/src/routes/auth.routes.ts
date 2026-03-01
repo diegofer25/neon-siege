@@ -54,12 +54,14 @@ async function issueTokens(
 const forgotIpLimiter = createRateLimiter({
   windowMs: 15 * 60_000,
   max: 5,
+  prefix: 'auth_forgot_ip',
   keyFn: (c) => getClientIp(c),
 });
 
 const forgotEmailLimiter = createRateLimiter({
   windowMs: 60 * 60_000,
   max: 3,
+  prefix: 'auth_forgot_email',
   keyFn: async (c) => {
     try {
       const body = await c.req.json();
@@ -73,18 +75,21 @@ const forgotEmailLimiter = createRateLimiter({
 const resetPasswordLimiter = createRateLimiter({
   windowMs: 60 * 60_000,
   max: 10,
+  prefix: 'auth_reset_ip',
   keyFn: (c) => getClientIp(c),
 });
 
 const registerStartIpLimiter = createRateLimiter({
   windowMs: 15 * 60_000,
   max: 5,
+  prefix: 'auth_reg_ip',
   keyFn: (c) => getClientIp(c),
 });
 
 const registerStartEmailLimiter = createRateLimiter({
   windowMs: 60 * 60_000,
   max: 5,
+  prefix: 'auth_reg_email',
   keyFn: async (c) => {
     try {
       const body = await c.req.json();
@@ -98,8 +103,68 @@ const registerStartEmailLimiter = createRateLimiter({
 const registerVerifyLimiter = createRateLimiter({
   windowMs: 15 * 60_000,
   max: 20,
+  prefix: 'auth_verify_ip',
   keyFn: (c) => getClientIp(c),
 });
+
+const loginIpLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 10,
+  prefix: 'auth_login_ip',
+  keyFn: (c) => getClientIp(c),
+});
+
+const loginEmailLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 5,
+  prefix: 'auth_login_email',
+  keyFn: async (c) => {
+    try {
+      const body = await c.req.json();
+      return body?.email ? `email:${String(body.email).trim().toLowerCase()}` : null;
+    } catch {
+      return null;
+    }
+  },
+});
+
+const anonymousIpLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 10,
+  prefix: 'auth_anon_ip',
+  keyFn: (c) => getClientIp(c),
+});
+
+const refreshLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 30,
+  prefix: 'auth_refresh_ip',
+  keyFn: (c) => getClientIp(c),
+});
+
+// ─── Input validation helpers ────────────────────────────────────────────────
+
+/** Basic email format check — rejects obviously invalid formats before wasting Resend quota. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isValidEmail(email: string): boolean {
+  return EMAIL_RE.test(email) && email.length <= 254;
+}
+
+/**
+ * Display name validation: 1-50 chars, no leading/trailing whitespace,
+ * allows letters, numbers, spaces, hyphens, underscores, and common punctuation.
+ */
+const DISPLAY_NAME_RE = /^[\p{L}\p{N}\s\-_.'!]+$/u;
+function isValidDisplayName(name: string): string | null {
+  const trimmed = name.trim();
+  if (trimmed.length < 1 || trimmed.length > 50) {
+    return 'Display name must be 1-50 characters';
+  }
+  if (!DISPLAY_NAME_RE.test(trimmed)) {
+    return 'Display name contains invalid characters';
+  }
+  return null; // valid
+}
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
@@ -108,12 +173,30 @@ authRoutes.post('/register', registerStartIpLimiter, registerStartEmailLimiter, 
   if (!body.email || !body.password || !body.displayName) {
     return c.json({ error: 'email, password, and displayName are required' }, 400);
   }
+  if (!isValidEmail(body.email)) {
+    return c.json({ error: 'Invalid email format' }, 400);
+  }
+  const nameErr = isValidDisplayName(body.displayName);
+  if (nameErr) {
+    return c.json({ error: nameErr }, 400);
+  }
   if (body.password.length < 6) {
     return c.json({ error: 'Password must be at least 6 characters' }, 400);
   }
 
+  // Optionally extract caller's userId from a guest JWT so the service
+  // can allow a guest-to-email upgrade when the name is already theirs.
+  let callerUserId: string | null = null;
+  const authHeader = c.req.header('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const payload = await verifyJwt(authHeader.slice(7), c.env.JWT_SECRET);
+      if (payload?.sub) callerUserId = payload.sub;
+    } catch { /* ignore invalid tokens */ }
+  }
+
   try {
-    await authService.startEmailRegistration(c.env.DB, c.env, body.email, body.password, body.displayName);
+    await authService.startEmailRegistration(c.env.DB, c.env, body.email, body.password, body.displayName, callerUserId);
     return c.json({ ok: true });
   } catch (err) {
     if (err instanceof authService.AuthError) {
@@ -141,7 +224,7 @@ authRoutes.post('/register/verify', registerVerifyLimiter, async (c) => {
   }
 });
 
-authRoutes.post('/login', async (c) => {
+authRoutes.post('/login', loginIpLimiter, loginEmailLimiter, async (c) => {
   const body = await c.req.json<{ email?: string; password?: string }>();
   if (!body.email || !body.password) {
     return c.json({ error: 'email and password are required' }, 400);
@@ -177,7 +260,7 @@ authRoutes.post('/google', async (c) => {
   }
 });
 
-authRoutes.post('/anonymous/resume', async (c) => {
+authRoutes.post('/anonymous/resume', anonymousIpLimiter, async (c) => {
   const body = await c.req.json<{ deviceId?: string }>();
   if (!body.deviceId || body.deviceId.length < 10 || body.deviceId.length > 128) {
     return c.json({ error: 'deviceId must be 10-128 characters' }, 400);
@@ -195,10 +278,14 @@ authRoutes.post('/anonymous/resume', async (c) => {
   }
 });
 
-authRoutes.post('/anonymous', async (c) => {
+authRoutes.post('/anonymous', anonymousIpLimiter, async (c) => {
   const body = await c.req.json<{ displayName?: string; deviceId?: string }>();
   if (!body.displayName || !body.deviceId) {
     return c.json({ error: 'displayName and deviceId are required' }, 400);
+  }
+  const nameErr = isValidDisplayName(body.displayName);
+  if (nameErr) {
+    return c.json({ error: nameErr }, 400);
   }
 
   try {
@@ -213,7 +300,7 @@ authRoutes.post('/anonymous', async (c) => {
   }
 });
 
-authRoutes.post('/refresh', async (c) => {
+authRoutes.post('/refresh', refreshLimiter, async (c) => {
   const token = getCookie(c, 'refreshToken');
   if (!token) {
     return c.json({ error: 'No refresh token' }, 401);
@@ -246,12 +333,20 @@ authRoutes.post('/forgot-password', forgotIpLimiter, forgotEmailLimiter, async (
     return c.json({ error: 'email is required' }, 400);
   }
 
-  // Always return ok to prevent user enumeration
+  // Always return ok with consistent timing to prevent user enumeration
+  const start = Date.now();
   try {
     await authService.requestPasswordReset(c.env.DB, c.env, body.email);
   } catch {
-    // Swallow
+    // Swallow — whether user exists or not, same response
   }
+
+  // Normalise response time to ~500ms so attackers cannot
+  // distinguish "user found → email sent" from "user not found".
+  const elapsed = Date.now() - start;
+  const pad = Math.max(0, 500 - elapsed);
+  if (pad > 0) await new Promise((r) => setTimeout(r, pad));
+
   return c.json({ ok: true });
 });
 

@@ -151,6 +151,21 @@ export async function updateDisplayName(
   return findById(db, userId);
 }
 
+export async function upgradeAnonymousToEmail(
+  db: D1Database,
+  userId: string,
+  email: string,
+  passwordHash: string,
+): Promise<User | null> {
+  const now = nowISO();
+  await run(
+    db,
+    `UPDATE users SET email = ?, password_hash = ?, auth_provider = 'email', anonymous_device_id = NULL, updated_at = ? WHERE id = ? AND auth_provider = 'anonymous'`,
+    [email, passwordHash, now, userId],
+  );
+  return findById(db, userId);
+}
+
 export async function updatePasswordHash(
   db: D1Database,
   userId: string,
@@ -253,6 +268,7 @@ export interface PendingEmailRegistration {
   expires_at: string;
   attempts_used: number;
   consumed_at: string | null;
+  anonymous_user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -264,14 +280,15 @@ export async function upsertPendingEmailRegistration(
   passwordHash: string,
   codeHash: string,
   expiresAt: Date,
+  anonymousUserId: string | null = null,
 ): Promise<PendingEmailRegistration> {
   const id = newId();
   const now = nowISO();
   await run(
     db,
     `INSERT INTO pending_email_registrations
-       (id, email, display_name, password_hash, code_hash, expires_at, attempts_used, consumed_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)
+       (id, email, display_name, password_hash, code_hash, expires_at, attempts_used, consumed_at, anonymous_user_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)
      ON CONFLICT (email) DO UPDATE SET
        display_name  = excluded.display_name,
        password_hash = excluded.password_hash,
@@ -279,8 +296,9 @@ export async function upsertPendingEmailRegistration(
        expires_at    = excluded.expires_at,
        attempts_used = 0,
        consumed_at   = NULL,
+       anonymous_user_id = excluded.anonymous_user_id,
        updated_at    = ?`,
-    [id, email, displayName, passwordHash, codeHash, expiresAt.toISOString(), now, now, now],
+    [id, email, displayName, passwordHash, codeHash, expiresAt.toISOString(), anonymousUserId, now, now, now],
   );
   return (await findPendingEmailRegistrationByEmail(db, email))!;
 }

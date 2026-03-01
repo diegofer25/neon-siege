@@ -26,6 +26,7 @@ export const bugReportRoutes = new Hono<BugReportEnv>();
 const limiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 3,
+  prefix: 'bugreport_ip',
   keyFn: (c) => getClientIp(c) ?? 'unknown',
 });
 
@@ -110,6 +111,7 @@ bugReportRoutes.post('/', limiter, async (c) => {
         url,
         attachments,
       },
+      c.env.FEEDBACK_EMAIL,
     );
   } catch (err) {
     console.error('[bug-report] Failed to send email:', err);

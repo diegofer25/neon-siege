@@ -4,7 +4,7 @@
 
 import * as LeaderboardModel from '../models/leaderboard.model';
 import type { LocationFilter } from '../models/leaderboard.model';
-import { validateScore } from './anticheat.service';
+import { validateScore, verifyChecksum } from './anticheat.service';
 
 interface SubmitScoreData {
   userId: string;
@@ -21,10 +21,33 @@ interface SubmitScoreData {
   clientVersion?: string;
   checksum?: string;
   continuesUsed?: number;
+  /** Per-session HMAC key from game session service — used to verify checksum. */
+  sessionHmacKey?: string;
 }
 
 export async function submitScore(db: D1Database, data: SubmitScoreData) {
-  // Validate the score
+  // SECURITY: Verify HMAC checksum if both checksum and session key are present
+  if (data.checksum && data.sessionHmacKey) {
+    // Build canonical payload string (sorted, deterministic)
+    const checksumPayload = JSON.stringify({
+      difficulty: data.difficulty,
+      gameDurationMs: data.gameDurationMs ?? 0,
+      isVictory: data.isVictory,
+      kills: data.kills,
+      level: data.level,
+      maxCombo: data.maxCombo,
+      score: data.score,
+      startWave: data.startWave ?? 1,
+      wave: data.wave,
+    });
+
+    const checksumValid = await verifyChecksum(checksumPayload, data.checksum, data.sessionHmacKey);
+    if (!checksumValid) {
+      throw new Error('Score checksum verification failed');
+    }
+  }
+
+  // Validate the score with heuristic anti-cheat
   const validation = await validateScore({
     score: data.score,
     wave: data.wave,

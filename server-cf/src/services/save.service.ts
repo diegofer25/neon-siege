@@ -10,6 +10,7 @@
  */
 
 import * as SaveModel from '../models/save.model';
+import { timingSafeEqual } from './crypto.utils';
 
 /** How long a game-session token stays valid (48 h). */
 const SESSION_TTL_MS = 48 * 60 * 60 * 1000;
@@ -73,7 +74,7 @@ async function _verifyTokenSignature(
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 
-  return expected === sigHex;
+  return timingSafeEqual(expected, sigHex);
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────────

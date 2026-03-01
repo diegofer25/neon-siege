@@ -28,12 +28,14 @@ export const creditRoutes = new Hono<CreditEnv>();
 const continueLimiter = createRateLimiter({
   windowMs: 60_000,
   max: 5,
+  prefix: 'credit_continue',
   keyFn: (c) => c.get('userId') || null,
 });
 
 const checkoutLimiter = createRateLimiter({
   windowMs: 60_000,
   max: 3,
+  prefix: 'credit_checkout',
   keyFn: (c) => c.get('userId') || null,
 });
 
@@ -88,6 +90,23 @@ creditRoutes.post('/checkout', requireAuth, checkoutLimiter, async (c) => {
 
   if (!body.successUrl || !body.cancelUrl) {
     return c.json({ error: 'successUrl and cancelUrl are required' }, 400);
+  }
+
+  // SECURITY: Validate redirect URLs against allowlist to prevent open redirects
+  const allowedHostsRaw = c.env.ALLOWED_CHECKOUT_HOSTS || '';
+  if (allowedHostsRaw) {
+    const allowedHosts = allowedHostsRaw.split(',').map((h: string) => h.trim().toLowerCase());
+    for (const urlStr of [body.successUrl, body.cancelUrl]) {
+      try {
+        const parsed = new URL(urlStr);
+        if (!allowedHosts.some((h: string) => parsed.hostname === h || parsed.hostname.endsWith('.' + h))) {
+          console.warn(`[checkout] Rejected redirect URL: ${urlStr}`);
+          return c.json({ error: 'Invalid redirect URL' }, 400);
+        }
+      } catch {
+        return c.json({ error: 'Invalid redirect URL format' }, 400);
+      }
+    }
   }
 
   const user = await UserModel.findById(c.env.DB, userId);

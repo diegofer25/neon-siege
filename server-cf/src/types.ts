@@ -16,6 +16,11 @@ export interface Env {
   EMAIL_FROM: string;
   GEOIP_ENABLED: string;
   ALLOWED_ORIGINS: string;
+  ALLOWED_CHECKOUT_HOSTS: string;
+  FEEDBACK_EMAIL: string;
+
+  // ─── KV Namespace (rate limiting) ────────────────────
+  RATE_LIMIT: KVNamespace;
 
   // ─── Secrets (wrangler secret put) ───────────────────
   JWT_SECRET: string;

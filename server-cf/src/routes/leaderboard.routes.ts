@@ -5,7 +5,10 @@
 import { Hono } from 'hono';
 import type { Env, AppVariables } from '../types';
 import { requireAuth, optionalAuth } from '../middleware/auth';
+import { createRateLimiter, getClientIp as getClientIpRL } from '../middleware/rateLimit';
 import * as leaderboardService from '../services/leaderboard.service';
+import * as gameSessionService from '../services/gamesession.service';
+import { GameSessionError } from '../services/gamesession.service';
 import * as UserModel from '../models/user.model';
 import {
   resolveLocation,
@@ -17,9 +20,30 @@ type LBEnv = { Bindings: Env; Variables: AppVariables };
 
 export const leaderboardRoutes = new Hono<LBEnv>();
 
+// ─── Rate limiters ───────────────────────────────────────────────────────────
+
+const leaderboardReadLimiter = createRateLimiter({
+  windowMs: 60_000,
+  max: 60,
+  prefix: 'lb_read_ip',
+  keyFn: (c) => getClientIpRL(c),
+});
+
+const leaderboardSubmitLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 5,
+  prefix: 'lb_submit_user',
+});
+
+const leaderboardSessionLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 10,
+  prefix: 'lb_session_user',
+});
+
 // ─── Public: GET / (optional auth for user rank) ─────────────────────────────
 
-leaderboardRoutes.get('/', optionalAuth, async (c) => {
+leaderboardRoutes.get('/', optionalAuth, leaderboardReadLimiter, async (c) => {
   const q = c.req.query();
   const difficulty = q.difficulty || 'normal';
   const limit = Math.min(parseInt(q.limit || '50', 10), 100);
@@ -54,6 +78,32 @@ leaderboardRoutes.get('/', optionalAuth, async (c) => {
   return c.json(result);
 });
 
+// ─── Authenticated: POST /session — issue game session for anti-cheat ────
+
+leaderboardRoutes.post('/session', requireAuth, leaderboardSessionLimiter, async (c) => {
+  const userId = c.get('userId');
+
+  // Only registered users can play for leaderboard
+  const user = await UserModel.findById(c.env.DB, userId);
+  if (!user || !UserModel.isRegisteredUser(user)) {
+    return c.json({ error: 'Leaderboard requires a registered account' }, 403);
+  }
+
+  try {
+    const result = await gameSessionService.createSession(
+      c.env.DB,
+      c.env.SCORE_HMAC_SECRET,
+      userId,
+    );
+    return c.json(result);
+  } catch (err) {
+    if (err instanceof GameSessionError) {
+      return c.json({ error: err.message }, err.statusCode as any);
+    }
+    throw err;
+  }
+});
+
 // ─── Authenticated: GET /me ──────────────────────────────────────────────────
 
 leaderboardRoutes.get('/me', requireAuth, async (c) => {
@@ -65,7 +115,7 @@ leaderboardRoutes.get('/me', requireAuth, async (c) => {
 
 // ─── Authenticated: POST /submit ─────────────────────────────────────────────
 
-leaderboardRoutes.post('/submit', requireAuth, async (c) => {
+leaderboardRoutes.post('/submit', requireAuth, leaderboardSubmitLimiter, async (c) => {
   const userId = c.get('userId');
 
   // Check if user is registered (not anonymous)
@@ -88,6 +138,7 @@ leaderboardRoutes.post('/submit', requireAuth, async (c) => {
     clientVersion?: string;
     checksum?: string;
     continuesUsed?: number;
+    gameSessionToken?: string;
   }>();
 
   // Basic validation
@@ -101,6 +152,30 @@ leaderboardRoutes.post('/submit', requireAuth, async (c) => {
     body.isVictory === undefined
   ) {
     return c.json({ error: 'Missing required fields' }, 400);
+  }
+
+  // SECURITY: Require game session token and checksum
+  if (!body.gameSessionToken) {
+    return c.json({ error: 'gameSessionToken is required' }, 400);
+  }
+  if (!body.checksum) {
+    return c.json({ error: 'checksum is required' }, 400);
+  }
+
+  // Consume the game session (single-use) and get the per-session HMAC key
+  let sessionHmacKey: string;
+  try {
+    sessionHmacKey = await gameSessionService.consumeSession(
+      c.env.DB,
+      c.env.SCORE_HMAC_SECRET,
+      userId,
+      body.gameSessionToken,
+    );
+  } catch (err) {
+    if (err instanceof GameSessionError) {
+      return c.json({ error: err.message }, err.statusCode as any);
+    }
+    throw err;
   }
 
   try {
@@ -119,6 +194,7 @@ leaderboardRoutes.post('/submit', requireAuth, async (c) => {
       clientVersion: body.clientVersion,
       checksum: body.checksum,
       continuesUsed: body.continuesUsed,
+      sessionHmacKey,
     });
 
     // Geo-tagging (best-effort, non-blocking)

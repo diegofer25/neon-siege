@@ -10,6 +10,11 @@ database_name = "neon-siege-db"
 database_id = "TO_BE_CREATED"            # run: wrangler d1 create neon-siege-db
 migrations_dir = "migrations"
 
+# ─── KV Namespace (rate limiting) ───────────────────────────────────────────
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "TO_BE_CREATED"                     # run: wrangler kv namespace create RATE_LIMIT
+
 # ─── Environment: Preview ───────────────────────────────────────────────────
 [env.preview]
 name = "neon-siege-api-preview"
@@ -19,6 +24,10 @@ binding = "DB"
 database_name = "neon-siege-db-preview"
 database_id = "TO_BE_CREATED"            # run: wrangler d1 create neon-siege-db-preview
 migrations_dir = "migrations"
+
+[[env.preview.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "TO_BE_CREATED"                     # run: wrangler kv namespace create RATE_LIMIT --env preview
 
 # ─── Secrets (set via `wrangler secret put <KEY>`) ──────────────────────────
 # JWT_SECRET
@@ -38,4 +47,9 @@ NODE_ENV = "production"
 APP_BASE_URL = "https://neon-siege.com"
 EMAIL_FROM = "Neon Siege <noreply@diegolamarao.com>"
 GEOIP_ENABLED = "true"
-ALLOWED_ORIGINS = ""
+# TODO: Replace with your actual production domains before deploy
+ALLOWED_ORIGINS = "https://neon-siege.com,https://YOURNAME.itch.io"
+# TODO: Replace with your actual production domains for Stripe redirects
+ALLOWED_CHECKOUT_HOSTS = "neon-siege.com,YOURNAME.itch.io"
+# Feedback / bug-report email recipient (configurable)
+FEEDBACK_EMAIL = "diego.lamarao92@gmail.com"

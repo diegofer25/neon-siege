@@ -26,11 +26,33 @@ const app = new Hono<AppEnv>();
 app.use(
   '*',
   async (c, next) => {
-    const allowedRaw = c.env.ALLOWED_ORIGINS || '*';
-    const origins = allowedRaw === '*' ? ['*'] : allowedRaw.split(',').map((o) => o.trim());
+    const allowedRaw = c.env.ALLOWED_ORIGINS;
+
+    // SECURITY: If ALLOWED_ORIGINS is empty / unset, reject all cross-origin
+    // requests in production. In dev (NODE_ENV !== 'production'), allow all.
+    if (!allowedRaw || allowedRaw.trim() === '') {
+      if (c.env.NODE_ENV === 'production') {
+        // No CORS headers → browser blocks cross-origin requests
+        console.warn('[cors] ALLOWED_ORIGINS is empty in production — rejecting CORS');
+        await next();
+        return;
+      }
+      // Dev fallback: allow everything
+      const devCors = cors({
+        origin: '*',
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowHeaders: ['Content-Type', 'Authorization'],
+        exposeHeaders: ['Content-Length'],
+        credentials: false,
+        maxAge: 86400,
+      });
+      return devCors(c, next);
+    }
+
+    const origins = allowedRaw.split(',').map((o) => o.trim()).filter(Boolean);
 
     const corsMiddleware = cors({
-      origin: origins.length === 1 && origins[0] === '*' ? '*' : origins,
+      origin: origins,
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization'],
       exposeHeaders: ['Content-Length'],
