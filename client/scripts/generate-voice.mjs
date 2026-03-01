@@ -5,7 +5,8 @@
  * manifest entry into an MP3 narration file stored in assets/audio/voice/.
  *
  * Usage:
- *   npm run voice:generate                          # Generate all voice lines
+ *   npm run voice:generate                          # Generate all lore voice lines
+ *   npm run voice:generate -- --manifest=game       # Generate game callout voice lines
  *   npm run voice:generate -- --dry-run             # Preview only
  *   npm run voice:generate -- --only=lore_voice_01_city,lore_voice_07_stand
  *   npm run voice:generate -- --force               # Regenerate existing files
@@ -20,6 +21,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { Buffer } from 'node:buffer';
 import { VOICE_MANIFEST } from './voice-manifest.mjs';
+import { GAME_VOICE_MANIFEST } from './game-voice-manifest.mjs';
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -44,6 +46,7 @@ function parseArgs(argv) {
         force: false,
         only: null,
         limit: null,
+        manifest: 'lore',
         concurrency: DEFAULTS.concurrency,
         outDir: DEFAULTS.outDir,
         voiceId: DEFAULTS.voiceId,
@@ -60,6 +63,7 @@ function parseArgs(argv) {
         if (token === '--dry-run') args.dryRun = true;
         else if (token === '--force') args.force = true;
         else if (token === '--no-speaker-boost') args.useSpeakerBoost = false;
+        else if (token.startsWith('--manifest=')) args.manifest = token.split('=')[1];
         else if (token.startsWith('--only=')) args.only = new Set(token.split('=')[1].split(',').map(v => v.trim()).filter(Boolean));
         else if (token.startsWith('--limit=')) args.limit = Number.parseInt(token.split('=')[1], 10);
         else if (token.startsWith('--concurrency=')) args.concurrency = Number.parseInt(token.split('=')[1], 10);
@@ -92,6 +96,7 @@ Usage:
   npm run voice:generate -- [options]
 
 Options:
+  --manifest=lore|game      Voice manifest to use (default: lore)
   --dry-run                 Show planned files without API calls
   --force                   Regenerate even when file exists
   --only=key1,key2          Generate specific manifest keys
@@ -190,6 +195,7 @@ function makeTaskQueue(manifest, extension, outDir) {
         key: entry.key,
         scene: entry.scene,
         text: entry.text,
+        voiceId: entry.voiceId || null,
         filePath: path.join(outDir, `${entry.key}.${extension}`),
     }));
 }
@@ -212,7 +218,11 @@ async function main() {
     const args = parseArgs(process.argv.slice(2));
     const extension = extensionFromOutputFormat(args.outputFormat);
 
-    let manifest = VOICE_MANIFEST;
+    const MANIFESTS = { lore: VOICE_MANIFEST, game: GAME_VOICE_MANIFEST };
+    let manifest = MANIFESTS[args.manifest];
+    if (!manifest) {
+        throw new Error(`Unknown manifest "${args.manifest}". Use: ${Object.keys(MANIFESTS).join(', ')}`);
+    }
     if (args.only) manifest = manifest.filter(item => args.only.has(item.key));
     if (args.limit !== null) manifest = manifest.slice(0, args.limit);
 
@@ -258,7 +268,7 @@ async function main() {
             const buffer = await requestTTS({
                 apiKey,
                 text: task.text,
-                voiceId: args.voiceId,
+                voiceId: task.voiceId || args.voiceId,
                 modelId: args.modelId,
                 outputFormat: args.outputFormat,
                 stability: args.stability,

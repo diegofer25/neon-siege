@@ -13,6 +13,7 @@ import { telemetry } from './managers/TelemetryManager.js';
 import { settingsManager } from './managers/SettingsManager.js';
 import { saveStateManager } from './managers/SaveStateManager.js';
 import { audioManager } from './managers/AudioManager.js';
+import { voiceManager } from './managers/VoiceManager.js';
 import { hudManager } from './managers/HUDManager.js';
 import { skillUI } from './ui/SkillUIController.js';
 // DevPanel & AdminPanel are dynamically imported only in dev mode (see initGame)
@@ -899,6 +900,15 @@ function showGameOver() {
         refreshCreditInfo();
     }
 
+    // Voice-over for game over — pick variant based on context
+    if (isNewBest) {
+        voiceManager.play('game_over_record');
+    } else if (waveDiff > 0 && waveDiff <= 5) {
+        voiceManager.play('game_over_close');
+    } else {
+        voiceManager.play('game_over_defeat');
+    }
+
     playSFX('game_over');
 
     telemetry.endSession('game_over', {
@@ -930,6 +940,7 @@ function showVictoryScreen() {
 
     vicScreen.show();
 
+    voiceManager.play('victory_wave30');
     playSFX('boss_defeat');
 
     telemetry.endSession('victory', {

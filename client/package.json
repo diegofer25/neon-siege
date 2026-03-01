@@ -16,7 +16,9 @@
     "music:generate": "node scripts/generate-music.mjs",
     "music:plan": "node scripts/generate-music.mjs --dry-run",
     "voice:generate": "node scripts/generate-voice.mjs",
-    "voice:plan": "node scripts/generate-voice.mjs --dry-run"
+    "voice:plan": "node scripts/generate-voice.mjs --dry-run",
+    "voice:game:generate": "node scripts/generate-voice.mjs --manifest=game",
+    "voice:game:plan": "node scripts/generate-voice.mjs --manifest=game --dry-run"
   },
   "devDependencies": {
     "@eslint/css": "^0.9.0",

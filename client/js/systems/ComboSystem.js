@@ -1,8 +1,12 @@
 import { playSFX } from '../main.js';
+import { voiceManager } from '../managers/VoiceManager.js';
 import { vfxHelper } from '../managers/VFXHelper.js';
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 import { MathUtils } from '../utils/MathUtils.js';
 import { ActionTypes } from '../state/index.js';
+
+/** Voice keys for the top 3 combo tiers (indices 2, 3, 4). */
+const COMBO_VOICE_KEYS = [null, null, 'combo_rampage', 'combo_unstoppable', 'combo_godmode'];
 
 const COMBO_TIERS = [
     { kills: 5,  label: 'COMBO x5',       multiplier: 1.25, bonusScore: 50,   color: '#fff' },
@@ -42,6 +46,10 @@ export class ComboSystem {
             this.comboTier = newTier;
             const tier = COMBO_TIERS[newTier - 1];
             this._onTierReached(tier);
+
+            // Voice callout for top combo tiers
+            const voiceKey = COMBO_VOICE_KEYS[newTier];
+            if (voiceKey) voiceManager.play(voiceKey);
         }
 
         return this.getScoreMultiplier();

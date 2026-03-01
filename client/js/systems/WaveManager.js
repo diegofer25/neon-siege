@@ -2,7 +2,18 @@ import { createBoss } from '../bosses/BossFactory.js';
 import { GameConfig } from '../config/GameConfig.js';
 import { createBasicEnemy, createFastEnemy, createTankEnemy, createSplitterEnemy, createHealerEnemy } from '../enemies/EnemyFactory.js';
 import { playSFX } from '../main.js';
+import { voiceManager } from '../managers/VoiceManager.js';
 import { ActionTypes } from '../state/ActionDispatcher.js';
+
+/** Map bossType string → voice key. */
+const BOSS_VOICE_MAP = {
+    Classic:    'boss_intro_classic',
+    Shield:     'boss_intro_shield',
+    Teleporter: 'boss_intro_teleporter',
+    Splitter:   'boss_intro_splitter',
+    Vortex:     'boss_intro_vortex',
+    Chrono:     'boss_intro_chrono',
+};
 
 /**
  * Manages wave progression, enemy spawning, and wave completion logic.
@@ -103,6 +114,10 @@ export class WaveManager {
         this.game.enemies.push(boss);
         // Use shield-specific SFX for ShieldBoss, otherwise generic boss spawn
         playSFX(boss.bossType === 'Shield' ? 'boss_spawn_shield' : 'boss_spawn_classic');
+
+        // Voice-over callout for the boss type
+        const voiceKey = BOSS_VOICE_MAP[boss.bossType];
+        if (voiceKey) voiceManager.play(voiceKey);
     }
 
     /**

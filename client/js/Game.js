@@ -20,6 +20,7 @@ import { GameEventBus } from "./skills/GameEventBus.js";
 import { SkillEffectEngine } from "./skills/SkillEffectEngine.js";
 import { SKILL_PLUGIN_REGISTRY } from "./skills/registry.js";
 import { playSFX } from "./main.js";
+import { voiceManager } from "./managers/VoiceManager.js";
 import { vfxHelper } from "./managers/VFXHelper.js";
 const createFloatingText = vfxHelper.createFloatingText.bind(vfxHelper);
 const screenFlash = vfxHelper.screenFlash.bind(vfxHelper);
@@ -890,6 +891,11 @@ export class Game {
 				payload: { currency: 'LEGACY_TOKENS', amount: milestone.bonusTokens },
 			});
 
+			// Voice-over milestone callout
+			const milestoneVoice = { 10: 'milestone_wave10', 25: 'milestone_wave25', 50: 'milestone_wave50' };
+			const voiceKey = milestoneVoice[this.wave];
+			if (voiceKey) voiceManager.play(voiceKey);
+
 			playSFX('boss_defeat');
 		} else if (isMiniMilestone(this.wave)) {
 			const { width, height } = this.getLogicalCanvasSize();
@@ -925,6 +931,7 @@ export class Game {
 		// Ascension event every 5 waves
 		if (this.ascensionSystem.isAscensionWave(this.wave)) {
 			this.gameState = Game.STATES.ASCENSION;
+			voiceManager.play('ascension_offer');
 			showAscensionPanel();
 			return;
 		}
@@ -1303,6 +1310,11 @@ export class Game {
 		this.waveModifierKey = modifierKey;
 		if (modifierKey && GameConfig.WAVE_MODIFIERS[modifierKey]) {
 			Object.assign(this.modifierState, GameConfig.WAVE_MODIFIERS[modifierKey].effect);
+
+			// Voice callout for wave modifier
+			const modVoice = { STORM: 'modifier_ion_storm', OVERCLOCK: 'modifier_overclock', FOG: 'modifier_neon_fog' };
+			const voiceKey = modVoice[modifierKey];
+			if (voiceKey) voiceManager.play(voiceKey);
 		}
 
 		// Dispatch modifier to store
