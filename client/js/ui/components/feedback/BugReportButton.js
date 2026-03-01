@@ -239,6 +239,11 @@ class BugReportButton extends BaseComponent {
       this._renderFileList();
     });
 
+    // Prevent global game hotkeys from hijacking text input (e.g. Space)
+    this._$('#desc').addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
+
     this._$('#submitBtn').addEventListener('click', () => this._submit());
   }
 
