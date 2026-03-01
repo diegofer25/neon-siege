@@ -1622,6 +1622,9 @@ export class Game {
 		this._gameOverTracked = false;
 		this._runStartTimestamp = Date.now();
 		this._saveLoadWave = checkpointWave;
+
+		// Request a game session for anti-cheat score signing (non-blocking)
+		requestGameSession();
 		this.setRunDifficulty(legacy.difficulty || DEFAULT_RUN_DIFFICULTY);
 
 		this.waveManager.reset();
