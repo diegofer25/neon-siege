@@ -67,7 +67,7 @@ export async function apiFetch(path, options = {}) {
     const refreshed = await refreshToken();
     if (refreshed) {
       headers['Authorization'] = `Bearer ${_accessToken}`;
-      res = await fetch(path, { ...options, headers, credentials: 'include' });
+      res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include' });
     }
   }
 
