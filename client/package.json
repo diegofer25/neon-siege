@@ -1,6 +1,6 @@
 {
   "name": "@neon-siege/client",
-  "version": "1.0.7-beta",
+  "version": "1.0.8-beta",
   "private": true,
   "description": "Neon Siege game client",
   "main": "index.html",
