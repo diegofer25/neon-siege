@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-OUT_FILE="$ROOT_DIR/server-cf/.dev.vars"
+OUT_FILE="$ROOT_DIR/server/.dev.vars"
 
 infisical export --env=dev --path=/neon-td --format=dotenv > "$OUT_FILE"
 

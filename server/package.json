@@ -1,5 +1,5 @@
 {
-  "name": "@neon-siege/server-cf",
+  "name": "@neon-siege/server",
   "version": "1.0.0",
   "private": true,
   "scripts": {
