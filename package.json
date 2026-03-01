@@ -22,7 +22,13 @@
     "docker:dev:logs": "docker compose -f docker-compose.dev.yml logs -f",
     "docker:prod": "docker compose -f docker-compose.prod.yml up --build -d",
     "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
-    "docker:prod:logs": "docker compose -f docker-compose.prod.yml logs -f"
+    "docker:prod:logs": "docker compose -f docker-compose.prod.yml logs -f",
+    "deploy:staging": "bash ./scripts/deploy.sh staging",
+    "deploy:prod": "bash ./scripts/deploy.sh prod",
+    "deploy:staging:worker": "bash ./scripts/deploy.sh staging worker",
+    "deploy:staging:pages": "bash ./scripts/deploy.sh staging pages",
+    "deploy:prod:worker": "bash ./scripts/deploy.sh prod worker",
+    "deploy:prod:pages": "bash ./scripts/deploy.sh prod pages"
   },
   "keywords": [
     "game",
