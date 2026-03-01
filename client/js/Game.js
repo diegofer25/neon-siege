@@ -1216,6 +1216,7 @@ export class Game {
 			});
 
 			this._syncPlayerFromSkills();
+			this.achievementSystem?.onSkillLearned();
 			telemetry.track('ascension_picked', { modifierId, wave: this.wave });
 
 			// Continue to skill allocation

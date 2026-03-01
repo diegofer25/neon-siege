@@ -229,7 +229,8 @@ class SkillUIController {
         }
         this._treeRenderer.setCallbacks(
             (skillId) => {
-                sm.learnSkill(skillId);
+                if (!sm.learnSkill(skillId)) return;
+                g.achievementSystem?.onSkillLearned();
                 this._refreshTree(sm);
                 playSFX('ui_purchase_success');
                 // Purchase juice: burst + shake + flash + floating text

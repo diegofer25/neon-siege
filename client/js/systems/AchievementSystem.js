@@ -36,7 +36,7 @@ export const ACHIEVEMENTS = [
     { id: 'shield_cracker',  name: 'Shield Cracker',    desc: 'Defeat a Shield Boss',              icon: '🔨', check: 'shieldBossKills', target: 1 },
 
     // Difficulty-based
-    { id: 'hard_mode_10',    name: 'Masochist',         desc: 'Reach wave 10 on Hard',             icon: '💀', check: 'hardModeWave', target: 10 },
+    { id: 'hard_mode_10',    name: 'Masochist',         desc: 'Reach wave 30 on Hard',             icon: '💀', check: 'hardModeWave', target: 30 },
 
     // Secret
     { id: 'perfectionist',   name: 'Perfectionist',     desc: 'Complete wave 10 at full HP',       icon: '✨', check: 'perfectWave10', target: 1 },
@@ -186,9 +186,9 @@ export class AchievementSystem {
             case 'level':
                 return game.skillManager?.level || 0;
             case 'skillCount':
-                return game.skillManager?.learnedSkills?.size || 0;
+                return Object.values(game.skillManager?.skillRanks || {}).filter((rank) => rank > 0).length;
             case 'ascensionCount':
-                return game.ascensionSystem?.selectedModifiers?.length || 0;
+                return game.ascensionSystem?.activeModifiers?.length || game.ascensionSystem?.selectedModifiers?.length || 0;
             case 'bossKills':
                 return this.bossKills;
             case 'shieldBossKills':
