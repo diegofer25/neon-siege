@@ -285,6 +285,7 @@ async function init() {
         const progression = game?.progressionManager?.getSnapshot?.();
         const isFirstRun = !progression || (progression.totalRuns ?? 0) === 0;
         if (isFirstRun && loreIntro) {
+            startScreen.hide();
             loreIntro.addEventListener('lore-complete', () => startGame(), { once: true });
             loreIntro.show();
             return;
