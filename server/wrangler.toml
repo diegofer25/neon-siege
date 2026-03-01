@@ -57,12 +57,10 @@ FEEDBACK_EMAIL = "diego.lamarao92@gmail.com"
 # ─── Vars (non-secret config) ──────────────────────────────────────────────
 [vars]
 NODE_ENV = "production"
-APP_BASE_URL = "https://neon-siege.com"
+APP_BASE_URL = "https://neon-siege.diegolamarao.com"
 EMAIL_FROM = "Neon Siege <noreply@diegolamarao.com>"
 GEOIP_ENABLED = "true"
-# TODO: Replace with your actual production domains before deploy
-ALLOWED_ORIGINS = "https://neon-siege.com,https://YOURNAME.itch.io"
-# TODO: Replace with your actual production domains for Stripe redirects
-ALLOWED_CHECKOUT_HOSTS = "neon-siege.com,YOURNAME.itch.io"
+ALLOWED_ORIGINS = "https://neon-siege.diegolamarao.com"
+ALLOWED_CHECKOUT_HOSTS = "neon-siege.diegolamarao.com"
 # Feedback / bug-report email recipient (configurable)
 FEEDBACK_EMAIL = "diego.lamarao92@gmail.com"

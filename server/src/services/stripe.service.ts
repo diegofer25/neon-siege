@@ -56,7 +56,13 @@ export async function createCheckoutSession(
 }
 
 /**
- * Verify Stripe webhook signature, process checkout.session.completed.
+ * Verify Stripe webhook signature and dispatch all relevant checkout events.
+ *
+ * Handled events:
+ *   checkout.session.completed            — synchronous payment succeeded → grant credits
+ *   checkout.session.async_payment_succeeded — async payment succeeded → grant credits
+ *   checkout.session.async_payment_failed  — async payment failed → record failed transaction
+ *   checkout.session.expired              — session expired before payment → record expired transaction
  */
 export async function handleWebhook(
   env: StripeEnv,
@@ -77,22 +83,53 @@ export async function handleWebhook(
     throw new StripeServiceError(`Webhook signature verification failed: ${err.message}`, 400);
   }
 
-  if (event.type !== 'checkout.session.completed') {
-    return true; // Acknowledge non-relevant events
-  }
-
   const session = event.data.object as Stripe.Checkout.Session;
   const userId = session.metadata?.userId;
   const creditsAmount = parseInt(session.metadata?.creditsAmount || '10', 10);
 
-  if (!userId) {
-    console.error('[StripeService] checkout.session.completed without userId metadata:', session.id);
-    return false;
-  }
+  switch (event.type) {
+    // ── Payment success (sync and async) ────────────────────────────────────
+    case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded': {
+      if (!userId) {
+        console.error(`[StripeService] ${event.type} without userId metadata — session: ${session.id}`);
+        return false;
+      }
+      await CreditModel.grantPurchasedCredits(db, userId, creditsAmount, session.id);
+      console.log(`[StripeService] ${event.type} — granted ${creditsAmount} credits to user ${userId} (session: ${session.id})`);
+      return true;
+    }
 
-  await CreditModel.grantPurchasedCredits(db, userId, creditsAmount, session.id);
-  console.log(`[StripeService] Granted ${creditsAmount} credits to user ${userId} (session: ${session.id})`);
-  return true;
+    // ── Async payment failed ─────────────────────────────────────────────────
+    case 'checkout.session.async_payment_failed': {
+      if (userId) {
+        await CreditModel.recordTransaction(db, userId, 'purchase', 0, session.id, {
+          event: event.type,
+          status: 'payment_failed',
+          sessionId: session.id,
+        });
+      }
+      console.warn(`[StripeService] async_payment_failed — session: ${session.id}, userId: ${userId ?? 'unknown'}`);
+      return true;
+    }
+
+    // ── Session expired before payment ───────────────────────────────────────
+    case 'checkout.session.expired': {
+      if (userId) {
+        await CreditModel.recordTransaction(db, userId, 'purchase', 0, session.id, {
+          event: event.type,
+          status: 'expired',
+          sessionId: session.id,
+        });
+      }
+      console.warn(`[StripeService] checkout.session.expired — session: ${session.id}, userId: ${userId ?? 'unknown'}`);
+      return true;
+    }
+
+    default:
+      // Acknowledge without processing
+      return true;
+  }
 }
 
 // ─── Error ──────────────────────────────────────────────────────────────────
