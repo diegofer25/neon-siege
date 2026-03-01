@@ -25,42 +25,49 @@ const SCENES = [
     {
         image: 'assets/images/lore/lore_01_city.jpg',
         text: 'In 2187, humanity built NEXUS PRIME — a city of light, powered by the Neon Grid, an infinite energy lattice that connected every mind, every machine.',
+        voice: 'assets/audio/voice/lore_voice_01_city.mp3',
         duration: 10000,
         sfx: null,
     },
     {
         image: 'assets/images/lore/lore_02_breach.jpg',
         text: 'Then the Grid tore open. From the breach came THE SWARM — entities of pure entropy, drawn to the Grid\'s light like moths to a flame. They consumed everything they touched.',
+        voice: 'assets/audio/voice/lore_voice_02_breach.mp3',
         duration: 12000,
         sfx: 'lore_breach_rumble',
     },
     {
         image: 'assets/images/lore/lore_03_fall.jpg',
         text: 'In 72 hours, the outer districts fell. The military was overwhelmed. The Swarm adapted to every weapon, every strategy. Humanity was losing.',
+        voice: 'assets/audio/voice/lore_voice_03_fall.mp3',
         duration: 10000,
         sfx: null,
     },
     {
         image: 'assets/images/lore/lore_04_project.jpg',
         text: 'Deep beneath the city, Project SIEGE had been waiting. A fusion of human will and Grid energy — a living weapon designed to channel the very power the Swarm craved.',
+        voice: 'assets/audio/voice/lore_voice_04_project.mp3',
         duration: 11000,
         sfx: null,
     },
     {
         image: 'assets/images/lore/lore_05_awakening.jpg',
         text: 'You are the Siege Protocol. The last line of defense. The Grid flows through you — every shot, every shield, every spark of power drawn from the same energy they seek to devour.',
+        voice: 'assets/audio/voice/lore_voice_05_awakening.mp3',
         duration: 12000,
         sfx: 'lore_awakening_power',
     },
     {
         image: 'assets/images/lore/lore_06_mission.jpg',
         text: 'They will come in waves. They will adapt. They will send their strongest. But with each wave you survive, you grow stronger. The Grid remembers. The Grid evolves.',
+        voice: 'assets/audio/voice/lore_voice_06_mission.mp3',
         duration: 11000,
         sfx: null,
     },
     {
         image: 'assets/images/lore/lore_07_stand.jpg',
         text: 'Hold the line. 30 waves. 6 siege commanders. One chance. The city\'s last light\u2026 is you.',
+        voice: 'assets/audio/voice/lore_voice_07_stand.mp3',
         duration: 10000,
         sfx: null,
     },
@@ -290,6 +297,7 @@ class LoreIntro extends BaseComponent {
         /** @private */ this._advancing = false;
         /** @private */ this._typewriterDone = false;
         /** @private */ this._loreAudio = null;
+        /** @private */ this._voiceAudio = null;
 
         this._onKeyDown = this._onKeyDown.bind(this);
         this._onPointerDown = this._onPointerDown.bind(this);
@@ -420,6 +428,9 @@ class LoreIntro extends BaseComponent {
             audioManager.playSFX(scene.sfx);
         }
 
+        // Play voice-over narration
+        this._playVoice(scene.voice);
+
         // Update progress bar
         this._updateProgress(next);
 
@@ -516,8 +527,28 @@ class LoreIntro extends BaseComponent {
         // Create dedicated audio for lore
         this._loreAudio = new Audio('assets/audio/music/music_lore_intro.mp3');
         this._loreAudio.loop = false;
-        this._loreAudio.volume = Math.max(0, Math.min(1, audioManager.musicVolume));
+        this._loreAudio.volume = Math.max(0, Math.min(1, audioManager.musicVolume * 0.4));
         this._loreAudio.play().catch(() => {});
+    }
+
+    /** @private */
+    _playVoice(voiceSrc) {
+        // Stop any existing voice-over
+        this._stopVoice();
+
+        if (!voiceSrc) return;
+
+        this._voiceAudio = new Audio(voiceSrc);
+        this._voiceAudio.volume = Math.max(0, Math.min(1, audioManager.soundVolume * 1.5));
+        this._voiceAudio.play().catch(() => {});
+    }
+
+    /** @private */
+    _stopVoice() {
+        if (!this._voiceAudio) return;
+        this._voiceAudio.pause();
+        this._voiceAudio.src = '';
+        this._voiceAudio = null;
     }
 
     /** @private */
@@ -590,7 +621,8 @@ class LoreIntro extends BaseComponent {
         const overlay = this._$('.lore-overlay');
         overlay?.classList.add('fade-out');
 
-        // Stop music with fade
+        // Stop voice and music with fade
+        this._stopVoice();
         this._stopMusic();
 
         setTimeout(() => {
@@ -620,6 +652,12 @@ class LoreIntro extends BaseComponent {
         this._$('.progress-bar')?.style.setProperty('width', '0%');
         this._$('.skip-btn')?.classList.remove('visible');
         this._$('.advance-hint')?.classList.remove('visible');
+
+        if (this._voiceAudio) {
+            this._voiceAudio.pause();
+            this._voiceAudio.src = '';
+            this._voiceAudio = null;
+        }
 
         if (this._loreAudio) {
             this._loreAudio.pause();
