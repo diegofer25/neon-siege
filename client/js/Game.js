@@ -451,6 +451,13 @@ export class Game {
 		// Dispatch GAME_START to reset all store slices
 		this.dispatcher.dispatch({ type: ActionTypes.GAME_START, payload: {} });
 
+		// Clean up any pending continue invulnerability timer
+		if (this._continueIFrameTimer) {
+			clearTimeout(this._continueIFrameTimer);
+			this._continueIFrameTimer = null;
+			this.player._godModeActive = false;
+		}
+
 		this.gameState = "playing";
 		this.wave = 1;
 		this.score = 0;
@@ -1581,9 +1588,16 @@ export class Game {
 		};
 	}
 
-	restoreFromSave(snapshot) {
+	restoreFromSave(snapshot, { deferWaveStart = false } = {}) {
 		if (!snapshot || typeof snapshot !== "object") {
 			return false;
+		}
+
+		// Clean up any pending continue invulnerability timer from a prior continue
+		if (this._continueIFrameTimer) {
+			clearTimeout(this._continueIFrameTimer);
+			this._continueIFrameTimer = null;
+			this.player._godModeActive = false;
 		}
 
 		// If this is a v3 SnapshotManager format, restore store directly
@@ -1633,21 +1647,27 @@ export class Game {
 
 		this.waveManager.reset();
 		this.waveManager.setDifficulty(this.runDifficulty);
-		this.waveManager.startWave(this.wave);
 
-		if (legacy.modifierKey) {
-			this.applyWaveModifier(legacy.modifierKey);
+		if (deferWaveStart) {
+			// Store info for startRestoredWave() to use later
+			this._deferredWaveModifierKey = legacy.modifierKey || null;
+		} else {
+			this.waveManager.startWave(this.wave);
+
+			if (legacy.modifierKey) {
+				this.applyWaveModifier(legacy.modifierKey);
+			}
+
+			// Dispatch WAVE_START for the restored wave
+			this.dispatcher.dispatch({
+				type: ActionTypes.WAVE_START,
+				payload: {
+					wave: this.wave,
+					enemiesToSpawn: this.waveManager.enemiesToSpawn,
+					isBoss: this.waveManager.isBossWave,
+				},
+			});
 		}
-
-		// Dispatch WAVE_START for the restored wave
-		this.dispatcher.dispatch({
-			type: ActionTypes.WAVE_START,
-			payload: {
-				wave: this.wave,
-				enemiesToSpawn: this.waveManager.enemiesToSpawn,
-				isBoss: this.waveManager.isBossWave,
-			},
-		});
 
 		telemetry.track("save_loaded", {
 			wave: this.wave,
@@ -1662,13 +1682,24 @@ export class Game {
 	 * This is distinct from restoreFromSave() — it dispatches RUN_USE_CONTINUE
 	 * and stores the continue token for later redemption.
 	 *
+	 * Wave start is deferred so the caller (main.js handleContinue) can run
+	 * a 3-2-1-GO countdown before enemies spawn. Call startRestoredWave()
+	 * after the game loop is running to trigger the countdown.
+	 *
 	 * @param {object} save — the save payload from the server
 	 * @param {string} continueToken — one-time server-issued token
 	 * @returns {boolean} true if restore succeeded
 	 */
 	restoreFromContinue(save, continueToken) {
-		const restored = this.restoreFromSave(save);
+		const restored = this.restoreFromSave(save, { deferWaveStart: true });
 		if (!restored) return false;
+
+		// Player paid for this continue — restore to full health so they
+		// get a fair chance at the wave instead of resuming at low HP.
+		this.player.hp = this.player.maxHp;
+		if (this.player.hasShield) {
+			this.player.shieldHp = this.player.maxShieldHp;
+		}
 
 		// Track the continue usage in the run state
 		this.dispatcher.dispatch({ type: ActionTypes.RUN_USE_CONTINUE, payload: {} });
@@ -1682,6 +1713,41 @@ export class Game {
 		});
 
 		return true;
+	}
+
+	/**
+	 * Start the wave that was deferred by restoreFromContinue().
+	 * Runs a 3-2-1-GO countdown first, then spawns enemies and grants
+	 * brief invulnerability so the player can orient after continuing.
+	 */
+	startRestoredWave() {
+		const modifierKey = this._deferredWaveModifierKey;
+		this._deferredWaveModifierKey = null;
+
+		this._runWaveCountdown(() => {
+			this.waveManager.startWave(this.wave);
+
+			if (modifierKey) {
+				this.applyWaveModifier(modifierKey);
+			}
+
+			// Dispatch WAVE_START for the restored wave
+			this.dispatcher.dispatch({
+				type: ActionTypes.WAVE_START,
+				payload: {
+					wave: this.wave,
+					enemiesToSpawn: this.waveManager.enemiesToSpawn,
+					isBoss: this.waveManager.isBossWave,
+				},
+			});
+
+			// Grant brief invulnerability (2s) so the player can orient
+			this.player._godModeActive = true;
+			this._continueIFrameTimer = setTimeout(() => {
+				this.player._godModeActive = false;
+				this._continueIFrameTimer = null;
+			}, 2000);
+		});
 	}
 
 	/**

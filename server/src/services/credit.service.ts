@@ -98,14 +98,15 @@ export async function requestContinue(
   save: Record<string, unknown>;
   creditBalance: CreditBalance;
 }> {
-  // 1. Deduct one credit (throws 402 if none available)
-  const deduction = await CreditModel.deductCredit(db, userId, runId);
-
-  // 2. Load & validate server-side save
+  // 1. Validate save exists BEFORE deducting credit (avoids losing a credit
+  //    when there's nothing to continue from)
   const save = await SaveModel.getSaveByUserId(db, userId);
   if (!save) {
     throw new CreditModel.CreditError('No save found — nothing to continue from', 404);
   }
+
+  // 2. Deduct one credit (throws 402 if none available)
+  const deduction = await CreditModel.deductCredit(db, userId, runId);
 
   const saveVersion = save.save_version;
 

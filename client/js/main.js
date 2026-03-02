@@ -1164,6 +1164,7 @@ async function handleContinue() {
         const { continueToken, save } = await creditService.requestContinue();
 
         // 2. Restore game state from the server-provided save
+        //    Wave start is deferred — enemies won't spawn until the countdown finishes.
         const restored = game.restoreFromContinue(save, continueToken);
         if (!restored) {
             continueUi?.showContinueError?.('Failed to restore save data.');
@@ -1177,6 +1178,9 @@ async function handleContinue() {
         document.querySelector('game-over-screen')?.hide();
         document.querySelector('pause-screen')?.hide();
 
+        // Reset loading state before hiding (so it's clean if game-over shows again)
+        continueUi?.setContinueLoading?.(false);
+
         telemetry.track('continue_used', {
             fromWave: save.wave || 0,
             continuesUsed: game.store.get('run', 'continuesUsed'),
@@ -1189,11 +1193,15 @@ async function handleContinue() {
         lastTime = performance.now();
         animationFrameId = requestAnimationFrame(gameLoop);
 
+        // 4. Run 3-2-1-GO countdown, then spawn enemies with brief invulnerability.
+        //    The game loop is already running (rendering the empty arena + countdown).
+        game.startRestoredWave();
+
         syncMusicTrack();
         syncSaveButtons();
 
-        // 4. Redeem the continue token server-side (deletes the old save)
-        //    This is fire-and-forget — game is already restored.
+        // 5. Redeem the continue token server-side (marks token as used).
+        //    Fire-and-forget — game is already restored.
         const token = game.consumePendingContinueToken();
         if (token) {
             creditService.redeemContinue(token).catch(err => {
