@@ -16,3 +16,4 @@ APP_BASE_URL=http://localhost:8080
 EMAIL_FROM=Neon Siege <noreply@diegolamarao.com>
 GEOIP_ENABLED=true
 ALLOWED_ORIGINS=
+ALLOWED_CHECKOUT_HOSTS=localhost:8080,127.0.0.1:8080

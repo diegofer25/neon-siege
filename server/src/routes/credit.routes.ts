@@ -46,6 +46,45 @@ const startRunLimiter = createRateLimiter({
   keyFn: (c) => c.get('userId') || null,
 });
 
+type AllowedCheckoutHost = {
+  hostname: string;
+  port: string | null;
+};
+
+function parseAllowedCheckoutHosts(raw: string): AllowedCheckoutHost[] {
+  return raw
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean)
+    .map((entry) => {
+      try {
+        const normalized = entry.includes('://') ? entry : `https://${entry}`;
+        const parsed = new URL(normalized);
+        return {
+          hostname: parsed.hostname,
+          port: parsed.port || null,
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter((entry): entry is AllowedCheckoutHost => entry !== null);
+}
+
+function isAllowedCheckoutRedirect(urlStr: string, allowedHosts: AllowedCheckoutHost[]): boolean {
+  const parsed = new URL(urlStr);
+  const hostname = parsed.hostname.toLowerCase();
+  const port = parsed.port || null;
+
+  return allowedHosts.some((allowed) => {
+    if (allowed.port) {
+      return hostname === allowed.hostname && port === allowed.port;
+    }
+
+    return hostname === allowed.hostname || hostname.endsWith(`.${allowed.hostname}`);
+  });
+}
+
 // ─── Authenticated routes ────────────────────────────────────────────────────
 
 /** GET / — return current credit balance */
@@ -115,13 +154,16 @@ creditRoutes.post('/checkout', requireAuth, checkoutLimiter, async (c) => {
   }
 
   // SECURITY: Validate redirect URLs against allowlist to prevent open redirects
+  // In local dev, automatically allow localhost / 127.0.0.1
+  const isDev = c.env.NODE_ENV === 'development';
   const allowedHostsRaw = c.env.ALLOWED_CHECKOUT_HOSTS || '';
-  if (allowedHostsRaw) {
-    const allowedHosts = allowedHostsRaw.split(',').map((h: string) => h.trim().toLowerCase());
+  const extraDevHosts = isDev ? 'localhost,127.0.0.1' : '';
+  const combinedHosts = [allowedHostsRaw, extraDevHosts].filter(Boolean).join(',');
+  if (combinedHosts) {
+    const allowedHosts = parseAllowedCheckoutHosts(combinedHosts);
     for (const urlStr of [body.successUrl, body.cancelUrl]) {
       try {
-        const parsed = new URL(urlStr);
-        if (!allowedHosts.some((h: string) => parsed.hostname === h || parsed.hostname.endsWith('.' + h))) {
+        if (!isAllowedCheckoutRedirect(urlStr, allowedHosts)) {
           console.warn(`[checkout] Rejected redirect URL: ${urlStr}`);
           return c.json({ error: 'Invalid redirect URL' }, 400);
         }
