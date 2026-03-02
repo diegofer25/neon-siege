@@ -104,3 +104,27 @@ export async function countActiveSessions(
   );
   return row?.cnt ?? 0;
 }
+
+/**
+ * Delete a user's oldest unconsumed sessions, keeping only the `keep` most
+ * recent ones. This prevents abandoned sessions from accumulating when the
+ * client calls requestGameSession() repeatedly (restarts, continues, etc.).
+ */
+export async function pruneUserSessions(
+  db: D1Database,
+  userId: string,
+  keep: number,
+): Promise<void> {
+  await run(
+    db,
+    `DELETE FROM game_sessions
+     WHERE user_id = ? AND used_at IS NULL AND expires_at > datetime('now')
+       AND id NOT IN (
+         SELECT id FROM game_sessions
+         WHERE user_id = ? AND used_at IS NULL AND expires_at > datetime('now')
+         ORDER BY created_at DESC
+         LIMIT ?
+       )`,
+    [userId, userId, keep],
+  );
+}

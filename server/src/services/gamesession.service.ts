@@ -13,7 +13,7 @@ import * as GameSessionModel from '../models/gamesession.model';
 import { timingSafeEqual } from './crypto.utils';
 
 /** Max active (unused) game sessions per user — prevents abuse. */
-const MAX_ACTIVE_SESSIONS = 5;
+const MAX_ACTIVE_SESSIONS = 10;
 
 // ─── Token building / verification ─────────────────────────────────────────
 
@@ -105,6 +105,10 @@ export async function createSession(
   scoreHmacSecret: string,
   userId: string,
 ): Promise<GameSessionResult> {
+  // Prune abandoned sessions for this user, keeping only the 2 most recent.
+  // This prevents orphan build-up from client restarts / continues.
+  await GameSessionModel.pruneUserSessions(db, userId, 2);
+
   // Limit concurrent sessions to prevent abuse
   const activeCount = await GameSessionModel.countActiveSessions(db, userId);
   if (activeCount >= MAX_ACTIVE_SESSIONS) {
