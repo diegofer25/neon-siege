@@ -20,7 +20,8 @@
     "voice:generate": "node scripts/generate-voice.mjs",
     "voice:plan": "node scripts/generate-voice.mjs --dry-run",
     "voice:game:generate": "node scripts/generate-voice.mjs --manifest=game",
-    "voice:game:plan": "node scripts/generate-voice.mjs --manifest=game --dry-run"
+    "voice:game:plan": "node scripts/generate-voice.mjs --manifest=game --dry-run",
+    "icons:optimize:skills": "bash scripts/optimize-skill-icons.sh"
   },
   "devDependencies": {
     "@eslint/css": "^0.9.0",

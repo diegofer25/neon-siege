@@ -394,6 +394,7 @@ class SplashScreen extends BaseComponent {
         const phaseLabels = {
             fonts: 'Loading Neon Grid fonts',
             images: 'Downloading visual assets',
+          icons: 'Caching skill icon atlas',
             audio: 'Warming weapon audio banks',
         };
 

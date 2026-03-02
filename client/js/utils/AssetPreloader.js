@@ -10,6 +10,8 @@
  *   await preloader.run();
  */
 
+import { ARCHETYPES, ASCENSION_POOL, ATTRIBUTES } from '../config/SkillConfig.js';
+
 // ── Asset manifests ─────────────────────────────────────────────────────────
 
 /** @type {string[]} Critical images (start screen, lore, skill icons) */
@@ -25,6 +27,15 @@ const IMAGE_ASSETS = [
     'assets/images/lore/lore_06_mission.jpg',
     'assets/images/lore/lore_07_stand.jpg',
 ];
+
+/** @type {string[]} Skill/attribute/ascension icon images used in UI panels/tree. */
+const SKILL_ICON_ASSETS = Array.from(new Set([
+    ...Object.values(ATTRIBUTES).map((attr) => attr.iconImage).filter(Boolean),
+    ...Object.values(ARCHETYPES).flatMap((archetype) =>
+        (archetype.skills || []).map((skill) => skill.iconImage).filter(Boolean)
+    ),
+    ...ASCENSION_POOL.map((modifier) => modifier.iconImage).filter(Boolean),
+]));
 
 /** @type {string[]} Font files (woff2 — small, critical for rendering) */
 const FONT_ASSETS = [
@@ -61,7 +72,7 @@ export class AssetPreloader {
         /** @private */
         this._loaded = 0;
         /** @private */
-        this._total = IMAGE_ASSETS.length + FONT_ASSETS.length + AUDIO_ASSETS.length;
+        this._total = IMAGE_ASSETS.length + SKILL_ICON_ASSETS.length + FONT_ASSETS.length + AUDIO_ASSETS.length;
     }
 
     /**
@@ -79,7 +90,10 @@ export class AssetPreloader {
         // Phase 2: images (medium — fills the cache for start screen & lore)
         await this._loadBatch(IMAGE_ASSETS, 'images', (url) => this._warmImage(url));
 
-        // Phase 3: audio (large — just cache the bytes, no playback)
+        // Phase 3: skill icons (used heavily in skill tree / level-up / ascension UI)
+        await this._loadBatch(SKILL_ICON_ASSETS, 'icons', (url) => this._warmImage(url));
+
+        // Phase 4: audio (large — just cache the bytes, no playback)
         await this._loadBatch(AUDIO_ASSETS, 'audio', (url) => this._warmFetch(url));
 
         // Final: wait for the browser font API to confirm fonts are ready
