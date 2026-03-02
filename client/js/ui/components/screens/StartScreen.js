@@ -613,22 +613,34 @@ class StartScreen extends BaseComponent {
 
         if (saveData && credits.total > 0) {
             const wave = saveData.checkpointWave ?? saveData.wave ?? '?';
-            const creditLabel = credits.total === 1 ? '1 continue' : `${credits.total} continues`;
-            continueBtn.textContent = `CONTINUE — WAVE ${wave} (${creditLabel})`;
+            const freeLeft = credits.freeRemainingThisRun ?? 0;
+            const paid = credits.purchased ?? 0;
+
+            // Button text: show what's available
+            if (freeLeft > 0) {
+                const creditLabel = credits.total === 1 ? '1 continue' : `${credits.total} continues`;
+                continueBtn.textContent = `CONTINUE — WAVE ${wave} (${creditLabel})`;
+            } else {
+                const paidLabel = paid === 1 ? '1 purchased continue' : `${paid} purchased continues`;
+                continueBtn.textContent = `CONTINUE — WAVE ${wave} (${paidLabel})`;
+            }
             continueBtn.style.display = '';
             continueBtn.removeAttribute('disabled');
             if (badge) {
-                const freeLeft = credits.freeRemainingThisRun ?? 0;
-                badge.textContent = freeLeft > 0
-                    ? `${freeLeft} free this run` + (credits.purchased > 0 ? ` + ${credits.purchased} purchased` : '')
-                    : `${credits.purchased} purchased continue${credits.purchased !== 1 ? 's' : ''}`;
+                if (freeLeft > 0 && paid > 0) {
+                    badge.textContent = `${freeLeft} free + ${paid} purchased`;
+                } else if (freeLeft > 0) {
+                    badge.textContent = `${freeLeft} free continue${freeLeft !== 1 ? 's' : ''}`;
+                } else if (paid > 0) {
+                    badge.textContent = `${paid} purchased — new runs get 3 free`;
+                }
                 badge.classList.remove('empty');
             }
             if (buyBtn) buyBtn.style.display = 'none';
         } else if (saveData && credits.total === 0) {
             continueBtn.style.display = 'none';
             if (badge) {
-                badge.textContent = 'NO CONTINUES REMAINING';
+                badge.textContent = 'NO CONTINUES — START A NEW RUN (3 FREE)';
                 badge.classList.add('empty');
             }
             if (buyBtn) {

@@ -51,6 +51,7 @@ export interface CreditBalance {
   freeRemainingThisRun: number;
   purchased: number;
   total: number;
+  runId: string | null;
 }
 
 export async function getBalance(db: D1Database, userId: string): Promise<CreditBalance> {
@@ -63,6 +64,7 @@ export async function getBalance(db: D1Database, userId: string): Promise<Credit
     freeRemainingThisRun: freeRemaining,
     purchased: credits.balance,
     total: freeRemaining + credits.balance,
+    runId: credits.current_run_id ?? null,
   };
 }
 
@@ -147,6 +149,7 @@ export async function requestContinue(
       freeRemainingThisRun: Math.max(0, CreditModel.FREE_PER_RUN - deduction.freeUsedThisRun),
       purchased: deduction.newBalance,
       total: Math.max(0, CreditModel.FREE_PER_RUN - deduction.freeUsedThisRun) + deduction.newBalance,
+      runId: runId ?? null,
     },
   };
 }
@@ -184,5 +187,6 @@ export async function grantPurchasedCredits(
     freeRemainingThisRun: freeRemaining,
     purchased: credits.balance,
     total: freeRemaining + credits.balance,
+    runId: credits.current_run_id ?? null,
   };
 }

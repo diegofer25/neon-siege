@@ -174,17 +174,27 @@ class GameOverScreen extends BaseComponent {
             continueBtn.style.display = 'inline-block';
             continueBtn.removeAttribute('disabled');
             delete continueBtn.dataset.prevLabel;
-            continueBtn.textContent = `CONTINUE (${credits.total} left)`;
+
             const freeLeft = credits.freeRemainingThisRun ?? 0;
-            badge.textContent = freeLeft > 0
-                ? `${freeLeft} free this run` + (credits.purchased > 0 ? ` + ${credits.purchased} purchased` : '')
-                : `${credits.purchased} purchased continues`;
+            const paid = credits.purchased ?? 0;
+
+            // Button: show total available
+            continueBtn.textContent = `CONTINUE (${credits.total} left)`;
+
+            // Badge: break down free vs paid clearly
+            if (freeLeft > 0 && paid > 0) {
+                badge.textContent = `${freeLeft} free this run + ${paid} purchased`;
+            } else if (freeLeft > 0) {
+                badge.textContent = `${freeLeft} free this run`;
+            } else if (paid > 0) {
+                badge.textContent = `${paid} purchased continue${paid !== 1 ? 's' : ''}`;
+            }
             badge.classList.toggle('empty', false);
             buyBtn.style.display = 'none';
         } else if (hasSave && credits.total === 0) {
             // No continues — show buy button, hide continue
             continueBtn.style.display = 'none';
-            badge.textContent = 'NO CONTINUES REMAINING';
+            badge.textContent = 'NO CONTINUES — BUY OR START A NEW RUN (3 FREE)';
             badge.classList.toggle('empty', true);
             buyBtn.style.display = 'inline-block';
         } else {

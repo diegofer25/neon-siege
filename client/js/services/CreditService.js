@@ -85,6 +85,10 @@ export async function getBalance() {
   try {
     const data = await apiFetch('/api/credits');
     _cachedBalance = data.credits;
+    // Restore the active run ID from the server (handles page reload)
+    if (data.credits.runId && !_currentRunId) {
+      _currentRunId = data.credits.runId;
+    }
     return { ..._cachedBalance };
   } catch (err) {
     console.warn('[CreditService] Failed to fetch balance:', err.message);
