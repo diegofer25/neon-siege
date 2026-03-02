@@ -28,8 +28,7 @@
     "deploy:staging:worker": "bash ./scripts/deploy.sh staging worker",
     "deploy:staging:pages": "bash ./scripts/deploy.sh staging pages",
     "deploy:prod:worker": "bash ./scripts/deploy.sh prod worker",
-    "deploy:prod:pages": "bash ./scripts/deploy.sh prod pages",
-    "deploy:prod:all": "concurrently -n worker,pages -c magenta,cyan \"npm run deploy:prod:worker\" \"npm run deploy:prod:pages\""
+    "deploy:prod:pages": "bash ./scripts/deploy.sh prod pages"
   },
   "keywords": [
     "game",
