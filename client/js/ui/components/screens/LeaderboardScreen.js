@@ -568,6 +568,49 @@ const styles = createSheet(/* css */ `
   .lb-empty-icon { font-size: 28px; opacity: 0.4; }
   .lb-error { text-align: center; padding: var(--spacing-xl); color: var(--color-accent-red); font-size: 13px; }
 
+  .lb-load-more-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 8px 12px;
+    color: #777;
+    font-size: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+  .lb-load-more-status.error { color: var(--color-accent-red); }
+  .lb-load-more-spinner {
+    width: 14px;
+    height: 14px;
+    color: var(--color-primary-neon);
+    opacity: 0.8;
+  }
+  .lb-load-more-retry {
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #bbb;
+    font-size: 11px;
+    padding: 4px 10px !important;
+    cursor: pointer;
+    box-shadow: none !important;
+    margin-left: 4px !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+  }
+  .lb-load-more-retry::before { display: none !important; }
+  .lb-load-more-retry:hover {
+    border-color: var(--color-primary-neon) !important;
+    color: var(--color-primary-neon);
+    animation: none !important;
+    transform: none !important;
+  }
+  .lb-load-more-sentinel {
+    width: 100%;
+    height: 1px;
+  }
+
   /* ── User rank banner ─────────────────────────────────────────────────── */
   .lb-user-rank {
     margin-top: var(--spacing-md);
@@ -614,7 +657,14 @@ class LeaderboardScreen extends BaseComponent {
     connectedCallback() {
         this._currentDifficulty = 'normal';
         this._currentScope = 'global';
-        this._data = null;
+    this._data = { entries: [], userRank: null };
+    this._nextCursor = null;
+    this._hasMore = false;
+    this._isLoadingMore = false;
+    this._pageLimit = 50;
+    this._observer = null;
+    this._loadSessionId = 0;
+    this._loadMoreError = '';
 
         // ── Tooltip lookup maps ──────────────────────────────────────────────
         this._skillMap = new Map();
@@ -657,6 +707,30 @@ class LeaderboardScreen extends BaseComponent {
             </div>
         `, overlayStyles, styles);
 
+        this._tableWrapClickHandler = (e) => {
+          const targetEl = (() => {
+            const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+            for (const node of path) {
+              if (node instanceof HTMLElement) return node;
+            }
+            return e.target instanceof HTMLElement ? e.target : null;
+          })();
+
+          const retryBtn = targetEl?.closest('.lb-load-more-retry');
+          if (retryBtn) {
+            this._loadNextPage();
+            return;
+          }
+
+          const btn = targetEl?.closest('.stats-btn');
+          if (!btn) return;
+          const idx = parseInt(btn.dataset.idx);
+          if (!Number.isNaN(idx) && this._data?.entries?.[idx]) {
+            this._showRunDetails(this._data.entries[idx]);
+          }
+        };
+        this._$('#tableWrap').addEventListener('click', this._tableWrapClickHandler);
+
         // Tab switching
         this._$('#tabs').addEventListener('click', (e) => {
             const tab = /** @type {HTMLElement} */ (e.target).closest('.lb-tab');
@@ -695,10 +769,19 @@ class LeaderboardScreen extends BaseComponent {
     hide() {
         const root = this._$('.overlay');
         if (!root || !root.classList.contains('show')) return;
+      this._cleanupObserver();
         root.classList.add('hide');
         root.addEventListener('animationend', () => {
             root.classList.remove('show', 'hide');
         }, { once: true });
+    }
+
+    disconnectedCallback() {
+      this._cleanupObserver();
+      this._$('#tableWrap')?.removeEventListener('click', this._tableWrapClickHandler);
+      if (this._rdpTooltipCleanup) { this._rdpTooltipCleanup(); this._rdpTooltipCleanup = null; }
+      this._rdpTooltip?.hideTooltip();
+      if (super.disconnectedCallback) super.disconnectedCallback();
     }
 
     /** @param {string} [difficulty] */
@@ -710,6 +793,14 @@ class LeaderboardScreen extends BaseComponent {
         );
 
         const wrap = this._$('#tableWrap');
+        this._cleanupObserver();
+        this._hideRunDetails();
+        this._nextCursor = null;
+        this._hasMore = false;
+        this._isLoadingMore = false;
+        this._loadMoreError = '';
+        this._data = { entries: [], userRank: null };
+
         wrap.innerHTML = `
             <div class="lb-loading">
                 <span class="lb-loading-spinner">${SPINNER_SVG}</span>
@@ -717,48 +808,113 @@ class LeaderboardScreen extends BaseComponent {
             </div>`;
         this._$('#userRank').style.display = 'none';
 
-        try {
-            let url = `/api/leaderboard?difficulty=${difficulty}&limit=50`;
-            if (this._currentScope && this._currentScope !== 'global') {
-                url += `&scope=${this._currentScope}`;
-            }
-            const data = await apiFetch(url);
-            this._data = data;
-            this._renderTable(data);
-        } catch {
-            wrap.innerHTML = `<div class="lb-error">Could not load leaderboard</div>`;
-        }
+        this._loadSessionId += 1;
+        const sessionId = this._loadSessionId;
+        await this._loadNextPage({ reset: true, sessionId });
     }
 
-    /** @param {{ entries: any[], total: number, userRank: number|null }} data */
-    _renderTable(data) {
-        const wrap = this._$('#tableWrap');
+      _buildLeaderboardUrl(cursor = null) {
+        const params = new URLSearchParams({
+          difficulty: this._currentDifficulty,
+          limit: String(this._pageLimit),
+        });
+        if (this._currentScope && this._currentScope !== 'global') {
+          params.set('scope', this._currentScope);
+        }
+        if (cursor) params.set('cursor', cursor);
+        return `/api/leaderboard?${params.toString()}`;
+      }
 
-        if (!data.entries || data.entries.length === 0) {
+      async _loadNextPage({ reset = false, sessionId = this._loadSessionId } = {}) {
+        if (this._isLoadingMore) return;
+        if (!reset && (!this._hasMore || !this._nextCursor)) return;
+
+        this._isLoadingMore = true;
+        if (!reset) {
+          this._loadMoreError = '';
+          this._updateLoadMoreStatus();
+        }
+
+        try {
+          const cursor = reset ? null : this._nextCursor;
+          const data = await apiFetch(this._buildLeaderboardUrl(cursor));
+          if (sessionId !== this._loadSessionId) return;
+
+          const pageEntries = Array.isArray(data?.entries) ? data.entries : [];
+
+          if (reset) {
+            this._data = {
+              entries: [...pageEntries],
+              userRank: data?.userRank ?? null,
+            };
+            this._renderTable();
+          } else {
+            const startIndex = this._data.entries.length;
+            this._data.entries.push(...pageEntries);
+            this._appendRows(pageEntries, startIndex);
+            if (data?.userRank != null) this._data.userRank = data.userRank;
+            this._updateUserRankBanner();
+          }
+
+          this._nextCursor = data?.nextCursor || null;
+          this._hasMore = Boolean(data?.hasMore) && Boolean(this._nextCursor);
+          this._loadMoreError = '';
+          this._updateLoadMoreStatus();
+          this._setupObserver();
+        } catch {
+          if (sessionId !== this._loadSessionId) return;
+
+          if (reset) {
+            this._$('#tableWrap').innerHTML = `<div class="lb-error">Could not load leaderboard</div>`;
+          } else {
+            this._loadMoreError = 'Could not load more entries.';
+            this._updateLoadMoreStatus();
+            this._cleanupObserver();
+          }
+        } finally {
+          if (sessionId !== this._loadSessionId) return;
+          this._isLoadingMore = false;
+          this._updateLoadMoreStatus();
+        }
+      }
+
+      /** @param {any[]} entries @param {number} startIndex */
+      _buildRows(entries, startIndex = 0) {
+        return entries.map((entry, i) => {
+          const rowIndex = startIndex + i;
+          const rank = entry.rank || rowIndex + 1;
+          const rankClass = rank <= 3 ? ` rank-${rank}` : '';
+          const victoryBadge = entry.is_victory ? '<span class="victory-badge">★</span>' : '';
+          const rankContent = rank <= 3 ? `<span class="rank-badge">${rank}</span>` : `#${rank}`;
+
+          return `<tr>
+            <td class="rank-cell${rankClass}">${rankContent}</td>
+            <td class="name-cell">${this._esc(entry.display_name)}</td>
+            <td class="score-cell">${entry.score.toLocaleString()}</td>
+            <td class="wave-cell">W${entry.wave}${victoryBadge}</td>
+            <td class="stats-cell">
+              <button class="stats-btn" data-idx="${rowIndex}">View Stats</button>
+            </td>
+          </tr>`;
+        }).join('');
+      }
+
+      _renderTable() {
+        const wrap = this._$('#tableWrap');
+        const entries = this._data?.entries || [];
+
+        if (entries.length === 0) {
+          this._cleanupObserver();
             wrap.innerHTML = `
                 <div class="lb-empty">
                     <span class="lb-empty-icon">🏆</span>
                     No entries yet — be the first!
                 </div>`;
+          this._updateUserRankBanner();
             return;
         }
 
-        const rows = data.entries.map((entry, i) => {
-            const rank = entry.rank || i + 1;
-            const rankClass = rank <= 3 ? ` rank-${rank}` : '';
-            const victoryBadge = entry.is_victory ? '<span class="victory-badge">★</span>' : '';
-            const rankContent = rank <= 3 ? `<span class="rank-badge">${rank}</span>` : `#${rank}`;
-
-            return `<tr>
-                <td class="rank-cell${rankClass}">${rankContent}</td>
-                <td class="name-cell">${this._esc(entry.display_name)}</td>
-                <td class="score-cell">${entry.score.toLocaleString()}</td>
-                <td class="wave-cell">W${entry.wave}${victoryBadge}</td>
-                <td class="stats-cell">
-                    <button class="stats-btn" data-idx="${i}">View Stats</button>
-                </td>
-            </tr>`;
-        }).join('');
+        const rows = this._buildRows(entries, 0);
 
         wrap.innerHTML = `
             <table>
@@ -767,21 +923,81 @@ class LeaderboardScreen extends BaseComponent {
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
+          <div class="lb-load-more-status" id="lbLoadMoreStatus"></div>
+          <div class="lb-load-more-sentinel" id="lbLoadMoreSentinel" aria-hidden="true"></div>
         `;
 
-        wrap.addEventListener('click', (e) => {
-            const btn = /** @type {HTMLElement} */ (e.target).closest('.stats-btn');
-            if (!btn) return;
-            const idx = parseInt(/** @type {HTMLElement} */ (btn).dataset.idx);
-            if (!isNaN(idx)) this._showRunDetails(data.entries[idx]);
+        this._updateLoadMoreStatus();
+        this._updateUserRankBanner();
+      }
+
+      /** @param {any[]} entries @param {number} startIndex */
+      _appendRows(entries, startIndex) {
+        if (!entries?.length) return;
+        const tbody = this._$('#tableWrap tbody');
+        if (!tbody) {
+          this._renderTable();
+          return;
+        }
+        tbody.insertAdjacentHTML('beforeend', this._buildRows(entries, startIndex));
+      }
+
+      _updateLoadMoreStatus() {
+        const statusEl = this._$('#lbLoadMoreStatus');
+        if (!statusEl) return;
+
+        statusEl.classList.toggle('error', Boolean(this._loadMoreError));
+
+        if (this._loadMoreError) {
+          statusEl.innerHTML = `${this._loadMoreError} <button class="lb-load-more-retry">Retry</button>`;
+          return;
+        }
+        if (this._isLoadingMore) {
+          statusEl.innerHTML = `<span class="lb-load-more-spinner">${SPINNER_SVG}</span> Loading more…`;
+          return;
+        }
+        if (this._hasMore && this._nextCursor) {
+          statusEl.textContent = 'Scroll for more';
+          return;
+        }
+        statusEl.textContent = 'End of leaderboard';
+      }
+
+      _setupObserver() {
+        this._cleanupObserver();
+        if (!this._hasMore || !this._nextCursor) return;
+
+        const wrap = this._$('#tableWrap');
+        const sentinel = this._$('#lbLoadMoreSentinel');
+        if (!wrap || !sentinel) return;
+
+        this._observer = new IntersectionObserver((entries) => {
+          if (!entries?.[0]?.isIntersecting) return;
+          this._loadNextPage();
+        }, {
+          root: wrap,
+          rootMargin: '0px 0px 220px 0px',
+          threshold: 0,
         });
 
-        // User rank banner
-        const rankEl = this._$('#userRank');
-        if (data.userRank != null) {
-            rankEl.innerHTML = `Your best rank: <strong>#${data.userRank}</strong> on ${this._currentDifficulty}`;
-            rankEl.style.display = 'flex';
+        this._observer.observe(sentinel);
+      }
+
+      _cleanupObserver() {
+        if (this._observer) {
+          this._observer.disconnect();
+          this._observer = null;
         }
+      }
+
+      _updateUserRankBanner() {
+        const rankEl = this._$('#userRank');
+        if (this._data?.userRank != null) {
+          rankEl.innerHTML = `Your best rank: <strong>#${this._data.userRank}</strong> on ${this._currentDifficulty}`;
+            rankEl.style.display = 'flex';
+          return;
+        }
+        rankEl.style.display = 'none';
     }
 
     /* ── Run details panel ──────────────────────────────────────────────── */

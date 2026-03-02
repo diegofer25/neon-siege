@@ -46,7 +46,7 @@ export interface RunDetails {
 
 export interface LeaderboardRow extends LeaderboardEntry {
   display_name: string;
-  rank: number;
+  rank?: number;
 }
 
 function parseRunDetails(runDetails: unknown): RunDetails {
@@ -89,6 +89,41 @@ export interface LocationFilter {
   countryCode?: string;
   region?: string;
   city?: string;
+}
+
+interface LeaderboardCursorPayload {
+  score: number;
+  updatedAt: string;
+  id: string;
+}
+
+function encodeCursor(payload: LeaderboardCursorPayload): string {
+  return btoa(JSON.stringify(payload));
+}
+
+function decodeCursor(cursor: string): LeaderboardCursorPayload {
+  try {
+    const decoded = atob(cursor);
+    const parsed = JSON.parse(decoded) as Partial<LeaderboardCursorPayload>;
+
+    if (
+      typeof parsed?.score !== 'number' ||
+      typeof parsed?.updatedAt !== 'string' ||
+      typeof parsed?.id !== 'string' ||
+      parsed.updatedAt.length === 0 ||
+      parsed.id.length === 0
+    ) {
+      throw new Error('Invalid cursor');
+    }
+
+    return {
+      score: parsed.score,
+      updatedAt: parsed.updatedAt,
+      id: parsed.id,
+    };
+  } catch {
+    throw new Error('Invalid cursor');
+  }
 }
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
@@ -171,9 +206,9 @@ export async function getLeaderboard(
   db: D1Database,
   difficulty: string,
   limit: number = 50,
-  offset: number = 0,
+  cursor?: string,
   locationFilter?: LocationFilter,
-): Promise<{ entries: LeaderboardRow[]; total: number }> {
+): Promise<{ entries: LeaderboardRow[]; nextCursor: string | null; hasMore: boolean }> {
   const params: unknown[] = [difficulty];
   let locationWhere = '';
 
@@ -190,35 +225,52 @@ export async function getLeaderboard(
     locationWhere += ` AND u.city = ?`;
   }
 
-  const countParams = [...params];
-  params.push(limit, offset);
+  if (cursor) {
+    const parsedCursor = decodeCursor(cursor);
+    params.push(
+      parsedCursor.score,
+      parsedCursor.score,
+      parsedCursor.updatedAt,
+      parsedCursor.score,
+      parsedCursor.updatedAt,
+      parsedCursor.id,
+    );
+    locationWhere +=
+      ' AND (le.score < ? OR (le.score = ? AND le.updated_at < ?) OR (le.score = ? AND le.updated_at = ? AND le.id < ?))';
+  }
 
-  const entries = await query<LeaderboardRow>(
+  const fetchLimit = limit + 1;
+  params.push(fetchLimit);
+
+  const rows = await query<LeaderboardRow>(
     db,
     `SELECT
       le.*,
-      u.display_name,
-      ROW_NUMBER() OVER (ORDER BY le.score DESC) AS rank
+      u.display_name
      FROM leaderboard_entries le
      JOIN users u ON u.id = le.user_id
      WHERE le.difficulty = ?${locationWhere}
-     ORDER BY le.score DESC
-     LIMIT ? OFFSET ?`,
+     ORDER BY le.score DESC, le.updated_at DESC, le.id DESC
+     LIMIT ?`,
     params,
   );
 
-  const countResult = await queryOne<{ count: number }>(
-    db,
-    `SELECT COUNT(*) as count
-     FROM leaderboard_entries le
-     JOIN users u ON u.id = le.user_id
-     WHERE le.difficulty = ?${locationWhere}`,
-    countParams,
-  );
+  const hasMore = rows.length > limit;
+  const entries = hasMore ? rows.slice(0, limit) : rows;
+  const lastEntry = entries[entries.length - 1];
+  const nextCursor =
+    hasMore && lastEntry
+      ? encodeCursor({
+          score: lastEntry.score,
+          updatedAt: lastEntry.updated_at,
+          id: lastEntry.id,
+        })
+      : null;
 
   return {
     entries: entries.map(normalizeEntry),
-    total: countResult?.count ?? 0,
+    nextCursor,
+    hasMore,
   };
 }
 
@@ -272,7 +324,7 @@ export async function getUserRank(
     `SELECT rank FROM (
       SELECT
         le.user_id,
-        ROW_NUMBER() OVER (ORDER BY le.score DESC) AS rank
+        ROW_NUMBER() OVER (ORDER BY le.score DESC, le.updated_at DESC, le.id DESC) AS rank
       FROM leaderboard_entries le
       JOIN users u ON u.id = le.user_id
       WHERE le.difficulty = ?${locationWhere}

@@ -10,6 +10,7 @@ import * as leaderboardService from '../services/leaderboard.service';
 import * as gameSessionService from '../services/gamesession.service';
 import { GameSessionError } from '../services/gamesession.service';
 import * as UserModel from '../models/user.model';
+import type { LocationFilter } from '../models/leaderboard.model';
 import {
   resolveLocation,
   resolveLocationFromCf,
@@ -46,17 +47,19 @@ const leaderboardSessionLimiter = createRateLimiter({
 leaderboardRoutes.get('/', optionalAuth, leaderboardReadLimiter, async (c) => {
   const q = c.req.query();
   const difficulty = q.difficulty || 'normal';
-  const limit = Math.min(parseInt(q.limit || '50', 10), 100);
-  const offset = Math.max(parseInt(q.offset || '0', 10), 0);
+  const parsedLimit = Number.parseInt(q.limit || '50', 10);
+  const limit = !Number.isFinite(parsedLimit) || parsedLimit <= 0
+    ? 50
+    : Math.min(parsedLimit, 100);
+  const cursor = q.cursor;
   const scope = q.scope || 'global';
   const userId = c.get('userId') || undefined;
 
-  let locationFilter;
+  let locationFilter: LocationFilter | undefined;
   if (scope !== 'global' && userId) {
     const user = await UserModel.findById(c.env.DB, userId);
     if (user?.country_code) {
-      locationFilter: { countryCode: user.country_code };
-      locationFilter = { countryCode: user.country_code } as any;
+      locationFilter = { countryCode: user.country_code };
       if ((scope === 'region' || scope === 'city') && user.region) {
         locationFilter = { ...locationFilter, region: user.region };
       }
@@ -66,16 +69,23 @@ leaderboardRoutes.get('/', optionalAuth, leaderboardReadLimiter, async (c) => {
     }
   }
 
-  const result = await leaderboardService.getLeaderboard(
-    c.env.DB,
-    difficulty,
-    limit,
-    offset,
-    userId,
-    locationFilter,
-  );
+  try {
+    const result = await leaderboardService.getLeaderboard(
+      c.env.DB,
+      difficulty,
+      limit,
+      cursor,
+      userId,
+      locationFilter,
+    );
 
-  return c.json(result);
+    return c.json(result);
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'Invalid cursor') {
+      return c.json({ error: err.message }, 400);
+    }
+    throw err;
+  }
 });
 
 // ─── Authenticated: POST /session — issue game session for anti-cheat ────

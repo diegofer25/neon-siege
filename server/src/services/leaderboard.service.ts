@@ -81,11 +81,11 @@ export async function getLeaderboard(
   db: D1Database,
   difficulty: string,
   limit: number,
-  offset: number,
+  cursor: string | undefined,
   userId?: string,
   locationFilter?: LocationFilter,
 ) {
-  const result = await LeaderboardModel.getLeaderboard(db, difficulty, limit, offset, locationFilter);
+  const result = await LeaderboardModel.getLeaderboard(db, difficulty, limit, cursor, locationFilter);
 
   let userRank: number | null = null;
   if (userId) {
