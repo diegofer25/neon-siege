@@ -1641,8 +1641,12 @@ export class Game {
 		this._runStartTimestamp = Date.now();
 		this._saveLoadWave = checkpointWave;
 
-		// Request a game session for anti-cheat score signing (non-blocking)
-		requestGameSession();
+		// Request a game session for anti-cheat score signing (non-blocking).
+		// Skip for continue flow (deferWaveStart) — the session will be requested
+		// after the countdown in startRestoredWave() to avoid rate-limit conflicts.
+		if (!deferWaveStart) {
+			requestGameSession();
+		}
 		this.setRunDifficulty(legacy.difficulty || DEFAULT_RUN_DIFFICULTY);
 
 		this.waveManager.reset();
@@ -1723,6 +1727,10 @@ export class Game {
 	startRestoredWave() {
 		const modifierKey = this._deferredWaveModifierKey;
 		this._deferredWaveModifierKey = null;
+
+		// Request a game session for anti-cheat score signing now that the
+		// player is back in the game (deferred from restoreFromSave).
+		requestGameSession();
 
 		this._runWaveCountdown(() => {
 			this.waveManager.startWave(this.wave);

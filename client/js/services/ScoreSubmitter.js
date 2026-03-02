@@ -111,6 +111,12 @@ export async function submitScore(params) {
     continuesUsed: params.continuesUsed ?? 0,
   };
 
+  // If no session is available (e.g. requestGameSession was rate-limited
+  // after a continue), try to obtain one now before submitting.
+  if (!_currentSession) {
+    await requestGameSession();
+  }
+
   // Attach game session token + HMAC checksum if available
   if (_currentSession) {
     // Build canonical payload string (sorted keys, must match server)

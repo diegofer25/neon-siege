@@ -719,7 +719,7 @@ export function toggleMute() {
  * Start a new game session
  * Hides start screen, starts audio, and begins game loop
  */
-export function startGame() {
+export async function startGame() {
     pendingGameOverUnlock = null;
     document.querySelector('start-screen').hide();
     document.querySelector('game-over-screen').hide();
@@ -739,8 +739,9 @@ export function startGame() {
     // Initialize game state and start main loop
     game.start();
 
-    // Reset per-run free continues on the server (non-blocking)
-    creditService.startRun();
+    // Reset per-run free continues on the server.
+    // Awaiting ensures _currentRunId is set before any continue attempt.
+    await creditService.startRun();
 
     syncSaveButtons();
     if (animationFrameId !== null) {
@@ -755,7 +756,7 @@ export function startGame() {
  * Restart the game after game over
  * Hides game over screen and restarts game loop
  */
-function restartGame() {
+async function restartGame() {
     pendingGameOverUnlock = null;
     document.querySelector('game-over-screen').hide();
     document.querySelector('victory-screen').hide();
@@ -769,8 +770,9 @@ function restartGame() {
 
     game.restart();
 
-    // Reset per-run free continues on the server (non-blocking)
-    creditService.startRun();
+    // Reset per-run free continues on the server.
+    // Awaiting ensures _currentRunId is set before any continue attempt.
+    await creditService.startRun();
 
     syncMusicTrack({ restart: true });
     syncStartDifficultyUI(game.getRunDifficulty());

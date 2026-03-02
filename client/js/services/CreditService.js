@@ -100,10 +100,23 @@ export async function getBalance() {
  * Request a continue from the server.
  * Deducts 1 credit, returns a one-time continue token and the server-held save.
  *
+ * If no run ID is active (e.g. startRun() failed at game start), this will
+ * lazily start a run first so that free per-run credits are available.
+ *
  * @returns {Promise<{ continueToken: string, save: object, creditBalance: object }>}
  * @throws {ApiError} 402 if no credits, 404 if no save
  */
 export async function requestContinue() {
+  // Ensure we have a valid run ID — if startRun() failed at game start the
+  // player would silently lose free continues (server requires runId match).
+  if (!_currentRunId && isAuthenticated()) {
+    try {
+      await startRun();
+    } catch (err) {
+      console.warn('[CreditService] Lazy startRun failed before continue:', err.message);
+    }
+  }
+
   const data = await apiFetch('/api/credits/continue', {
     method: 'POST',
     body: JSON.stringify({ runId: _currentRunId }),

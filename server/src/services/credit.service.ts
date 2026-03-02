@@ -56,8 +56,12 @@ export interface CreditBalance {
 
 export async function getBalance(db: D1Database, userId: string): Promise<CreditBalance> {
   const credits = await CreditModel.getOrCreateCredits(db, userId);
+  const hasActiveRun = !!credits.current_run_id;
   const freeUsed = credits.run_free_used ?? 0;
-  const freeRemaining = Math.max(0, CreditModel.FREE_PER_RUN - freeUsed);
+  // Only report free remains when there is an active run — otherwise the
+  // client would show "3 free this run" while the server would reject them
+  // because no runId is present.
+  const freeRemaining = hasActiveRun ? Math.max(0, CreditModel.FREE_PER_RUN - freeUsed) : 0;
   return {
     freePerRun: CreditModel.FREE_PER_RUN,
     freeUsedThisRun: freeUsed,
