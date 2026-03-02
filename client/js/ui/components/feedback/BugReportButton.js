@@ -25,7 +25,7 @@ const styles = createSheet(/* css */ `
     position: fixed;
     bottom: 20px;
     left: 20px;
-    z-index: 90;
+    z-index: calc(var(--z-overlay) + 1);
     width: 44px;
     height: 44px;
     border-radius: 50%;
