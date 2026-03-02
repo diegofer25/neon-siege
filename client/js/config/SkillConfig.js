@@ -25,7 +25,7 @@ export const ATTRIBUTES = {
 		icon: '💥',
 		iconImage: 'assets/icons/skills/attr_str.jpg',
 		perPoint: {
-			damageMultiplier: 0.05,      // +5% damage per point
+			damageMultiplier: 0.10,      // +10% damage per point
 			explosionDamage: 0.04,        // +4% explosion damage per point
 			projectileSpeedMultiplier: 0.03, // +3% projectile speed per point
 		},
