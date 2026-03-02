@@ -41,6 +41,8 @@ import { syncPlayerStats } from "./state/ComputedStats.js";
 const DEFAULT_RUNTIME_SETTINGS = {
 	screenShakeEnabled: true,
 	performanceModeEnabled: false,
+	showMovementCountdownHint: true,
+	movementCountdownHintText: 'Move: WASD / Arrow Keys',
 };
 
 const DEFAULT_RUN_DIFFICULTY = "normal";
@@ -318,6 +320,8 @@ export class Game {
 		const cd = document.querySelector('wave-countdown');
 		if (!cd) return;
 		cd.setText(label);
+		const shouldShowMovementHint = this.runtimeSettings.showMovementCountdownHint && this.wave === 1;
+		cd.setHintText(shouldShowMovementHint ? this.runtimeSettings.movementCountdownHintText : '');
 		cd.setGo(isGo);
 		cd.restartAnimation();
 	}

@@ -44,6 +44,7 @@ declare global {
         show(): void;
         hide(): void;
         setText(label: string): void;
+        setHintText(label: string): void;
         setGo(isGo: boolean): void;
         restartAnimation(): void;
     }
@@ -77,6 +78,7 @@ declare global {
     interface StartScreenElement extends HTMLElement {
         show(): void;
         hide(): void;
+        setControlsHintVisible(visible: boolean): void;
         setLastRunStats(stats: { lastWave?: number; lastScore?: number; bestWave?: number; bestScore?: number }): void;
         getSelectedDifficulty(): string;
         setDifficulty(difficulty: string): void;

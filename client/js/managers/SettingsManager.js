@@ -8,7 +8,8 @@ const DEFAULT_SETTINGS = {
     screenShakeEnabled: true,
     performanceModeEnabled: false,
     showPerformanceStats: false,
-    showKeybindHints: true
+    showKeybindHints: true,
+    movementHintDismissedOnceMoved: false
 };
 
 function clampVolume(value, fallback) {

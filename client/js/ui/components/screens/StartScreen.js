@@ -117,6 +117,18 @@ const styles = createSheet(/* css */ `
     font-size: clamp(13px, 2vw, 16px);
     color: rgba(255, 255, 255, 0.78);
   }
+  .menu-controls-hint {
+    margin: var(--spacing-xs) 0 0;
+    padding: 10px 14px;
+    width: min(100%, 620px);
+    border: 1px solid rgba(0, 255, 255, 0.25);
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.34);
+    font-size: clamp(12px, 1.8vw, 13px);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.86);
+    line-height: 1.45;
+  }
   .start-difficulty-row {
     display: flex;
     align-items: center;
@@ -346,6 +358,11 @@ const styles = createSheet(/* css */ `
     .menu-objective {
       font-size: 13px;
     }
+    .menu-controls-hint {
+      font-size: 11px;
+      padding: 9px 10px;
+      line-height: 1.35;
+    }
     .start-difficulty-row {
       justify-content: flex-start;
       width: 100%;
@@ -419,6 +436,10 @@ class StartScreen extends BaseComponent {
               <h1>NEON SIEGE</h1>
               <p class="menu-subtitle">Auto-target turret defense with arcade neon chaos</p>
               <p class="menu-objective">Survive 30 waves, defeat 6 bosses, and build your skill path</p>
+              <p id="controlsHint" class="menu-controls-hint">
+                Move: WASD / Arrow Keys • Skills: Q / E / R / T • Pause: P • Settings: Esc<br>
+                Auto-fire is ON • Level up and spend points between waves
+              </p>
               <div class="start-difficulty-row" aria-label="Difficulty">
                 <span>Difficulty</span>
                 <div class="start-difficulty-options" id="difficultyGroup" role="radiogroup" aria-label="Select difficulty">
@@ -567,6 +588,13 @@ class StartScreen extends BaseComponent {
 
         container.style.display = 'block';
     }
+
+      /** @param {boolean} visible */
+      setControlsHintVisible(visible) {
+        const hint = this._$('#controlsHint');
+        if (!hint) return;
+        hint.style.display = visible ? 'block' : 'none';
+      }
 
     /**
      * Update the continue/credits UI based on credit balance and save availability.

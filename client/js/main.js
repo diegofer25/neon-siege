@@ -41,6 +41,7 @@ let showPerformanceStats = false;
 let animationFrameId = null;
 let settingsModalWasPlaying = false;
 let pendingGameOverUnlock = null;
+let movementHintDismissedOnceMoved = false;
 
 const APP_RUNTIME_KEY = '__NEON_TD_RUNTIME__';
 const appRuntime = window[APP_RUNTIME_KEY] || (window[APP_RUNTIME_KEY] = {
@@ -848,6 +849,11 @@ function gameLoop(timestamp = 0) {
     if (game.gameState === 'playing' || game.gameState === 'powerup' || game.gameState === 'levelup' || game.gameState === 'ascension') {
         // Update game logic
         game.update(delta, input);
+
+        if (game.gameState === 'playing' && !movementHintDismissedOnceMoved && game.player?.isMoving) {
+            const nextSettings = settingsManager.update({ movementHintDismissedOnceMoved: true });
+            applySettings(nextSettings);
+        }
         
         // Render current frame
         game.render();
@@ -1021,14 +1027,21 @@ function applySettings(settings) {
     audioManager.applySettings(settings);
 
     showPerformanceStats = settings.showPerformanceStats;
+    movementHintDismissedOnceMoved = settings.movementHintDismissedOnceMoved === true;
     hudManager.setPerformanceStatsVisible(showPerformanceStats);
+
+    const shouldShowMovementOnboarding = settings.showKeybindHints && !movementHintDismissedOnceMoved;
+    const startScreenEl = /** @type {any} */ (document.querySelector('start-screen'));
+    startScreenEl?.setControlsHintVisible?.(shouldShowMovementOnboarding);
 
     const settingsModalEl = document.querySelector('settings-modal');
     settingsModalEl?.setKeybindHintsVisible(settings.showKeybindHints);
 
     game?.setRuntimeSettings({
         screenShakeEnabled: settings.screenShakeEnabled,
-        performanceModeEnabled: settings.performanceModeEnabled
+        performanceModeEnabled: settings.performanceModeEnabled,
+        showMovementCountdownHint: shouldShowMovementOnboarding,
+        movementCountdownHintText: 'Move: WASD / Arrow Keys'
     });
 
     if (game?.performanceManager) {

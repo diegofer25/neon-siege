@@ -128,9 +128,11 @@ Notes:
 ## 🎮 How to Play
 
 ### Basic Controls
+- **WASD / Arrow Keys**: Move your mech
 - **Automatic Aiming**: Player automatically targets nearest enemy
 - **P Key**: Pause/unpause game
-- **Q/W/E/R**: Cast equipped active skills
+- **Q/E/R/T**: Cast equipped active skills
+- **Esc Key**: Open/close settings
 - **Mouse**: Navigate menus and progression panels
 - **⚙️ Settings Button**: Open settings to change audio, difficulty, performance, and save/load controls
 
