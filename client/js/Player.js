@@ -670,12 +670,11 @@ export class Player {
     }
     
     /**
-     * Find the optimal target enemy using priority-based selection algorithm
-     * Prioritizes enemies based on distance and health remaining
-     * Only targets enemies within the visible game area
+     * Find the closest valid enemy target.
+     * Only targets enemies within the visible game area.
      * 
      * @param {Array<import('./Enemy.js').Enemy>} enemies - Array of enemy objects to evaluate
-     * @returns {Object|null} Best target enemy or null if none available
+     * @returns {Object|null} Closest enemy or null if none available
      * 
      * @example
      * const target = player.findNearestEnemy(game.enemies);
@@ -701,24 +700,21 @@ export class Player {
         const maxY = canvasHeight - targetingMargin;
         
         let bestTarget = null;
-        let bestPriority = Infinity;
+        let nearestDistanceSq = Infinity;
         
         for (let eIdx = 0; eIdx < enemies.length; eIdx++) {
             const enemy = enemies[eIdx];
-            if (enemy.dying) continue; // Skip enemies already dying
+            if (!enemy || enemy.dying || enemy.health <= 0) continue; // Skip invalid/dead enemies
             
             // Skip enemies outside the visible targeting area
             if (enemy.x < minX || enemy.x > maxX || enemy.y < minY || enemy.y > maxY) {
                 continue;
             }
             
-            const distance = this._calculateDistanceSqTo(enemy);
-            // Lower health enemies get higher priority (lower score)
-            const healthFactor = (enemy.maxHealth - enemy.health) * 0.1;
-            const priority = distance - healthFactor * healthFactor;
+            const distanceSq = this._calculateDistanceSqTo(enemy);
             
-            if (priority < bestPriority) {
-                bestPriority = priority;
+            if (distanceSq < nearestDistanceSq) {
+                nearestDistanceSq = distanceSq;
                 bestTarget = enemy;
             }
         }
