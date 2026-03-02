@@ -41,7 +41,8 @@ async function issueTokens(
   setCookie(c, 'refreshToken', refreshTokenValue, {
     httpOnly: true,
     secure: true,
-    sameSite: 'Lax',
+    sameSite: 'None',
+    partitioned: true,
     maxAge: REFRESH_TOKEN_TTL,
     path: '/',
   });
@@ -321,7 +322,12 @@ authRoutes.post('/refresh', refreshLimiter, async (c) => {
 });
 
 authRoutes.post('/logout', (c) => {
-  deleteCookie(c, 'refreshToken', { path: '/' });
+  deleteCookie(c, 'refreshToken', {
+    path: '/',
+    secure: true,
+    sameSite: 'None',
+    partitioned: true,
+  });
   return c.json({ success: true });
 });
 
