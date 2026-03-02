@@ -44,11 +44,6 @@ export class WaveManager {
         this.waveCompletionTimer = 0;
         this.waveActive = false;
         this.isBossWave = false;
-        this.difficultyPreset = GameConfig.DIFFICULTY_PRESETS.normal;
-    }
-
-    setDifficulty(difficulty = 'normal') {
-        this.difficultyPreset = GameConfig.DERIVED.getDifficultyPreset(difficulty);
     }
 
     /**
@@ -79,12 +74,11 @@ export class WaveManager {
         this.game.applyWaveModifier(modifierKey);
 
         const enemyCount = GameConfig.DERIVED.getEnemyCountForWave(this.currentWave);
-        const adjustedEnemyCount = Math.max(1, Math.floor(enemyCount * this.difficultyPreset.enemyCountMultiplier));
         // Boss waves 5/10/15 are boss-only; wave 20+ spawn boss AND a regular enemy wave
-        this.enemiesToSpawn = (this.isBossWave && this.currentWave < 20) ? 0 : adjustedEnemyCount;
+        this.enemiesToSpawn = (this.isBossWave && this.currentWave < 20) ? 0 : enemyCount;
         this.enemySpawnInterval = Math.max(
             GameConfig.WAVE.MIN_SPAWN_INTERVAL,
-            GameConfig.DERIVED.getSpawnIntervalForWave(this.currentWave) * this.difficultyPreset.spawnIntervalMultiplier
+            GameConfig.DERIVED.getSpawnIntervalForWave(this.currentWave)
         );
         this.waveScaling = GameConfig.DERIVED.getScalingForWave(this.currentWave);
         this.enemySpawnTimer = 0;
@@ -186,10 +180,10 @@ export class WaveManager {
         }
         
         // Apply wave scaling to the created enemy
-        enemy.health *= this.waveScaling.health * this.difficultyPreset.enemyHealthMultiplier;
-        enemy.maxHealth *= this.waveScaling.health * this.difficultyPreset.enemyHealthMultiplier;
-        enemy.speed *= this.waveScaling.speed * this.difficultyPreset.enemySpeedMultiplier;
-        enemy.damage *= this.waveScaling.damage * this.difficultyPreset.enemyDamageMultiplier;
+        enemy.health *= this.waveScaling.health;
+        enemy.maxHealth *= this.waveScaling.health;
+        enemy.speed *= this.waveScaling.speed;
+        enemy.damage *= this.waveScaling.damage;
         
         // Set game reference for enemies that need it (like splitters)
         enemy.setGameReference(this.game);

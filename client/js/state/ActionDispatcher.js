@@ -231,7 +231,6 @@ export const ActionTypes = Object.freeze({
 	GAME_START: 'GAME_START',
 	GAME_RESTART: 'GAME_RESTART',
 	SCORE_ADD: 'SCORE_ADD',
-	SET_DIFFICULTY: 'SET_DIFFICULTY',
 	RUN_USE_CONTINUE: 'RUN_USE_CONTINUE',
 
 	// ─── Player ────────────────────────────────────────

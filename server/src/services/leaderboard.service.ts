@@ -8,7 +8,6 @@ import { validateScore, verifyChecksum } from './anticheat.service';
 
 interface SubmitScoreData {
   userId: string;
-  difficulty: string;
   score: number;
   wave: number;
   kills: number;
@@ -30,7 +29,6 @@ export async function submitScore(db: D1Database, data: SubmitScoreData) {
   if (data.checksum && data.sessionHmacKey) {
     // Build canonical payload string (sorted, deterministic)
     const checksumPayload = JSON.stringify({
-      difficulty: data.difficulty,
       gameDurationMs: data.gameDurationMs ?? 0,
       isVictory: data.isVictory,
       kills: data.kills,
@@ -55,7 +53,6 @@ export async function submitScore(db: D1Database, data: SubmitScoreData) {
     maxCombo: data.maxCombo,
     level: data.level,
     isVictory: data.isVictory,
-    difficulty: data.difficulty,
     gameDurationMs: data.gameDurationMs,
     startWave: data.startWave,
     checksum: data.checksum,
@@ -72,29 +69,28 @@ export async function submitScore(db: D1Database, data: SubmitScoreData) {
   });
 
   // Get the user's rank
-  const rank = await LeaderboardModel.getUserRank(db, data.userId, data.difficulty);
+  const rank = await LeaderboardModel.getUserRank(db, data.userId);
 
   return { entry, rank, isNewBest, flagged: validation.flagged };
 }
 
 export async function getLeaderboard(
   db: D1Database,
-  difficulty: string,
   limit: number,
   cursor: string | undefined,
   userId?: string,
   locationFilter?: LocationFilter,
 ) {
-  const result = await LeaderboardModel.getLeaderboard(db, difficulty, limit, cursor, locationFilter);
+  const result = await LeaderboardModel.getLeaderboard(db, limit, cursor, locationFilter);
 
   let userRank: number | null = null;
   if (userId) {
-    userRank = await LeaderboardModel.getUserRank(db, userId, difficulty, locationFilter);
+    userRank = await LeaderboardModel.getUserRank(db, userId, locationFilter);
   }
 
   return { ...result, userRank };
 }
 
-export async function getUserEntry(db: D1Database, userId: string, difficulty: string) {
-  return LeaderboardModel.getUserEntry(db, userId, difficulty);
+export async function getUserEntry(db: D1Database, userId: string) {
+  return LeaderboardModel.getUserEntry(db, userId);
 }

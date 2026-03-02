@@ -137,7 +137,7 @@ export class ChronoBoss extends Boss {
     _comboBurst() {
         playSFX('boss_attack_projectile_burst');
         const count = this.comboBurstCount;
-        const damage = 10 * this.getDifficultyDamageMultiplier();
+        const damage = 10;
         const offset = Date.now() / 200;
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 / count) * i + offset;
@@ -150,7 +150,7 @@ export class ChronoBoss extends Boss {
 
     _spiralWave() {
         const count = 14;
-        const damage = 12 * this.getDifficultyDamageMultiplier();
+        const damage = 12;
         const baseAngle = Date.now() / 120;
         for (let i = 0; i < count; i++) {
             const angle = baseAngle + (Math.PI * 2 / count) * i;
@@ -163,7 +163,7 @@ export class ChronoBoss extends Boss {
 
     _rapidSalvo(player) {
         const baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
-        const damage = 14 * this.getDifficultyDamageMultiplier();
+        const damage = 14;
         for (let i = 0; i < 9; i++) {
             const angle = baseAngle + (0.07 * (i - 4));
             const p = new Projectile(this.x, this.y, angle, damage);

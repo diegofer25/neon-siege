@@ -104,7 +104,7 @@ export class VortexBoss extends Boss {
     }
 
     _updateMines(delta, player) {
-        const damage = 15 * this.getDifficultyDamageMultiplier();
+        const damage = 15;
         for (let i = this.mines.length - 1; i >= 0; i--) {
             const mine = this.mines[i];
             mine.angle = this._orbitAngle + (Math.PI * 2 / this.mineCount) * i;
@@ -136,7 +136,7 @@ export class VortexBoss extends Boss {
 
     _updateShockwaves(delta, player) {
         const deltaSeconds = delta / 1000;
-        const damage = 10 * this.getDifficultyDamageMultiplier();
+        const damage = 10;
         for (let i = this.activeShockwaves.length - 1; i >= 0; i--) {
             const sw = this.activeShockwaves[i];
             sw.radius += sw.speed * deltaSeconds;

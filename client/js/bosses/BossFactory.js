@@ -15,12 +15,8 @@ import { ChronoBoss } from './ChronoBoss.js';
  */
 export function createBoss(game) {
     const wave = game.wave;
-    const difficultyPreset = game.waveManager?.difficultyPreset || GameConfig.DIFFICULTY_PRESETS.normal;
-    const healthMultiplier = difficultyPreset.enemyHealthMultiplier || 1;
-    const speedMultiplier = difficultyPreset.enemySpeedMultiplier || 1;
-    const damageMultiplier = difficultyPreset.enemyDamageMultiplier || 1;
-    const health = GameConfig.BOSS.BASE_HEALTH * (1 + (wave / 10) * 0.5) * healthMultiplier;
-    const damage = GameConfig.BOSS.BASE_DAMAGE * (1 + (wave / 10) * 0.2) * damageMultiplier;
+    const health = GameConfig.BOSS.BASE_HEALTH * (1 + (wave / 10) * 0.5);
+    const damage = GameConfig.BOSS.BASE_DAMAGE * (1 + (wave / 10) * 0.2);
 
     const canvasWidth = game.canvas.logicalWidth || game.canvas.width;
     const canvasHeight = game.canvas.logicalHeight || game.canvas.height;
@@ -60,6 +56,5 @@ export function createBoss(game) {
         boss = new BossClass(x, y, health, damage, game);
     }
 
-    boss.speed *= speedMultiplier;
     return boss;
 }

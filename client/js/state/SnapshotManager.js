@@ -293,7 +293,6 @@ export class SnapshotManager {
 					wave: oldSave.wave || 1,
 					score: oldSave.score || 0,
 					kills: 0,
-					difficulty: oldSave.difficulty || 'normal',
 					waveModifierKey: null,
 					modifierState: {
 						enemySpeedMultiplier: 1,

@@ -239,7 +239,6 @@ async function init() {
         settingsManager.update({ showPerformanceStats: true });
     }
     applySettings(initialSettings);
-    syncStartDifficultyUI();
 
     // Expose state system on window for debugging (only in debug mode)
     if (urlParams.has('debug')) {
@@ -730,10 +729,6 @@ export async function startGame() {
         statsOverlayEnabled: showPerformanceStats
     });
 
-    const selectedDifficulty = document.querySelector('start-screen').getSelectedDifficulty();
-    game.setRunDifficulty(selectedDifficulty);
-    syncStartDifficultyUI(selectedDifficulty);
-    
     syncMusicTrack({ restart: true });
     
     // Initialize game state and start main loop
@@ -775,7 +770,6 @@ async function restartGame() {
     await creditService.startRun();
 
     syncMusicTrack({ restart: true });
-    syncStartDifficultyUI(game.getRunDifficulty());
     syncSaveButtons();
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
@@ -996,7 +990,6 @@ function restartFromVictory() {
     playSFX('ui_restart_game');
 
     syncMusicTrack({ restart: true });
-    syncStartDifficultyUI(game.getRunDifficulty());
     syncSaveButtons();
 }
 
@@ -1285,8 +1278,6 @@ function loadGameFromSave(source = 'unknown') {
 
     syncMusicTrack();
 
-    syncStartDifficultyUI(game.getRunDifficulty());
-
     settingsModalWasPlaying = false;
     syncSaveButtons();
     return true;
@@ -1308,10 +1299,6 @@ function syncSaveButtons() {
     /** @type {any} */ (document.querySelector('settings-modal'))?.setSaveButtonStates?.({ hasSave });
     /** @type {any} */ (document.querySelector('game-over-screen'))?.setLoadSaveVisible?.(hasSave);
     startScreen?.setContinueInfo?.(balance, saveData);
-}
-
-function syncStartDifficultyUI(difficulty = game?.getRunDifficulty()) {
-    document.querySelector('start-screen')?.setDifficulty(difficulty ?? 'normal');
 }
 
 function resetSettingsToDefaults() {

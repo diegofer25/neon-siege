@@ -80,7 +80,6 @@ export async function requestGameSession() {
  * Fails silently if not authenticated or if the API is unreachable.
  *
  * @param {object} params
- * @param {string} params.difficulty
  * @param {number} params.score
  * @param {number} params.wave
  * @param {number} params.kills
@@ -98,7 +97,6 @@ export async function submitScore(params) {
 
   // Build the submission payload
   const payload = {
-    difficulty: params.difficulty,
     score: params.score,
     wave: params.wave,
     kills: params.kills,
@@ -121,7 +119,6 @@ export async function submitScore(params) {
   if (_currentSession) {
     // Build canonical payload string (sorted keys, must match server)
     const checksumPayload = JSON.stringify({
-      difficulty: payload.difficulty,
       gameDurationMs: payload.gameDurationMs ?? 0,
       isVictory: payload.isVictory,
       kills: payload.kills,

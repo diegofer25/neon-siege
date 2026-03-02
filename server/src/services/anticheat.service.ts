@@ -13,7 +13,6 @@ interface ScorePayload {
   maxCombo: number;
   level: number;
   isVictory: boolean;
-  difficulty: string;
   gameDurationMs?: number;
   startWave?: number;
   checksum?: string;

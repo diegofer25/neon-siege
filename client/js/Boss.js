@@ -28,14 +28,6 @@ export class Boss extends Enemy {
         this.chargeTimeRemaining = 0;
     }
 
-    getDifficultyPreset() {
-        return this.game?.waveManager?.difficultyPreset || GameConfig.DIFFICULTY_PRESETS.normal;
-    }
-
-    getDifficultyDamageMultiplier() {
-        return this.getDifficultyPreset().enemyDamageMultiplier || 1;
-    }
-
     update(delta, player) {
         // Override basic enemy movement
         const dx = player.x - this.x;
@@ -113,7 +105,7 @@ export class Boss extends Enemy {
     projectileBurst() {
         playSFX('boss_attack_projectile_burst');
         const projectileCount = 16;
-        const damage = 10 * this.getDifficultyDamageMultiplier();
+        const damage = 10;
         for (let i = 0; i < projectileCount; i++) {
             const angle = (Math.PI * 2 / projectileCount) * i;
             const projectile = new Projectile(
@@ -149,16 +141,11 @@ export class Boss extends Enemy {
     spawnMinions() {
         playSFX('boss_summon_minions');
         const minionCount = 2;
-        const difficultyPreset = this.getDifficultyPreset();
         for (let i = 0; i < minionCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             const spawnX = this.x + Math.cos(angle) * 100;
             const spawnY = this.y + Math.sin(angle) * 100;
             const minion = createFastEnemy(spawnX, spawnY, 1);
-            minion.health *= difficultyPreset.enemyHealthMultiplier;
-            minion.maxHealth *= difficultyPreset.enemyHealthMultiplier;
-            minion.speed *= difficultyPreset.enemySpeedMultiplier;
-            minion.damage *= difficultyPreset.enemyDamageMultiplier;
             minion.setGameReference(this.game);
             this.game.enemies.push(minion);
         }

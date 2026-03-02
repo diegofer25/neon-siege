@@ -35,8 +35,8 @@ export const ACHIEVEMENTS = [
     { id: 'boss_slayer',     name: 'Boss Slayer',       desc: 'Defeat your first boss',            icon: '🐉', check: 'bossKills', target: 1 },
     { id: 'shield_cracker',  name: 'Shield Cracker',    desc: 'Defeat a Shield Boss',              icon: '🔨', check: 'shieldBossKills', target: 1 },
 
-    // Difficulty-based
-    { id: 'hard_mode_10',    name: 'Masochist',         desc: 'Reach wave 30 on Hard',             icon: '💀', check: 'hardModeWave', target: 30 },
+    // Completion-based
+    { id: 'survivor_30',     name: 'Survivor',          desc: 'Win the game reaching wave 30',     icon: '💀', check: 'wave', target: 30 },
 
     // Secret
     { id: 'perfectionist',   name: 'Perfectionist',     desc: 'Complete wave 10 at full HP',       icon: '✨', check: 'perfectWave10', target: 1 },
@@ -193,8 +193,7 @@ export class AchievementSystem {
                 return this.bossKills;
             case 'shieldBossKills':
                 return this.shieldBossKills;
-            case 'hardModeWave':
-                return game.runDifficulty === 'hard' ? game.wave : 0;
+
             case 'perfectWave10':
                 return (game.wave >= 10 && game.player?.hp === game.player?.maxHp) ? 1 : 0;
             default:

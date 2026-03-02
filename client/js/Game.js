@@ -45,8 +45,7 @@ const DEFAULT_RUNTIME_SETTINGS = {
 	movementCountdownHintText: 'Move: WASD / Arrow Keys',
 };
 
-const DEFAULT_RUN_DIFFICULTY = "normal";
-const RUN_DIFFICULTY_VALUES = new Set(["easy", "normal", "hard"]);
+
 
 /**
  * Main game class - now focused on coordination between systems rather than direct management.
@@ -212,7 +211,6 @@ export class Game {
 		};
 		this._initializeObjectPools();
 		this.runtimeSettings = { ...DEFAULT_RUNTIME_SETTINGS };
-		this.runDifficulty = DEFAULT_RUN_DIFFICULTY;
 	}
 
 	/**
@@ -480,7 +478,6 @@ export class Game {
 		this.eventBus.clear();
 		this.applyResponsiveEntityScale();
 		this.waveManager.reset();
-		this.waveManager.setDifficulty(this.runDifficulty);
 		this.comboSystem.resetForRun();
 		this.lootSystem.resetForRun();
 		this.achievementSystem.resetForRun();
@@ -503,12 +500,6 @@ export class Game {
 					isBoss: this.waveManager.isBossWave,
 				},
 			});
-		});
-
-		// Dispatch difficulty
-		this.dispatcher.dispatch({
-			type: ActionTypes.SET_DIFFICULTY,
-			payload: { difficulty: this.runDifficulty },
 		});
 
 		telemetry.track("run_start", {
@@ -595,7 +586,6 @@ export class Game {
 		// Reset and reconfigure wave manager for new wave
 		this._clearWaveCountdownTimeouts();
 		this.waveManager.reset();
-		this.waveManager.setDifficulty(this.runDifficulty);
 
 		// Run countdown then start the wave with proper store dispatch
 		this._runWaveCountdown(() => {
@@ -639,18 +629,6 @@ export class Game {
 				},
 			});
 		});
-	}
-
-	setRunDifficulty(difficulty = DEFAULT_RUN_DIFFICULTY) {
-		const normalizedDifficulty = RUN_DIFFICULTY_VALUES.has(difficulty)
-			? difficulty
-			: DEFAULT_RUN_DIFFICULTY;
-		this.runDifficulty = normalizedDifficulty;
-		this.waveManager.setDifficulty(this.runDifficulty);
-	}
-
-	getRunDifficulty() {
-		return this.runDifficulty;
 	}
 
 	setRuntimeSettings(settings = {}) {
@@ -832,7 +810,6 @@ export class Game {
 	 */
 	_submitScoreToLeaderboard(isVictory) {
 		submitScore({
-			difficulty: this.getRunDifficulty(),
 			score: this.score,
 			wave: this.wave,
 			kills: this.achievementSystem.killsThisRun,
@@ -1562,7 +1539,6 @@ export class Game {
 		if (snapshot) {
 			snapshot.legacyCompat = {
 				gameState: this.gameState,
-				difficulty: this.runDifficulty,
 				wave: this.wave,
 				checkpointWave: Math.max(1, this.wave),
 				score: this.score,
@@ -1576,7 +1552,6 @@ export class Game {
 
 		return snapshot || {
 			gameState: this.gameState,
-			difficulty: this.runDifficulty,
 			wave: this.wave,
 			checkpointWave: Math.max(1, this.wave),
 			score: this.score,
@@ -1647,10 +1622,7 @@ export class Game {
 		if (!deferWaveStart) {
 			requestGameSession();
 		}
-		this.setRunDifficulty(legacy.difficulty || DEFAULT_RUN_DIFFICULTY);
-
 		this.waveManager.reset();
-		this.waveManager.setDifficulty(this.runDifficulty);
 
 		if (deferWaveStart) {
 			// Store info for startRestoredWave() to use later

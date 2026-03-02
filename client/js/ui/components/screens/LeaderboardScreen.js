@@ -1,10 +1,10 @@
 /**
- * @fileoverview <leaderboard-screen> — leaderboard overlay with difficulty tabs
- * and a click-to-open run details panel (with skill/ascension/attribute images).
+ * @fileoverview <leaderboard-screen> — leaderboard overlay
+ * with a click-to-open run details panel (with skill/ascension/attribute images).
  *
  * Public API:
  *   show() / hide()
- *   loadLeaderboard(difficulty?) — fetch and render
+ *   loadLeaderboard() — fetch and render
  *
  * Events (composed, bubbling):
  *   'leaderboard-close'
@@ -655,7 +655,6 @@ const styles = createSheet(/* css */ `
 
 class LeaderboardScreen extends BaseComponent {
     connectedCallback() {
-        this._currentDifficulty = 'normal';
         this._currentScope = 'global';
     this._data = { entries: [], userRank: null };
     this._nextCursor = null;
@@ -684,11 +683,6 @@ class LeaderboardScreen extends BaseComponent {
                     <div class="lb-header">
                         <span class="lb-header-icon">${TROPHY_ICON}</span>
                         <h2 class="lb-heading">LEADERBOARD</h2>
-                    </div>
-                    <div class="lb-tabs" id="tabs">
-                        <button class="lb-tab" data-diff="easy">Easy</button>
-                        <button class="lb-tab active" data-diff="normal">Normal</button>
-                        <button class="lb-tab" data-diff="hard">Hard</button>
                     </div>
                     <div class="lb-scope hidden" id="scopeBar">
                         <button class="lb-scope-btn active" data-scope="global">Global</button>
@@ -731,14 +725,6 @@ class LeaderboardScreen extends BaseComponent {
         };
         this._$('#tableWrap').addEventListener('click', this._tableWrapClickHandler);
 
-        // Tab switching
-        this._$('#tabs').addEventListener('click', (e) => {
-            const tab = /** @type {HTMLElement} */ (e.target).closest('.lb-tab');
-            if (!tab) return;
-            this._hideRunDetails();
-            this.loadLeaderboard(/** @type {HTMLElement} */ (tab).dataset.diff);
-        });
-
         // Scope switching
         this._$('#scopeBar').addEventListener('click', (e) => {
             const btn = /** @type {HTMLElement} */ (e.target).closest('.lb-scope-btn');
@@ -748,7 +734,7 @@ class LeaderboardScreen extends BaseComponent {
                 b.classList.toggle('active', /** @type {HTMLElement} */ (b).dataset.scope === this._currentScope)
             );
             this._hideRunDetails();
-            this.loadLeaderboard(this._currentDifficulty);
+            this.loadLeaderboard();
         });
 
         // Close leaderboard
@@ -763,7 +749,7 @@ class LeaderboardScreen extends BaseComponent {
         super.show();
         this._hideRunDetails();
         this._updateScopeBar();
-        this.loadLeaderboard(this._currentDifficulty);
+        this.loadLeaderboard();
     }
 
     hide() {
@@ -784,14 +770,7 @@ class LeaderboardScreen extends BaseComponent {
       if (super.disconnectedCallback) super.disconnectedCallback();
     }
 
-    /** @param {string} [difficulty] */
-    async loadLeaderboard(difficulty = 'normal') {
-        this._currentDifficulty = difficulty;
-
-        this._$$('.lb-tab').forEach(/** @param {Element} t */ t =>
-            t.classList.toggle('active', /** @type {HTMLElement} */ (t).dataset.diff === difficulty)
-        );
-
+    async loadLeaderboard() {
         const wrap = this._$('#tableWrap');
         this._cleanupObserver();
         this._hideRunDetails();
@@ -815,7 +794,6 @@ class LeaderboardScreen extends BaseComponent {
 
       _buildLeaderboardUrl(cursor = null) {
         const params = new URLSearchParams({
-          difficulty: this._currentDifficulty,
           limit: String(this._pageLimit),
         });
         if (this._currentScope && this._currentScope !== 'global') {
@@ -993,7 +971,7 @@ class LeaderboardScreen extends BaseComponent {
       _updateUserRankBanner() {
         const rankEl = this._$('#userRank');
         if (this._data?.userRank != null) {
-          rankEl.innerHTML = `Your best rank: <strong>#${this._data.userRank}</strong> on ${this._currentDifficulty}`;
+          rankEl.innerHTML = `Your best rank: <strong>#${this._data.userRank}</strong>`;
             rankEl.style.display = 'flex';
           return;
         }

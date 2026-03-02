@@ -204,7 +204,7 @@ export class ShieldBoss extends Boss {
     spiralShot() {
         const projectileCount = 8;
         const spiralOffset = (Date.now() / 100) % (Math.PI * 2);
-        const damage = 15 * this.getDifficultyDamageMultiplier();
+        const damage = 15;
         
         for (let i = 0; i < projectileCount; i++) {
             const angle = (Math.PI * 2 / projectileCount) * i + spiralOffset;
@@ -224,7 +224,7 @@ export class ShieldBoss extends Boss {
         const projectileCount = 5;
         const baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
         const spread = 0.4; // Spread in radians
-        const damage = 12 * this.getDifficultyDamageMultiplier();
+        const damage = 12;
         
         for (let i = 0; i < projectileCount; i++) {
             const angle = baseAngle + (spread * (i - 2) / 2);
@@ -245,7 +245,7 @@ export class ShieldBoss extends Boss {
         // Create expanding ring of projectiles
         const rings = 3;
         const projectilesPerRing = 12;
-        const damage = 8 * this.getDifficultyDamageMultiplier();
+        const damage = 8;
         
         for (let ring = 0; ring < rings; ring++) {
             this._schedule(() => {
@@ -279,7 +279,7 @@ export class ShieldBoss extends Boss {
         // Fire a powerful laser beam
         const laserLength = 800;
         const angle = Math.atan2(this.laserTargetY - this.y, this.laserTargetX - this.x);
-        const damage = 20 * this.getDifficultyDamageMultiplier();
+        const damage = 20;
         
         // Create multiple projectiles along the laser path
         const projectileCount = 15;

@@ -430,7 +430,6 @@ export class AdminPanel {
 			g.enemies.length = 0;
 			g.projectiles.length = 0;
 			g.waveManager.reset();
-			g.waveManager.setDifficulty(g.runDifficulty);
 			g.waveManager.startWave(n);
 			this._status(`Jumped to wave ${n}.`, 'success');
 		};

@@ -1,13 +1,11 @@
 /**
- * @fileoverview <start-screen> — initial menu screen with difficulty selector.
+ * @fileoverview <start-screen> — initial menu screen.
  *
  * Public API:
  *   setLastRunStats({ lastWave, lastScore, bestWave, bestScore })
  *   setContinueInfo(credits, saveData)
  *   setContinueLoading(bool)
  *   showContinueError(message)
- *   getSelectedDifficulty() → string
- *   setDifficulty(difficulty)
  *   show() / hide()
  *
  * Events (composed, bubbling):
@@ -15,21 +13,14 @@
  *   'continue-game'      — "Continue" button clicked (spends 1 credit)
  *   'buy-credits'        — "Buy Credits" button clicked
  *   'settings-click'     — "Settings" button clicked
- *   'difficulty-change'  — difficulty option clicked, detail: { difficulty }
  */
 
 import { BaseComponent } from '../BaseComponent.js';
 import { overlayStyles, createSheet } from '../shared-styles.js';
-import { GameConfig } from '../../../config/GameConfig.js';
 import '../hud/HudSettings.js';
+import { GameConfig } from '../../../config/GameConfig.js';
 
-const RUN_DIFFICULTY_VALUES = new Set(['easy', 'normal', 'hard']);
 const APP_VERSION = import.meta.env.APP_VERSION || '0.0.0';
-
-/** @param {string} value @returns {string} */
-function normalizeDifficulty(value) {
-    return RUN_DIFFICULTY_VALUES.has(value) ? value : 'normal';
-}
 
 const styles = createSheet(/* css */ `
   :host { display: contents; }
@@ -129,49 +120,7 @@ const styles = createSheet(/* css */ `
     color: rgba(255, 255, 255, 0.86);
     line-height: 1.45;
   }
-  .start-difficulty-row {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    margin: var(--spacing-md) 0 var(--spacing-sm);
-    color: #fff;
-    font-size: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .start-difficulty-options {
-    display: inline-flex;
-    gap: var(--spacing-xs);
-    padding: 4px;
-    border: 1px solid rgba(0, 255, 255, 0.45);
-    border-radius: var(--radius-md);
-    background: rgba(0, 0, 0, 0.45);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-  }
-  .start-difficulty-option {
-    min-width: 72px;
-    margin: 0 !important;
-    padding: 8px 12px !important;
-    font-size: 13px !important;
-    border-radius: var(--radius-sm) !important;
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
-    background: rgba(255, 255, 255, 0.06) !important;
-    box-shadow: none !important;
-    text-transform: none !important;
-    letter-spacing: 0 !important;
-  }
-  .start-difficulty-option::before { display: none; }
-  .start-difficulty-option:hover {
-    animation: none !important;
-    border-color: var(--color-secondary-neon) !important;
-    box-shadow: 0 0 10px rgba(255, 45, 236, 0.35) !important;
-  }
-  .start-difficulty-option.active {
-    border-color: var(--color-primary-neon) !important;
-    background: rgba(0, 255, 255, 0.14) !important;
-    box-shadow: 0 0 12px rgba(0, 255, 255, 0.45) !important;
-    color: var(--color-primary-neon);
-  }
+
   .menu-main neon-button {
     margin: 0;
     width: 100%;
@@ -363,25 +312,8 @@ const styles = createSheet(/* css */ `
       padding: 9px 10px;
       line-height: 1.35;
     }
-    .start-difficulty-row {
-      justify-content: flex-start;
-      width: 100%;
-      font-size: 14px;
-    }
-    .start-difficulty-options {
-      width: 100%;
-      justify-content: space-between;
-    }
-    .start-difficulty-option {
-      flex: 1;
-      min-width: 0;
-      padding: 8px 6px !important;
-      font-size: 12px !important;
-    }
-    .last-run-stats {
-      min-width: 0;
-      width: 100%;
-      padding: var(--spacing-sm) var(--spacing-md);
+    .start-logo {
+      width: clamp(80px, 16vw, 140px);
     }
     .last-run-row {
       font-size: 13px;
@@ -440,14 +372,6 @@ class StartScreen extends BaseComponent {
                 Move: WASD / Arrow Keys • Skills: Q / E / R / T • Pause: P • Settings: Esc<br>
                 Auto-fire is ON • Level up and spend points between waves
               </p>
-              <div class="start-difficulty-row" aria-label="Difficulty">
-                <span>Difficulty</span>
-                <div class="start-difficulty-options" id="difficultyGroup" role="radiogroup" aria-label="Select difficulty">
-                  <button type="button" role="radio" class="start-difficulty-option" data-difficulty="easy" aria-checked="false" tabindex="-1">Easy</button>
-                  <button type="button" role="radio" class="start-difficulty-option active" data-difficulty="normal" aria-checked="true" tabindex="0">Normal</button>
-                  <button type="button" role="radio" class="start-difficulty-option" data-difficulty="hard" aria-checked="false" tabindex="-1">Hard</button>
-                </div>
-              </div>
               <div class="primary-actions">
                 <neon-button id="startBtn" variant="primary">START RUN</neon-button>
                 <div class="continue-section">
@@ -480,7 +404,6 @@ class StartScreen extends BaseComponent {
         this._$('#leaderboardBtn').addEventListener('click', () => this._emit('show-leaderboard'));
         this._$('#achievementsBtn').addEventListener('click', () => this._emit('show-achievements'));
         this._$('#loginBtn').addEventListener('click', () => this._emit('show-login'));
-        this._setupDifficultyControls();
         this._syncVersionBadge();
     }
 
@@ -503,66 +426,6 @@ class StartScreen extends BaseComponent {
           // Keep compile-time version fallback
         }
       }
-
-    /** @private */
-    _setupDifficultyControls() {
-        const root = this._$('#difficultyGroup');
-        if (!root) return;
-
-        root.addEventListener('click', (e) => {
-            const target = /** @type {HTMLElement} */ (e.target);
-            const optionButton = /** @type {HTMLButtonElement|null} */ (target.closest('.start-difficulty-option'));
-            if (!optionButton) return;
-            const difficulty = normalizeDifficulty(optionButton.dataset.difficulty || 'normal');
-            this.setDifficulty(difficulty);
-            this._emit('difficulty-change', { difficulty });
-        });
-
-        root.addEventListener('keydown', (e) => {
-            const isForward = e.key === 'ArrowRight' || e.key === 'ArrowDown';
-            const isBackward = e.key === 'ArrowLeft' || e.key === 'ArrowUp';
-            const isFirst = e.key === 'Home';
-            const isLast = e.key === 'End';
-            if (!isForward && !isBackward && !isFirst && !isLast) return;
-
-            const target = /** @type {HTMLElement} */ (e.target);
-            const options = Array.from(root.querySelectorAll('.start-difficulty-option'));
-            if (!options.length) return;
-
-            const currentButton = target.closest('.start-difficulty-option');
-            const currentIndex = Math.max(0, options.indexOf(currentButton || options[0]));
-            let nextIndex = currentIndex;
-            if (isFirst) nextIndex = 0;
-            else if (isLast) nextIndex = options.length - 1;
-            else if (isForward) nextIndex = (currentIndex + 1) % options.length;
-            else if (isBackward) nextIndex = (currentIndex - 1 + options.length) % options.length;
-
-            const nextButton = /** @type {HTMLButtonElement} */ (options[nextIndex]);
-            const nextDifficulty = normalizeDifficulty(nextButton.dataset.difficulty || 'normal');
-            e.preventDefault();
-            this.setDifficulty(nextDifficulty);
-            nextButton.focus();
-            this._emit('difficulty-change', { difficulty: nextDifficulty });
-        });
-    }
-
-    /** @returns {string} */
-    getSelectedDifficulty() {
-        const active = this._$('.start-difficulty-option.active');
-        return normalizeDifficulty(active?.dataset?.difficulty || 'normal');
-    }
-
-    /** @param {string} difficulty */
-    setDifficulty(difficulty) {
-        const normalized = normalizeDifficulty(difficulty);
-        const options = this._$$('.start-difficulty-option');
-        options.forEach(option => {
-            const isActive = normalizeDifficulty(option.dataset.difficulty || '') === normalized;
-            option.classList.toggle('active', isActive);
-            option.setAttribute('aria-checked', isActive ? 'true' : 'false');
-            option.tabIndex = isActive ? 0 : -1;
-        });
-    }
 
     /** @param {{ lastWave?: number, lastScore?: number, bestWave?: number, bestScore?: number }} data */
     setLastRunStats({ lastWave, lastScore, bestWave, bestScore }) {

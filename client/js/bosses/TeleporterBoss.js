@@ -106,7 +106,7 @@ export class TeleporterBoss extends Boss {
     _fireSalvo(player) {
         const baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
         const spread = 0.6;
-        const damage = 12 * this.getDifficultyDamageMultiplier();
+        const damage = 12;
         for (let i = 0; i < this.salvoCount; i++) {
             const angle = baseAngle + (spread * (i - (this.salvoCount - 1) / 2) / (this.salvoCount - 1));
             const p = new Projectile(this.x, this.y, angle, damage);
@@ -127,7 +127,7 @@ export class TeleporterBoss extends Boss {
             // Damage player if standing in pool
             const dist = MathUtils.distance(pool.x, pool.y, player.x, player.y);
             if (dist < pool.radius + player.radius) {
-                const dmg = this.poolDPS * this.getDifficultyDamageMultiplier() * (delta / 1000);
+                const dmg = this.poolDPS * (delta / 1000);
                 player.takeDamage(dmg);
             }
         }

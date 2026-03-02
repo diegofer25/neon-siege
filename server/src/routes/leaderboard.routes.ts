@@ -46,7 +46,6 @@ const leaderboardSessionLimiter = createRateLimiter({
 
 leaderboardRoutes.get('/', optionalAuth, leaderboardReadLimiter, async (c) => {
   const q = c.req.query();
-  const difficulty = q.difficulty || 'normal';
   const parsedLimit = Number.parseInt(q.limit || '50', 10);
   const limit = !Number.isFinite(parsedLimit) || parsedLimit <= 0
     ? 50
@@ -72,7 +71,6 @@ leaderboardRoutes.get('/', optionalAuth, leaderboardReadLimiter, async (c) => {
   try {
     const result = await leaderboardService.getLeaderboard(
       c.env.DB,
-      difficulty,
       limit,
       cursor,
       userId,
@@ -117,9 +115,8 @@ leaderboardRoutes.post('/session', requireAuth, leaderboardSessionLimiter, async
 // ─── Authenticated: GET /me ──────────────────────────────────────────────────
 
 leaderboardRoutes.get('/me', requireAuth, async (c) => {
-  const difficulty = c.req.query('difficulty') || 'normal';
   const userId = c.get('userId');
-  const entry = await leaderboardService.getUserEntry(c.env.DB, userId, difficulty);
+  const entry = await leaderboardService.getUserEntry(c.env.DB, userId);
   return c.json(entry ?? { entry: null });
 });
 
@@ -135,7 +132,6 @@ leaderboardRoutes.post('/submit', requireAuth, leaderboardSubmitLimiter, async (
   }
 
   const body = await c.req.json<{
-    difficulty?: string;
     score?: number;
     wave?: number;
     kills?: number;
@@ -153,7 +149,6 @@ leaderboardRoutes.post('/submit', requireAuth, leaderboardSubmitLimiter, async (
 
   // Basic validation
   if (
-    !body.difficulty ||
     body.score === undefined ||
     body.wave === undefined ||
     body.kills === undefined ||
@@ -191,7 +186,6 @@ leaderboardRoutes.post('/submit', requireAuth, leaderboardSubmitLimiter, async (
   try {
     const result = await leaderboardService.submitScore(c.env.DB, {
       userId,
-      difficulty: body.difficulty,
       score: body.score,
       wave: body.wave,
       kills: body.kills,

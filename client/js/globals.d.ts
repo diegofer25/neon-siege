@@ -80,8 +80,6 @@ declare global {
         hide(): void;
         setControlsHintVisible(visible: boolean): void;
         setLastRunStats(stats: { lastWave?: number; lastScore?: number; bestWave?: number; bestScore?: number }): void;
-        getSelectedDifficulty(): string;
-        setDifficulty(difficulty: string): void;
         setAuthUser(user: { display_name: string } | null): void;
         setContinueLoading(loading: boolean): void;
         setContinueInfo(balance: unknown, save: unknown): void;

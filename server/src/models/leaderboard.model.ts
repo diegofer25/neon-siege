@@ -15,7 +15,6 @@ import { query, queryOne, run, nowISO, newId } from '../db';
 export interface LeaderboardEntry {
   id: string;
   user_id: string;
-  difficulty: 'easy' | 'normal' | 'hard';
   score: number;
   wave: number;
   kills: number;
@@ -70,7 +69,6 @@ function normalizeEntry<T extends LeaderboardEntry>(entry: T): T {
 
 export interface CreateEntryData {
   userId: string;
-  difficulty: string;
   score: number;
   wave: number;
   kills: number;
@@ -129,7 +127,7 @@ function decodeCursor(cursor: string): LeaderboardCursorPayload {
 // ─── Queries ───────────────────────────────────────────────────────────────────
 
 /**
- * Upsert a leaderboard entry — one record per user per difficulty.
+ * Upsert a leaderboard entry — one record per user.
  * Only replaces the existing record if the new score is higher.
  *
  * D1 doesn't support RETURNING *, so we do INSERT + SELECT.
@@ -145,8 +143,8 @@ export async function upsertEntry(
   // Check existing score first
   const existing = await queryOne<LeaderboardEntry>(
     db,
-    'SELECT * FROM leaderboard_entries WHERE user_id = ? AND difficulty = ?',
-    [data.userId, data.difficulty],
+    'SELECT * FROM leaderboard_entries WHERE user_id = ?',
+    [data.userId],
   );
 
   if (!existing) {
@@ -154,12 +152,12 @@ export async function upsertEntry(
     await run(
       db,
       `INSERT INTO leaderboard_entries
-        (id, user_id, difficulty, score, wave, kills, max_combo, level, is_victory,
+        (id, user_id, score, wave, kills, max_combo, level, is_victory,
          run_details, game_duration_ms, client_version, checksum, flagged, continues_used,
          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        id, data.userId, data.difficulty, data.score, data.wave, data.kills,
+        id, data.userId, data.score, data.wave, data.kills,
         data.maxCombo, data.level, data.isVictory ? 1 : 0, runDetailsJson,
         data.gameDurationMs ?? null, data.clientVersion ?? null,
         data.checksum ?? null, data.flagged ? 1 : 0, data.continuesUsed ?? 0,
@@ -168,8 +166,8 @@ export async function upsertEntry(
     );
     const entry = (await queryOne<LeaderboardEntry>(
       db,
-      'SELECT * FROM leaderboard_entries WHERE user_id = ? AND difficulty = ?',
-      [data.userId, data.difficulty],
+      'SELECT * FROM leaderboard_entries WHERE user_id = ?',
+      [data.userId],
     ))!;
     return { entry: normalizeEntry(entry), isNewBest: true };
   }
@@ -182,19 +180,19 @@ export async function upsertEntry(
         score = ?, wave = ?, kills = ?, max_combo = ?, level = ?, is_victory = ?,
         run_details = ?, game_duration_ms = ?, client_version = ?, checksum = ?,
         flagged = ?, continues_used = ?, updated_at = ?
-       WHERE user_id = ? AND difficulty = ?`,
+       WHERE user_id = ?`,
       [
         data.score, data.wave, data.kills, data.maxCombo, data.level,
         data.isVictory ? 1 : 0, runDetailsJson, data.gameDurationMs ?? null,
         data.clientVersion ?? null, data.checksum ?? null,
         data.flagged ? 1 : 0, data.continuesUsed ?? 0, now,
-        data.userId, data.difficulty,
+        data.userId,
       ],
     );
     const entry = (await queryOne<LeaderboardEntry>(
       db,
-      'SELECT * FROM leaderboard_entries WHERE user_id = ? AND difficulty = ?',
-      [data.userId, data.difficulty],
+      'SELECT * FROM leaderboard_entries WHERE user_id = ?',
+      [data.userId],
     ))!;
     return { entry: normalizeEntry(entry), isNewBest: true };
   }
@@ -204,25 +202,24 @@ export async function upsertEntry(
 
 export async function getLeaderboard(
   db: D1Database,
-  difficulty: string,
   limit: number = 50,
   cursor?: string,
   locationFilter?: LocationFilter,
 ): Promise<{ entries: LeaderboardRow[]; nextCursor: string | null; hasMore: boolean }> {
-  const params: unknown[] = [difficulty];
-  let locationWhere = '';
+  const params: unknown[] = [];
+  let whereClause = 'WHERE 1=1';
 
   if (locationFilter?.countryCode) {
     params.push(locationFilter.countryCode);
-    locationWhere += ` AND u.country_code = ?`;
+    whereClause += ` AND u.country_code = ?`;
   }
   if (locationFilter?.region) {
     params.push(locationFilter.region);
-    locationWhere += ` AND u.region = ?`;
+    whereClause += ` AND u.region = ?`;
   }
   if (locationFilter?.city) {
     params.push(locationFilter.city);
-    locationWhere += ` AND u.city = ?`;
+    whereClause += ` AND u.city = ?`;
   }
 
   if (cursor) {
@@ -235,7 +232,7 @@ export async function getLeaderboard(
       parsedCursor.updatedAt,
       parsedCursor.id,
     );
-    locationWhere +=
+    whereClause +=
       ' AND (le.score < ? OR (le.score = ? AND le.updated_at < ?) OR (le.score = ? AND le.updated_at = ? AND le.id < ?))';
   }
 
@@ -249,7 +246,7 @@ export async function getLeaderboard(
       u.display_name
      FROM leaderboard_entries le
      JOIN users u ON u.id = le.user_id
-     WHERE le.difficulty = ?${locationWhere}
+     ${whereClause}
      ORDER BY le.score DESC, le.updated_at DESC, le.id DESC
      LIMIT ?`,
     params,
@@ -277,7 +274,6 @@ export async function getLeaderboard(
 export async function getUserEntry(
   db: D1Database,
   userId: string,
-  difficulty: string,
 ): Promise<LeaderboardRow | null> {
   const row = await queryOne<LeaderboardRow>(
     db,
@@ -285,12 +281,12 @@ export async function getUserEntry(
       le.*,
       u.display_name,
       (SELECT COUNT(*) + 1 FROM leaderboard_entries le2
-       WHERE le2.difficulty = le.difficulty AND le2.score > le.score AND le2.flagged = 0
+       WHERE le2.score > le.score AND le2.flagged = 0
       ) AS rank
      FROM leaderboard_entries le
      JOIN users u ON u.id = le.user_id
-     WHERE le.user_id = ? AND le.difficulty = ?`,
-    [userId, difficulty],
+     WHERE le.user_id = ?`,
+    [userId],
   );
   return row ? normalizeEntry(row) : null;
 }
@@ -298,10 +294,9 @@ export async function getUserEntry(
 export async function getUserRank(
   db: D1Database,
   userId: string,
-  difficulty: string,
   locationFilter?: LocationFilter,
 ): Promise<number | null> {
-  const params: unknown[] = [difficulty];
+  const params: unknown[] = [];
   let locationWhere = '';
 
   if (locationFilter?.countryCode) {
@@ -327,7 +322,7 @@ export async function getUserRank(
         ROW_NUMBER() OVER (ORDER BY le.score DESC, le.updated_at DESC, le.id DESC) AS rank
       FROM leaderboard_entries le
       JOIN users u ON u.id = le.user_id
-      WHERE le.difficulty = ?${locationWhere}
+      WHERE 1=1${locationWhere}
     ) ranked
     WHERE user_id = ?`,
     params,
