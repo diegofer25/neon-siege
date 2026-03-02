@@ -155,9 +155,6 @@ export class AudioManager {
      */
     playSFX(soundName) {
         const canonicalName = SFX_ALIASES[soundName] || soundName;
-        const forceMaxVolume = canonicalName === 'game_over';
-
-        if (!forceMaxVolume && this.soundVolume <= 0) return;
 
         const pool = this.sfx[canonicalName];
         if (!pool || pool.length === 0) return;
@@ -165,9 +162,7 @@ export class AudioManager {
         try {
             const source = pool[0];
             const sound = /** @type {HTMLAudioElement} */ (source.cloneNode());
-            sound.volume = forceMaxVolume
-                ? 1
-                : Math.max(0, Math.min(1, GameConfig.AUDIO.SFX_VOLUME * this.soundVolume));
+            sound.volume = Math.max(0, Math.min(1, GameConfig.AUDIO.SFX_VOLUME * this.soundVolume));
             sound.play().catch(e => console.log('Audio play failed:', e));
         } catch (e) {
             console.log('Audio error:', e);

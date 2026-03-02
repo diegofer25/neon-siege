@@ -571,7 +571,7 @@ class StartScreen extends BaseComponent {
     /**
      * Update the continue/credits UI based on credit balance and save availability.
      * Mirrors the GameOverScreen.setCreditInfo() API.
-     * @param {{ freeRemaining: number, purchased: number, total: number }} credits
+     * @param {{ freeRemainingThisRun: number, purchased: number, total: number }} credits
      * @param {{ wave?: number, checkpointWave?: number }|null} [saveData]
      */
     setContinueInfo(credits, saveData = null) {
@@ -590,8 +590,9 @@ class StartScreen extends BaseComponent {
             continueBtn.style.display = '';
             continueBtn.removeAttribute('disabled');
             if (badge) {
-                badge.textContent = credits.freeRemaining > 0
-                    ? `${credits.freeRemaining} free + ${credits.purchased} purchased`
+                const freeLeft = credits.freeRemainingThisRun ?? 0;
+                badge.textContent = freeLeft > 0
+                    ? `${freeLeft} free this run` + (credits.purchased > 0 ? ` + ${credits.purchased} purchased` : '')
                     : `${credits.purchased} purchased continue${credits.purchased !== 1 ? 's' : ''}`;
                 badge.classList.remove('empty');
             }

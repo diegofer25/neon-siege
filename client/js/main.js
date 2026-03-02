@@ -737,6 +737,10 @@ export function startGame() {
     
     // Initialize game state and start main loop
     game.start();
+
+    // Reset per-run free continues on the server (non-blocking)
+    creditService.startRun();
+
     syncSaveButtons();
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
@@ -763,6 +767,10 @@ function restartGame() {
     });
 
     game.restart();
+
+    // Reset per-run free continues on the server (non-blocking)
+    creditService.startRun();
+
     syncMusicTrack({ restart: true });
     syncStartDifficultyUI(game.getRunDifficulty());
     syncSaveButtons();

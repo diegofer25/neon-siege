@@ -15,9 +15,14 @@ export interface UserCredits {
   user_id: string;
   balance: number;
   free_credits_remaining: number;
+  current_run_id: string | null;
+  run_free_used: number;
   created_at: string;
   updated_at: string;
 }
+
+/** Number of free continues granted per run (server-authoritative constant). */
+export const FREE_PER_RUN = 3;
 
 export interface CreditTransaction {
   id: string;
@@ -65,19 +70,48 @@ export async function getOrCreateCredits(db: D1Database, userId: string): Promis
   ))!;
 }
 
+// ─── Start Run (per-run free continues) ──────────────────────────────────────
+
+/**
+ * Begin a new run — generates a server-side run ID and resets the per-run
+ * free continues counter. Call once at the start of every fresh run.
+ */
+export async function startRun(db: D1Database, userId: string): Promise<{ runId: string }> {
+  await getOrCreateCredits(db, userId);
+
+  const runId = crypto.randomUUID();
+  const result = await run(
+    db,
+    `UPDATE user_credits SET current_run_id = ?, run_free_used = 0, updated_at = ?
+     WHERE user_id = ?`,
+    [runId, nowISO(), userId],
+  );
+  if (result.meta.changes === 0) {
+    throw new CreditError('Failed to start run', 500);
+  }
+  return { runId };
+}
+
 // ─── Deduct credit (atomic via D1 batch) ─────────────────────────────────────
 
 export interface DeductResult {
   type: 'free_use' | 'paid_use';
-  newFree: number;
+  freeUsedThisRun: number;
   newBalance: number;
 }
 
 /**
- * Deduct one credit. Prefers free credits, then purchased.
- * Uses optimistic update with conditional WHERE to ensure atomicity.
+ * Deduct one credit. Prefers per-run free continues (up to FREE_PER_RUN),
+ * then purchased credits. Uses optimistic WHERE to ensure atomicity.
+ *
+ * @param runId — The active run ID obtained from startRun(). Required to
+ *   use free continues; if missing or mismatched, only paid credits apply.
  */
-export async function deductCredit(db: D1Database, userId: string): Promise<DeductResult> {
+export async function deductCredit(
+  db: D1Database,
+  userId: string,
+  runId?: string,
+): Promise<DeductResult> {
   // Ensure row exists
   await getOrCreateCredits(db, userId);
 
@@ -87,23 +121,29 @@ export async function deductCredit(db: D1Database, userId: string): Promise<Dedu
     [userId],
   ))!;
 
-  if (credits.free_credits_remaining > 0) {
+  // 1. Per-run free continues
+  if (
+    runId &&
+    credits.current_run_id === runId &&
+    credits.run_free_used < FREE_PER_RUN
+  ) {
     const result = await run(
       db,
-      `UPDATE user_credits SET free_credits_remaining = free_credits_remaining - 1, updated_at = ?
-       WHERE user_id = ? AND free_credits_remaining > 0`,
-      [nowISO(), userId],
+      `UPDATE user_credits SET run_free_used = run_free_used + 1, updated_at = ?
+       WHERE user_id = ? AND current_run_id = ? AND run_free_used < ?`,
+      [nowISO(), userId, runId, FREE_PER_RUN],
     );
     if (result.meta.changes === 0) {
       throw new CreditError('Credit deduction race — retry', 409);
     }
     return {
       type: 'free_use',
-      newFree: credits.free_credits_remaining - 1,
+      freeUsedThisRun: credits.run_free_used + 1,
       newBalance: credits.balance,
     };
   }
 
+  // 2. Purchased credits
   if (credits.balance > 0) {
     const result = await run(
       db,
@@ -116,7 +156,7 @@ export async function deductCredit(db: D1Database, userId: string): Promise<Dedu
     }
     return {
       type: 'paid_use',
-      newFree: 0,
+      freeUsedThisRun: credits.run_free_used,
       newBalance: credits.balance - 1,
     };
   }

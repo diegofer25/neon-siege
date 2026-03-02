@@ -850,13 +850,13 @@ export const GameConfig = {
     /**
      * Arcade continue / credits system
      *
-     * Players get a fixed number of free lifetime continues.
-     * After that they purchase credits via Stripe ($1 = 10 credits).
+     * Players get free continues that reset every run (not lifetime).
+     * After free continues are spent, they purchase credits via Stripe ($1 = 10).
      * Each continue costs 1 credit and loads the last wave checkpoint.
      */
     CONTINUE: {
-        /** One-time free credits granted to every new account */
-        FREE_CREDITS: 3,
+        /** Free continues granted at the start of every run */
+        FREE_PER_RUN: 3,
         /** How many credits a single purchase grants */
         CREDITS_PER_PURCHASE: 10,
         /** Display price (cosmetic — actual price comes from Stripe) */

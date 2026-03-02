@@ -39,6 +39,13 @@ const checkoutLimiter = createRateLimiter({
   keyFn: (c) => c.get('userId') || null,
 });
 
+const startRunLimiter = createRateLimiter({
+  windowMs: 60_000,
+  max: 5,
+  prefix: 'credit_start_run',
+  keyFn: (c) => c.get('userId') || null,
+});
+
 // ─── Authenticated routes ────────────────────────────────────────────────────
 
 /** GET / — return current credit balance */
@@ -48,12 +55,27 @@ creditRoutes.get('/', requireAuth, async (c) => {
   return c.json({ credits: balance });
 });
 
+/** POST /start-run — reset per-run free continues, return a run ID */
+creditRoutes.post('/start-run', requireAuth, startRunLimiter, async (c) => {
+  const userId = c.get('userId');
+  try {
+    const result = await creditService.startRun(c.env.DB, userId);
+    return c.json(result);
+  } catch (err) {
+    if (err instanceof CreditError) {
+      return c.json({ error: err.message }, err.statusCode as any);
+    }
+    throw err;
+  }
+});
+
 /** POST /continue — deduct 1 credit, issue continue token, return save */
 creditRoutes.post('/continue', requireAuth, continueLimiter, async (c) => {
   const userId = c.get('userId');
+  const body = await c.req.json<{ runId?: string }>().catch(() => ({} as { runId?: string }));
 
   try {
-    const result = await creditService.requestContinue(c.env.DB, c.env, userId);
+    const result = await creditService.requestContinue(c.env.DB, c.env, userId, body.runId);
     return c.json(result);
   } catch (err) {
     if (err instanceof CreditError) {

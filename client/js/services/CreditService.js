@@ -6,7 +6,7 @@
  * /api/credits/* endpoints and manages the Stripe Checkout popup flow.
  *
  * Public API:
- *   getBalance()            → { freeRemaining, purchased, total }
+ *   getBalance()            → { freePerRun, freeUsedThisRun, freeRemainingThisRun, purchased, total }
  *   requestContinue()       → { continueToken, save, creditBalance }
  *   redeemContinue(token)   → { ok: true }
  *   openCheckout()          → polls until credits arrive or timeout
@@ -16,11 +16,15 @@ import { apiFetch } from './ApiClient.js';
 import { isAuthenticated, getCurrentUser } from './AuthService.js';
 import { GameConfig } from '../config/GameConfig.js';
 
-/** @typedef {{ freeRemaining: number, purchased: number, total: number }} CreditBalance */
+/** @typedef {{ freePerRun: number, freeUsedThisRun: number, freeRemainingThisRun: number, purchased: number, total: number }} CreditBalance */
+
+// ─── Per-run state ────────────────────────────────────────────────────────────────────
+
+let _currentRunId = null;
 
 // ─── Cached balance (display-only — always verified server-side) ─────────────
 
-let _cachedBalance = { freeRemaining: 0, purchased: 0, total: 0 };
+let _cachedBalance = { freePerRun: GameConfig.CONTINUE.FREE_PER_RUN, freeUsedThisRun: 0, freeRemainingThisRun: GameConfig.CONTINUE.FREE_PER_RUN, purchased: 0, total: GameConfig.CONTINUE.FREE_PER_RUN };
 
 /** Read the last-fetched balance (display-only, not authoritative). */
 export function getCachedBalance() {
@@ -30,12 +34,53 @@ export function getCachedBalance() {
 // ─── API methods ─────────────────────────────────────────────────────────────
 
 /**
+ * Start a new run on the server — resets per-run free continues.
+ * Call this once at the beginning of every fresh game start / restart.
+ * @returns {Promise<{ runId: string }>}
+ */
+export async function startRun() {
+  if (!isAuthenticated()) {
+    _currentRunId = null;
+    _cachedBalance = {
+      freePerRun: GameConfig.CONTINUE.FREE_PER_RUN,
+      freeUsedThisRun: 0,
+      freeRemainingThisRun: GameConfig.CONTINUE.FREE_PER_RUN,
+      purchased: 0,
+      total: GameConfig.CONTINUE.FREE_PER_RUN,
+    };
+    return { runId: null };
+  }
+  try {
+    const data = await apiFetch('/api/credits/start-run', { method: 'POST' });
+    _currentRunId = data.runId;
+    // Reset cached balance free counters for the new run
+    _cachedBalance = {
+      ..._cachedBalance,
+      freeUsedThisRun: 0,
+      freeRemainingThisRun: GameConfig.CONTINUE.FREE_PER_RUN,
+      total: GameConfig.CONTINUE.FREE_PER_RUN + _cachedBalance.purchased,
+    };
+    return data;
+  } catch (err) {
+    console.warn('[CreditService] Failed to start run:', err.message);
+    _currentRunId = null;
+    return { runId: null };
+  }
+}
+
+/**
  * Fetch the current credit balance from the server.
- * @returns {Promise<{ freeRemaining: number, purchased: number, total: number }>}
+ * @returns {Promise<CreditBalance>}
  */
 export async function getBalance() {
   if (!isAuthenticated()) {
-    return { freeRemaining: GameConfig.CONTINUE.FREE_CREDITS, purchased: 0, total: GameConfig.CONTINUE.FREE_CREDITS };
+    return {
+      freePerRun: GameConfig.CONTINUE.FREE_PER_RUN,
+      freeUsedThisRun: 0,
+      freeRemainingThisRun: GameConfig.CONTINUE.FREE_PER_RUN,
+      purchased: 0,
+      total: GameConfig.CONTINUE.FREE_PER_RUN,
+    };
   }
   try {
     const data = await apiFetch('/api/credits');
@@ -55,7 +100,10 @@ export async function getBalance() {
  * @throws {ApiError} 402 if no credits, 404 if no save
  */
 export async function requestContinue() {
-  const data = await apiFetch('/api/credits/continue', { method: 'POST' });
+  const data = await apiFetch('/api/credits/continue', {
+    method: 'POST',
+    body: JSON.stringify({ runId: _currentRunId }),
+  });
   _cachedBalance = data.creditBalance;
   return data;
 }

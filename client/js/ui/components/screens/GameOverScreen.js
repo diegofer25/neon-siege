@@ -5,7 +5,7 @@
  *   setStats({ wave, score, combo, level })
  *   setNewRecord(bool)
  *   setNearMiss(text | null)
- *   setCreditInfo({ freeRemaining, purchased, total }, hasSave)
+ *   setCreditInfo({ freeRemainingThisRun, purchased, total }, hasSave)
  *   setContinueLoading(bool)
  *   show() / hide()
  *
@@ -153,7 +153,7 @@ class GameOverScreen extends BaseComponent {
 
     /**
      * Update the continue/credits UI based on server balance and save availability.
-     * @param {{ freeRemaining: number, purchased: number, total: number }} credits
+     * @param {{ freeRemainingThisRun: number, purchased: number, total: number }} credits
      * @param {boolean} hasSave — whether a save checkpoint exists to continue from
      */
     setCreditInfo(credits, hasSave = false) {
@@ -175,8 +175,9 @@ class GameOverScreen extends BaseComponent {
             continueBtn.removeAttribute('disabled');
             delete continueBtn.dataset.prevLabel;
             continueBtn.textContent = `CONTINUE (${credits.total} left)`;
-            badge.textContent = credits.freeRemaining > 0
-                ? `${credits.freeRemaining} free + ${credits.purchased} purchased`
+            const freeLeft = credits.freeRemainingThisRun ?? 0;
+            badge.textContent = freeLeft > 0
+                ? `${freeLeft} free this run` + (credits.purchased > 0 ? ` + ${credits.purchased} purchased` : '')
                 : `${credits.purchased} purchased continues`;
             badge.classList.toggle('empty', false);
             buyBtn.style.display = 'none';

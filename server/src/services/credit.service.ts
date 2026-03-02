@@ -46,18 +46,34 @@ async function _buildContinueToken(
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export interface CreditBalance {
-  freeRemaining: number;
+  freePerRun: number;
+  freeUsedThisRun: number;
+  freeRemainingThisRun: number;
   purchased: number;
   total: number;
 }
 
 export async function getBalance(db: D1Database, userId: string): Promise<CreditBalance> {
   const credits = await CreditModel.getOrCreateCredits(db, userId);
+  const freeUsed = credits.run_free_used ?? 0;
+  const freeRemaining = Math.max(0, CreditModel.FREE_PER_RUN - freeUsed);
   return {
-    freeRemaining: credits.free_credits_remaining,
+    freePerRun: CreditModel.FREE_PER_RUN,
+    freeUsedThisRun: freeUsed,
+    freeRemainingThisRun: freeRemaining,
     purchased: credits.balance,
-    total: credits.free_credits_remaining + credits.balance,
+    total: freeRemaining + credits.balance,
   };
+}
+
+/**
+ * Start a new run — resets per-run free continues on the server.
+ */
+export async function startRun(
+  db: D1Database,
+  userId: string,
+): Promise<{ runId: string }> {
+  return CreditModel.startRun(db, userId);
 }
 
 /**
@@ -74,13 +90,14 @@ export async function requestContinue(
   db: D1Database,
   env: { CONTINUE_TOKEN_SECRET: string },
   userId: string,
+  runId?: string,
 ): Promise<{
   continueToken: string;
   save: Record<string, unknown>;
   creditBalance: CreditBalance;
 }> {
   // 1. Deduct one credit (throws 402 if none available)
-  const deduction = await CreditModel.deductCredit(db, userId);
+  const deduction = await CreditModel.deductCredit(db, userId, runId);
 
   // 2. Load & validate server-side save
   const save = await SaveModel.getSaveByUserId(db, userId);
@@ -125,9 +142,11 @@ export async function requestContinue(
     continueToken: token,
     save: savePayload,
     creditBalance: {
-      freeRemaining: deduction.newFree,
+      freePerRun: CreditModel.FREE_PER_RUN,
+      freeUsedThisRun: deduction.freeUsedThisRun,
+      freeRemainingThisRun: Math.max(0, CreditModel.FREE_PER_RUN - deduction.freeUsedThisRun),
       purchased: deduction.newBalance,
-      total: deduction.newFree + deduction.newBalance,
+      total: Math.max(0, CreditModel.FREE_PER_RUN - deduction.freeUsedThisRun) + deduction.newBalance,
     },
   };
 }
@@ -157,9 +176,13 @@ export async function grantPurchasedCredits(
   stripeSessionId: string,
 ): Promise<CreditBalance> {
   const credits = await CreditModel.grantPurchasedCredits(db, userId, amount, stripeSessionId);
+  const freeUsed = credits.run_free_used ?? 0;
+  const freeRemaining = Math.max(0, CreditModel.FREE_PER_RUN - freeUsed);
   return {
-    freeRemaining: credits.free_credits_remaining,
+    freePerRun: CreditModel.FREE_PER_RUN,
+    freeUsedThisRun: freeUsed,
+    freeRemainingThisRun: freeRemaining,
     purchased: credits.balance,
-    total: credits.free_credits_remaining + credits.balance,
+    total: freeRemaining + credits.balance,
   };
 }
