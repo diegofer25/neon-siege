@@ -3,6 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2024-09-25"
 compatibility_flags = ["nodejs_compat"]
 
+# ─── Routes ───────────────────────────────────────────────────────────────
 [[routes]]
 pattern = "neon-siege-server.diegolamarao.com"
 custom_domain = true
@@ -25,16 +26,19 @@ name = "neon-siege-api-preview"
 workers_dev = true
 routes = []
 
+# D1 Database for preview environment (separate from production)
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "neon-siege-db-preview"
 database_id = "f8909d15-5579-42c8-8acc-9044b51549e8"
 migrations_dir = "migrations"
 
+# KV Namespace for preview environment (separate from production)
 [[env.preview.kv_namespaces]]
 binding = "RATE_LIMIT"
 id = "ebe209bb3d4c4edd9eab4a41dc2fb336"
 
+# Vars for preview environment (can differ from production)
 [env.preview.vars]
 NODE_ENV = "production"
 APP_BASE_URL = "https://staging.neon-siege.pages.dev"
@@ -66,3 +70,9 @@ ALLOWED_ORIGINS = "https://neon-siege.diegolamarao.com"
 ALLOWED_CHECKOUT_HOSTS = "neon-siege.diegolamarao.com"
 # Feedback / bug-report email recipient (configurable)
 FEEDBACK_EMAIL = "diego.lamarao92@gmail.com"
+
+# ─── Observability (logs, metrics, tracing) ─────────────────────────────────
+[observability]
+[observability.logs]
+enabled = false
+invocation_logs = true
