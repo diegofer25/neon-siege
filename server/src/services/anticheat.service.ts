@@ -80,16 +80,21 @@ export async function verifyChecksum(
   checksum: string,
   scoreHmacSecret: string,
 ): Promise<boolean> {
-  const encoder = new TextEncoder();
+  // The per-session HMAC key is a hex-encoded 32-byte string.
+  // Decode it to raw bytes to match the client-side hmacSign().
+  const keyBytes = new Uint8Array(scoreHmacSecret.length / 2);
+  for (let i = 0; i < scoreHmacSecret.length; i += 2) {
+    keyBytes[i / 2] = parseInt(scoreHmacSecret.substring(i, i + 2), 16);
+  }
   const key = await crypto.subtle.importKey(
     'raw',
-    encoder.encode(scoreHmacSecret),
+    keyBytes,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign'],
   );
 
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
   const expected = Array.from(new Uint8Array(signature))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
